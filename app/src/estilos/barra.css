@@ -1,0 +1,374 @@
+/* Estructura general y barra lateral en tinta profunda. */
+.app {
+  display: flex;
+  height: 100%;
+  overflow: hidden;
+}
+
+.principal {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--papel);
+}
+
+.barra-lateral {
+  position: relative;
+  flex: none;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--barra);
+  color: var(--barra-texto);
+  font-size: var(--t-m);
+  user-select: none;
+}
+
+.barra-lateral :focus-visible {
+  outline-color: var(--acento);
+}
+
+.barra-cabeza {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 8px 6px 10px;
+}
+
+.espacio {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 6px;
+  border-radius: var(--r-2);
+  text-align: left;
+}
+
+.espacio:hover {
+  background: var(--barra-2);
+}
+
+.logo-espacio {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  object-fit: cover;
+  flex: none;
+}
+
+.espacio-nombre {
+  font-family: var(--f-titulo);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boton-icono.barra {
+  color: var(--barra-texto-2);
+}
+
+.boton-icono.barra:hover {
+  background: var(--barra-3);
+  color: var(--barra-texto);
+}
+
+.barra-lateral .boton-icono.mini {
+  color: var(--barra-texto-2);
+}
+
+.barra-lateral .boton-icono.mini:hover {
+  background: var(--barra-3);
+  color: var(--barra-texto);
+}
+
+.barra-nav,
+.barra-pie {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 8px;
+}
+
+.barra-pie {
+  border-top: 1px solid var(--barra-linea);
+  padding: 8px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 8px;
+  border-radius: var(--r-1);
+  text-align: left;
+  color: var(--barra-texto);
+  position: relative;
+}
+
+.nav-item svg {
+  color: var(--barra-texto-2);
+  flex: none;
+}
+
+.nav-item > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-item:hover {
+  background: var(--barra-2);
+}
+
+.nav-item.activo {
+  background: var(--barra-3);
+}
+
+.nav-item.activo::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--acento);
+}
+
+.nav-item.tenue {
+  color: var(--barra-texto-2);
+}
+
+.barra-lateral .atajo {
+  background: transparent;
+  border-color: var(--barra-linea);
+  color: var(--barra-texto-2);
+}
+
+.contador-nav {
+  flex: none !important;
+  font-size: var(--t-xs);
+  color: var(--barra-texto-2);
+}
+
+.barra-desplazable {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 8px 12px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--barra-3) transparent;
+}
+
+.seccion-barra + .seccion-barra {
+  margin-top: 14px;
+}
+
+.seccion-cabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4px 0 8px;
+  height: 26px;
+}
+
+.seccion-titulo {
+  font-size: var(--t-xs);
+  font-weight: 650;
+  color: var(--barra-texto-2);
+  padding: 2px 4px;
+  margin-left: -4px;
+  border-radius: 4px;
+}
+
+.seccion-titulo:hover {
+  background: var(--barra-2);
+  color: var(--barra-texto);
+}
+
+.seccion-cabeza .boton-icono {
+  opacity: 0;
+}
+
+.seccion-cabeza:hover .boton-icono,
+.seccion-cabeza .boton-icono:focus-visible {
+  opacity: 1;
+}
+
+/* árbol */
+.nodo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 30px;
+  padding-right: 4px;
+  border-radius: var(--r-1);
+  cursor: pointer;
+}
+
+.nodo:hover {
+  background: var(--barra-2);
+}
+
+.nodo.activo {
+  background: var(--barra-3);
+  color: #fff;
+}
+
+.nodo.activo::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--acento);
+}
+
+.nodo-flecha {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  color: var(--barra-texto-2);
+  flex: none;
+}
+
+.nodo-flecha:hover {
+  background: var(--barra-3);
+}
+
+.nodo-flecha.oculta {
+  visibility: hidden;
+}
+
+.nodo-flecha svg {
+  transition: transform var(--dur);
+}
+
+.nodo-flecha svg.girado {
+  transform: rotate(90deg);
+}
+
+.nodo-icono {
+  color: var(--barra-texto-2);
+}
+
+.nodo-titulo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-left: 4px;
+}
+
+.nodo-acciones {
+  display: none;
+  gap: 1px;
+}
+
+.nodo:hover .nodo-acciones,
+.nodo:focus-within .nodo-acciones {
+  display: flex;
+}
+
+.nodo-renombrar {
+  flex: 1;
+  min-width: 0;
+  background: var(--barra);
+  border: 1px solid var(--acento);
+  border-radius: 4px;
+  padding: 2px 6px;
+  outline: none;
+}
+
+.nodo-vacio {
+  font-size: var(--t-s);
+  color: var(--barra-texto-2);
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+}
+
+.nodo.soltar-dentro {
+  background: color-mix(in srgb, var(--acento) 26%, transparent);
+}
+
+.nodo.soltar-antes::after,
+.nodo.soltar-despues::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 4px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--acento);
+}
+
+.nodo.soltar-antes::after {
+  top: -1px;
+}
+
+.nodo.soltar-despues::after {
+  bottom: -1px;
+}
+
+.soltar-raiz {
+  border-radius: var(--r-1);
+  margin-top: 2px;
+}
+
+.soltar-raiz.activo {
+  box-shadow: inset 0 2px 0 var(--acento);
+}
+
+.tirador-barra {
+  position: absolute;
+  top: 0;
+  right: -3px;
+  width: 6px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 5;
+}
+
+.tirador-barra:hover {
+  background: linear-gradient(to right, transparent 2px, var(--acento) 2px, var(--acento) 4px, transparent 4px);
+}
+
+.velo-barra {
+  display: none;
+}
+
+@media (max-width: 760px) {
+  .velo-barra {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 39;
+    background: var(--velo);
+  }
+  .barra-lateral {
+    position: fixed;
+    z-index: 40;
+    left: 0;
+    top: 0;
+    box-shadow: var(--sombra-flota);
+    max-width: 86vw;
+  }
+}

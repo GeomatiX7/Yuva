@@ -1,0 +1,15 @@
+{
+  "name": "Yuva",
+  "short_name": "Yuva",
+  "description": "Notas, documentos, tareas y bases de datos sin internet · Notes, docs, tasks and databases, offline.",
+  "lang": "es",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#FCFCFA",
+  "theme_color": "#3A0F1A",
+  "icons": [
+    { "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}

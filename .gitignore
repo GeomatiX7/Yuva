@@ -1,0 +1,20 @@
+# Dependencias y compilados
+node_modules/
+app/dist/
+escritorio/web/
+escritorio/instalador/
+escritorio/origen.json
+
+# Los instaladores van en GitHub Releases, no en el repositorio
+*.exe
+*.blockmap
+latest.yml
+
+# Varios
+*.log
+.env
+.env.*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

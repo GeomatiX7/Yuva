@@ -1,0 +1,97 @@
+{
+  "name": "espacio-notas-escritorio",
+  "productName": "Yuva",
+  "version": "0.7.0",
+  "description": "Notas, documentos, tareas y bases de datos, sin internet · Notes, docs, tasks and databases, offline",
+  "author": "GeomatiX",
+  "private": true,
+  "main": "main.cjs",
+  "scripts": {
+    "iconos": "electron iconos.cjs",
+    "iniciar": "npm --prefix ../app run build && electron .",
+    "empaquetar": "electron iconos.cjs && node preparar.cjs && electron-builder --win nsis --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "44.7.2",
+    "electron-builder": "26.17.0"
+  },
+  "build": {
+    "appId": "local.espacio-notas",
+    "copyright": "© 2026 GeomatiX",
+    "directories": {
+      "output": "instalador",
+      "buildResources": "recursos"
+    },
+    "files": [
+      "main.cjs",
+      "preload.cjs",
+      "actualizaciones.cjs",
+      "yuva-mcp.cjs",
+      "web/**/*"
+    ],
+    "asarUnpack": [
+      "yuva-mcp.cjs"
+    ],
+    "extraResources": [
+      {
+        "from": "recursos",
+        "to": "recursos",
+        "filter": [
+          "icono.png",
+          "bandeja*.png"
+        ]
+      },
+      {
+        "from": "web/AVISOS-DE-TERCEROS.txt",
+        "to": "AVISOS-DE-TERCEROS.txt"
+      },
+      {
+        "from": "../LICENSE",
+        "to": "LICENSE.txt"
+      },
+      {
+        "from": "../NOTICE",
+        "to": "NOTICE.txt"
+      }
+    ],
+    "electronFuses": {
+      "runAsNode": true,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "recursos/icono.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "installerLanguages": [
+        "es_ES",
+        "en_US"
+      ],
+      "language": "3082",
+      "displayLanguageSelector": false
+    },
+    "artifactName": "${productName}-${version}-instalador.${ext}",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "GeomatiX7",
+        "repo": "yuva",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "6.8.12"
+  },
+  "license": "Apache-2.0",
+  "homepage": "https://github.com/GeomatiX7/yuva"
+}

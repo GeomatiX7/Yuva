@@ -1,0 +1,168 @@
+/* Movimiento de la interfaz, siguiendo los principios clásicos de la animación (los «10 principios del
+   motion design» de Recursos): curvas de aceleración en vez de lineales, anticipación al pulsar,
+   un pequeño rebote al llegar (follow-through), entradas escalonadas (ritmo) y arcos.
+   Todo se apaga con «Ajustes › Apariencia › Animaciones: reducidas» o con la preferencia del sistema. */
+:root {
+  --ease-salida: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-rebote: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-entrada: cubic-bezier(0.5, 0, 0.75, 0);
+  --dur-media: 260ms;
+  --dur-larga: 700ms;
+}
+
+/* Anticipación: los botones se hunden un poco al pulsarlos y vuelven con rebote. */
+.boton,
+.boton-primario,
+.boton-icono,
+.boton-pagina,
+.boton-fila,
+.chip-opcion,
+.acceso {
+  transition: transform 160ms var(--ease-rebote), background-color var(--dur), color var(--dur), box-shadow var(--dur);
+}
+
+.boton:active,
+.boton-primario:active,
+.boton-icono:active,
+.boton-pagina:active,
+.boton-fila:active,
+.chip-opcion:active,
+.acceso:active {
+  transform: scale(0.95);
+  transition-duration: 60ms;
+}
+
+/* Casillas: se estiran y encogen al marcarse (squash & stretch). */
+.bn-block-content[data-content-type='checkListItem'] input[type='checkbox']:checked,
+.casilla-vista.marcada {
+  animation: marcar 320ms var(--ease-rebote);
+}
+
+@keyframes marcar {
+  0% { transform: scale(0.7); }
+  45% { transform: scale(1.18, 0.9); }
+  100% { transform: scale(1); }
+}
+
+/* Barras y anillos se llenan al aparecer (timing + easing). */
+.progreso-pista > span,
+.pomodoro-avance > span,
+.barra-progreso-relleno,
+.indicador-barra > span {
+  animation: llenar var(--dur-larga) var(--ease-salida) both;
+  transform-origin: left center;
+}
+
+@keyframes llenar {
+  from { transform: scaleX(0); }
+}
+
+.anillo-relleno,
+.indicador-anillo .anillo-relleno {
+  animation: trazar 900ms var(--ease-salida) both;
+}
+
+@keyframes trazar {
+  from { stroke-dasharray: 0 999 !important; }
+}
+
+/* Tarjetas: se levantan al pasar el ratón y bajan con suavidad (arcos y follow-through). */
+.tarjeta-galeria,
+.tarjeta-tablero,
+.acceso-tarjeta,
+.indicador {
+  transition: transform var(--dur-media) var(--ease-salida), box-shadow var(--dur-media) var(--ease-salida);
+}
+
+.tarjeta-galeria:hover,
+.acceso-tarjeta:hover {
+  transform: translateY(-3px);
+}
+
+/* Ritmo: las cajas de un tablero entran una tras otra. */
+.panel,
+.caja-tablero {
+  animation: entrar-caja 420ms var(--ease-salida) both;
+}
+
+.bn-block-outer:nth-child(2) :is(.panel, .caja-tablero) { animation-delay: 40ms; }
+.bn-block-outer:nth-child(3) :is(.panel, .caja-tablero) { animation-delay: 80ms; }
+.bn-block-outer:nth-child(4) :is(.panel, .caja-tablero) { animation-delay: 120ms; }
+.bn-block-outer:nth-child(5) :is(.panel, .caja-tablero) { animation-delay: 160ms; }
+.bn-block-outer:nth-child(n + 6) :is(.panel, .caja-tablero) { animation-delay: 200ms; }
+
+@keyframes entrar-caja {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.985);
+  }
+}
+
+/* Los menús salen desde donde se abrieron, con un rebote mínimo. */
+.flotante {
+  animation: abrir-menu 180ms var(--ease-rebote);
+}
+
+@keyframes abrir-menu {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+/* Iconos que se mueven al pasar el ratón (como los iconos animados de Recursos). */
+.boton-icono:hover > svg,
+.item-barra:hover > svg:first-child,
+.acceso:hover .acceso-icono {
+  animation: menear 420ms var(--ease-salida);
+}
+
+@keyframes menear {
+  30% { transform: rotate(-10deg) scale(1.08); }
+  60% { transform: rotate(6deg); }
+}
+
+/* Indicador de carga: tres puntos que rebotan con desfase. */
+.cargando-puntos {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  height: 1em;
+}
+
+.cargando-puntos span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: rebotar 900ms var(--ease-salida) infinite;
+}
+
+.cargando-puntos span:nth-child(2) { animation-delay: 120ms; }
+.cargando-puntos span:nth-child(3) { animation-delay: 240ms; }
+
+@keyframes rebotar {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.45; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* Sin animaciones: preferencia del sistema o ajuste de la app. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 1ms !important;
+  }
+}
+
+:root[data-movimiento='reducido'] *,
+:root[data-movimiento='reducido'] *::before,
+:root[data-movimiento='reducido'] *::after {
+  animation-duration: 1ms !important;
+  animation-iteration-count: 1 !important;
+  animation-delay: 0ms !important;
+  transition-duration: 1ms !important;
+}

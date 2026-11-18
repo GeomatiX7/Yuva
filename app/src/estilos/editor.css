@@ -1,0 +1,1382 @@
+/* Editor de bloques: BlockNote con los tokens propios, y bloques propios (aviso, subpágina, índice, menciones). */
+.editor-pagina .bn-container[data-color-scheme],
+.historial-previa .bn-container[data-color-scheme] {
+  --bn-font-family: var(--f-texto, var(--f-ui));
+  --bn-border-radius: 8px;
+  --bn-colors-editor-text: var(--tinta);
+  --bn-colors-editor-background: transparent;
+  --bn-colors-menu-text: var(--tinta);
+  --bn-colors-menu-background: var(--flota);
+  --bn-colors-tooltip-text: var(--barra-texto);
+  --bn-colors-tooltip-background: var(--barra);
+  --bn-colors-hovered-text: var(--tinta);
+  --bn-colors-hovered-background: var(--papel-2);
+  --bn-colors-selected-text: var(--acento-sobre);
+  --bn-colors-selected-background: var(--acento);
+  --bn-colors-disabled-text: var(--tinta-3);
+  --bn-colors-disabled-background: var(--papel-2);
+  --bn-colors-shadow: rgba(17, 41, 42, 0.16);
+  --bn-colors-border: var(--linea);
+  --bn-colors-side-menu: var(--tinta-3);
+  --bn-colors-highlights-gray-text: var(--e-gris-t);
+  --bn-colors-highlights-gray-background: var(--e-gris);
+  --bn-colors-highlights-brown-text: var(--e-marron-t);
+  --bn-colors-highlights-brown-background: var(--e-marron);
+  --bn-colors-highlights-red-text: var(--e-rojo-t);
+  --bn-colors-highlights-red-background: var(--e-rojo);
+  --bn-colors-highlights-orange-text: var(--e-naranja-t);
+  --bn-colors-highlights-orange-background: var(--e-naranja);
+  --bn-colors-highlights-yellow-text: var(--e-amarillo-t);
+  --bn-colors-highlights-yellow-background: var(--e-amarillo);
+  --bn-colors-highlights-green-text: var(--e-verde-t);
+  --bn-colors-highlights-green-background: var(--e-verde);
+  --bn-colors-highlights-blue-text: var(--e-azul-t);
+  --bn-colors-highlights-blue-background: var(--e-azul);
+  --bn-colors-highlights-purple-text: var(--e-morado-t);
+  --bn-colors-highlights-purple-background: var(--e-morado);
+  --bn-colors-highlights-pink-text: var(--e-rosa-t);
+  --bn-colors-highlights-pink-background: var(--e-rosa);
+}
+
+.pagina.fuente-serif {
+  --f-texto: var(--f-serif);
+}
+
+.pagina.fuente-mono {
+  --f-texto: var(--f-mono);
+}
+
+.editor-pagina .bn-editor {
+  padding-inline: 0;
+  padding-block: 4px;
+  font-family: var(--f-texto, var(--f-ui));
+  font-size: var(--t-cuerpo);
+  line-height: 1.6;
+  color: var(--tinta);
+  min-height: 120px;
+}
+
+.pagina.texto-pequeno .editor-pagina .bn-editor {
+  font-size: 14.5px;
+}
+
+.editor-fallo {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0;
+  padding: 14px 16px;
+  border-radius: var(--r-2);
+  border: 1px solid var(--linea);
+  background: var(--papel-2);
+  color: var(--tinta-2);
+  overflow-wrap: anywhere;
+}
+
+.editor-fallo small {
+  color: var(--tinta-3);
+}
+
+.editor-cargando {
+  min-height: 200px;
+}
+
+.editor-pagina .bn-block-content[data-content-type='heading'] {
+  font-family: var(--f-titulo);
+  letter-spacing: -0.012em;
+  font-variation-settings: 'opsz' 32;
+}
+
+.pagina.fuente-serif .editor-pagina .bn-block-content[data-content-type='heading'] {
+  font-family: var(--f-serif);
+}
+
+.pagina.fuente-mono .editor-pagina .bn-block-content[data-content-type='heading'] {
+  font-family: var(--f-mono);
+}
+
+.editor-pagina [data-content-type='heading'][data-level='1'] {
+  --level: 1.85em;
+}
+
+.editor-pagina [data-content-type='heading'][data-level='2'] {
+  --level: 1.45em;
+}
+
+.editor-pagina [data-content-type='heading'][data-level='3'] {
+  --level: 1.2em;
+}
+
+.editor-pagina .bn-block-outer:has(> .bn-block > .bn-block-content[data-content-type='heading']) {
+  margin-top: 0.9em;
+}
+
+.editor-pagina .bn-block-outer:first-child:has(> .bn-block > .bn-block-content[data-content-type='heading']) {
+  margin-top: 0.2em;
+}
+
+.editor-pagina .bn-inline-content code,
+.editor-pagina .bn-inline-content [data-style-type='code'] {
+  font-family: var(--f-mono);
+  font-size: 0.86em;
+  background: var(--papel-2);
+  color: var(--peligro);
+  border-radius: 4px;
+  padding: 0.12em 0.36em;
+}
+
+.editor-pagina .bn-inline-content a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--acento);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+.editor-pagina .bn-block-content[data-content-type='quote'] blockquote,
+.editor-pagina .bn-block-content[data-content-type='quote'] {
+  border-left-color: var(--tinta) !important;
+}
+
+.editor-pagina .bn-block-content[data-content-type='codeBlock'] {
+  background: var(--papel-2);
+  color: var(--tinta);
+  border-radius: var(--r-2);
+  font-family: var(--f-mono);
+  font-size: 0.86em;
+}
+
+.editor-pagina .bn-block-content[data-content-type='codeBlock'] > div > select {
+  color: var(--tinta-3);
+  font-family: var(--f-ui);
+}
+
+[data-tema='oscuro'] .editor-pagina .bn-block-content[data-content-type='codeBlock'] .shiki,
+[data-tema='oscuro'] .editor-pagina .bn-block-content[data-content-type='codeBlock'] .shiki span {
+  color: var(--shiki-dark) !important;
+}
+
+.editor-pagina .bn-block-content[data-content-type='checkListItem'][data-checked='true'] .bn-inline-content {
+  color: var(--tinta-3);
+}
+
+.editor-pagina .bn-block-content input[type='checkbox'] {
+  accent-color: var(--acento);
+}
+
+.editor-pagina .bn-block-content[data-content-type='divider'] hr {
+  border-color: var(--linea);
+}
+
+.editor-pagina .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)::before {
+  color: var(--tinta-3);
+}
+
+/* tablas del editor */
+.editor-pagina .bn-block-content[data-content-type='table'] th,
+.editor-pagina .bn-block-content[data-content-type='table'] td {
+  border-color: var(--linea-fuerte);
+}
+
+.editor-pagina .bn-block-content[data-content-type='table'] th {
+  background: var(--papel-2);
+}
+
+/* menús de BlockNote (Mantine) con la tipografía y forma propias */
+.bn-mantine .bn-suggestion-menu,
+.bn-mantine .bn-menu-dropdown,
+.bn-mantine .bn-toolbar,
+.bn-mantine .bn-panel {
+  font-family: var(--f-ui) !important;
+  border: 1px solid var(--linea) !important;
+  border-radius: var(--r-3) !important;
+  box-shadow: var(--sombra-flota) !important;
+}
+
+.bn-mantine .bn-suggestion-menu-label {
+  font-size: var(--t-xs) !important;
+  font-weight: 650 !important;
+  color: var(--tinta-3) !important;
+}
+
+.bn-mantine .bn-suggestion-menu-item[aria-selected='true'],
+.bn-mantine .bn-suggestion-menu-item:hover {
+  background: var(--papel-2) !important;
+  color: var(--tinta) !important;
+}
+
+.bn-mantine .bn-suggestion-menu-item[aria-selected='true'] .mantine-Badge-root,
+.bn-mantine .bn-suggestion-menu-item:hover .mantine-Badge-root {
+  color: var(--tinta-3) !important;
+}
+
+.bn-mantine .bn-mt-suggestion-menu-item-section[data-position='left'] {
+  background: var(--papel-2) !important;
+  color: var(--tinta-2) !important;
+  border-radius: var(--r-1) !important;
+}
+
+.bn-mantine .bn-suggestion-menu-item[aria-selected='true'] .bn-mt-suggestion-menu-item-section[data-position='left'] {
+  background: var(--acento) !important;
+  color: var(--acento-sobre) !important;
+}
+
+.bn-mantine .bn-mt-suggestion-menu-item-subtitle {
+  color: var(--tinta-3) !important;
+}
+
+/* destello al llegar a un bloque desde un enlace o el índice */
+.bn-block.destello > .bn-block-content {
+  animation: destello 1.6s ease-out;
+  border-radius: var(--r-1);
+}
+
+@keyframes destello {
+  0%,
+  30% {
+    background: var(--acento-suave);
+  }
+}
+
+/* ---------- bloques propios ---------- */
+.aviso {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px 14px 14px;
+  border-radius: var(--r-2);
+  background: var(--fondo-aviso, var(--e-amarillo));
+  margin: 2px 0;
+}
+
+.aviso-gris { --fondo-aviso: var(--e-gris); }
+.aviso-marron { --fondo-aviso: var(--e-marron); }
+.aviso-naranja { --fondo-aviso: var(--e-naranja); }
+.aviso-amarillo { --fondo-aviso: var(--e-amarillo); }
+.aviso-verde { --fondo-aviso: var(--e-verde); }
+.aviso-azul { --fondo-aviso: var(--e-azul); }
+.aviso-morado { --fondo-aviso: var(--e-morado); }
+.aviso-rosa { --fondo-aviso: var(--e-rosa); }
+.aviso-rojo { --fondo-aviso: var(--e-rojo); }
+
+.aviso-icono {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+  line-height: 1;
+  border-radius: var(--r-1);
+  margin-top: -1px;
+}
+
+.aviso-icono:hover:not(:disabled) {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.aviso-texto {
+  flex: 1;
+  min-width: 0;
+}
+
+.bloque-pagina {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 6px;
+  margin: 0 -6px;
+  border-radius: var(--r-1);
+  text-decoration: none;
+  color: var(--tinta);
+  font-weight: 560;
+  cursor: pointer;
+}
+
+.bloque-pagina:hover {
+  background: var(--papel-2);
+}
+
+.bloque-pagina-titulo {
+  text-decoration: underline;
+  text-decoration-color: var(--linea-fuerte);
+  text-underline-offset: 4px;
+}
+
+.bloque-pagina.perdida {
+  color: var(--tinta-3);
+  font-weight: 400;
+}
+
+.bloque-pagina-nota {
+  font-size: var(--t-s);
+  color: var(--peligro);
+}
+
+.indice {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 6px 0;
+}
+
+.indice.vacio {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  color: var(--tinta-3);
+  font-size: var(--t-m);
+  text-align: left;
+}
+
+.indice-item {
+  padding: 3px 8px;
+  margin-left: -8px;
+  border-radius: var(--r-1);
+  color: var(--tinta-2);
+  text-decoration: underline;
+  text-decoration-color: var(--linea-fuerte);
+  text-underline-offset: 4px;
+}
+
+.indice-item:hover {
+  background: var(--papel-2);
+  color: var(--tinta);
+}
+
+.indice-item.nivel-2 {
+  padding-left: 30px;
+}
+
+.indice-item.nivel-3 {
+  padding-left: 52px;
+}
+
+.mencion {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  text-decoration: none;
+  color: var(--tinta);
+  font-weight: 560;
+  border-radius: 4px;
+  padding: 0 2px;
+  cursor: pointer;
+}
+
+.mencion .icono-pagina {
+  align-self: center;
+}
+
+.mencion-texto {
+  text-decoration: underline;
+  text-decoration-color: var(--acento);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+.mencion-flecha {
+  color: var(--tinta-3);
+  align-self: center;
+}
+
+.mencion:hover {
+  background: var(--papel-2);
+}
+
+.fecha-en-linea {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--acento-fuerte);
+  font-weight: 560;
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 0 3px;
+}
+
+.fecha-en-linea:hover {
+  background: var(--acento-suave);
+}
+
+.fecha-en-linea input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  width: 100%;
+}
+
+.bd-en-linea {
+  width: 100%;
+  margin: 8px 0;
+  cursor: auto;
+}
+
+/* vista previa del historial */
+.titulo-previa {
+  font-family: var(--f-titulo);
+  font-size: 34px;
+  margin: 0 0 18px;
+  letter-spacing: -0.02em;
+}
+
+.editor-pagina .bn-editor:focus-visible {
+  outline: none;
+}
+
+/* Nada se monta: cada bloque de BlockNote es una cadena de filas flex (bloque › vista de React › contenido ›
+   nuestro componente). Sin esto, un bloque con un texto o un campo ancho no se encoge y se sale de la página o
+   de su columna, montándose sobre la de al lado. */
+.bn-block > .react-renderer,
+.bn-block-content,
+.bn-block-content > * {
+  min-width: 0;
+}
+
+/* ---------- columnas lado a lado ---------- */
+.editor-pagina .columnas {
+  display: flex;
+  flex-wrap: wrap; /* sin espacio (barra lateral abierta, ventana angosta) las columnas bajan de renglón */
+  align-items: stretch;
+  row-gap: 6px;
+  margin: 2px -20px;
+}
+
+.editor-pagina .columna {
+  position: relative;
+  flex: 1 1 0;
+  /* Debajo de esto una columna ya no deja leer un indicador, un reloj o una cuenta atrás: mejor que baje. */
+  min-width: min(190px, 100%);
+  box-sizing: border-box;
+  padding: 0 20px;
+}
+
+/* Una vista de base de datos (tabla, gráfico, calendario…) necesita más aire que un indicador o un reloj: su
+   columna baja de renglón antes, en vez de quedar en unos 200 px con todo abreviado. */
+.editor-pagina .columna:has(.bd-en-linea) {
+  min-width: min(260px, 100%);
+}
+
+.editor-pagina .columna-cuerpo {
+  min-width: 0;
+}
+
+.asa-columna {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -6px;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  width: 12px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.asa-columna::after {
+  content: '';
+  width: 2px;
+  height: 100%;
+  border-radius: 2px;
+  background: transparent;
+  transition: background var(--dur);
+}
+
+.columnas:hover .asa-columna::after {
+  background: var(--linea);
+}
+
+.asa-columna:hover::after,
+.asa-columna.activa::after {
+  background: var(--acento);
+}
+
+.node-columna:first-child .asa-columna {
+  display: none;
+}
+
+/* Guía vertical al arrastrar un bloque junto a otro para ponerlos en columnas. */
+.guia-columna {
+  position: fixed;
+  z-index: 70;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--acento);
+  box-shadow: 0 0 0 3px var(--acento-suave);
+  pointer-events: none;
+}
+
+@media (max-width: 640px) {
+  .editor-pagina .columnas {
+    flex-direction: column;
+    margin: 0;
+  }
+
+  .editor-pagina .columna {
+    padding: 0;
+  }
+
+  .asa-columna {
+    display: none;
+  }
+}
+
+@media print {
+  .asa-columna {
+    display: none;
+  }
+}
+
+/* Sin asa de ancho cuando la página no se puede editar (bloqueada o vista de una versión). */
+.bn-editor[contenteditable='false'] .asa-columna {
+  display: none;
+}
+
+/* Fecha en el texto con recordatorio */
+.fecha-en-linea.con-aviso {
+  background: var(--acento-suave);
+}
+
+.editor-fecha-linea .campo-etiquetado {
+  gap: 4px;
+}
+
+.fila-hora {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fila-hora .campo {
+  flex: 1;
+}
+
+.editor-fecha-linea .ayuda {
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* ---------- paneles: reloj, pomodoro, progreso del tiempo, calendario del mes ---------- */
+.panel {
+  position: relative;
+  container-type: inline-size;
+  box-sizing: border-box;
+  width: 100%; /* con container-type el bloque no toma su ancho del contenido */
+  margin: 4px 0;
+  padding: 16px;
+  border-radius: var(--r-3, 12px);
+  background: var(--papel-2);
+  color: var(--tinta);
+  font-family: var(--f-ui);
+  user-select: none;
+}
+
+.panel-ajuste {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0;
+  transition: opacity var(--dur);
+}
+
+.panel:hover .panel-ajuste,
+.panel-ajuste:focus-visible {
+  opacity: 1;
+}
+
+/* reloj */
+.panel-reloj {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.reloj-esfera {
+  width: min(150px, 74cqi);
+  height: auto;
+}
+
+.reloj-fondo {
+  fill: var(--papel);
+  stroke: var(--linea);
+  stroke-width: 1.5;
+}
+
+.reloj-marca {
+  stroke: var(--tinta-3);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.reloj-marca.fuerte {
+  stroke: var(--tinta);
+  stroke-width: 2.6;
+}
+
+.reloj-horas,
+.reloj-minutos {
+  stroke: var(--tinta);
+  stroke-linecap: round;
+}
+
+.reloj-horas {
+  stroke-width: 4.5;
+}
+
+.reloj-minutos {
+  stroke-width: 3;
+}
+
+.reloj-segundos {
+  stroke: var(--acento);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+}
+
+.reloj-centro {
+  fill: var(--acento);
+}
+
+.reloj-digital {
+  font-family: var(--f-titulo);
+  font-size: clamp(30px, 18cqi, 56px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.reloj-digital span {
+  color: var(--tinta-3);
+  font-size: 0.5em;
+  font-weight: 600;
+}
+
+.reloj-fecha {
+  color: var(--tinta-2);
+  font-size: var(--t-s);
+  text-align: center;
+}
+
+/* progreso del tiempo */
+.panel-progreso {
+  display: grid;
+  gap: 10px;
+}
+
+.progreso-fila {
+  display: grid;
+  grid-template-columns: 4.4em 1fr 3.4em;
+  align-items: center;
+  gap: 10px;
+  font-size: var(--t-s);
+}
+
+.progreso-nombre {
+  color: var(--tinta-2);
+  font-weight: 600;
+}
+
+.progreso-pista,
+.pomodoro-avance {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--papel-3);
+  overflow: hidden;
+}
+
+.progreso-pista > span,
+.pomodoro-avance > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--acento);
+}
+
+.progreso-pct {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta);
+  font-weight: 600;
+}
+
+@container (max-width: 210px) {
+  .progreso-fila {
+    grid-template-columns: 1fr auto;
+    row-gap: 4px;
+  }
+  .progreso-pista {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+/* pomodoro */
+.panel-pomodoro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr); /* la columna no se ensancha con las pestañas o los botones */
+  justify-items: center;
+  gap: 12px;
+  padding: 18px 16px;
+}
+
+.pomodoro-modos {
+  max-width: 100%;
+  /* Caja angosta: las pestañas bajan de renglón (centradas) en vez de esconderse tras una barra de desplazamiento. */
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.segmentado button[aria-selected='true'] {
+  background: var(--papel);
+  color: var(--tinta);
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--linea);
+}
+
+.pomodoro-tiempo {
+  font-family: var(--f-titulo);
+  font-size: clamp(44px, 26cqi, 84px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.panel-pomodoro.corriendo .pomodoro-tiempo {
+  color: var(--tinta);
+}
+
+.panel-pomodoro:not(.corriendo) .pomodoro-tiempo {
+  color: var(--tinta-2);
+}
+
+.pomodoro-avance {
+  width: min(260px, 100%);
+  height: 4px;
+}
+
+.modo-corta .pomodoro-avance > span,
+.modo-larga .pomodoro-avance > span {
+  background: var(--exito);
+}
+
+.pomodoro-controles {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.pomodoro-hechos {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 5px;
+}
+
+.pomodoro-hechos > span:not(.pomodoro-hechos-texto) {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid var(--tinta-3);
+}
+
+.pomodoro-hechos > span.hecho {
+  border-color: var(--acento);
+  background: var(--acento);
+}
+
+.pomodoro-hechos-texto {
+  margin-left: 4px;
+  color: var(--tinta-3);
+  font-size: var(--t-xs);
+}
+
+.pomodoro-ajustes {
+  display: grid;
+  gap: 6px;
+  padding: 6px 10px 10px;
+}
+
+.campo-linea {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: var(--t-s);
+}
+
+.campo-linea .campo {
+  width: 72px;
+  text-align: right;
+}
+
+/* calendario del mes */
+.panel-calendario {
+  padding: 12px 12px 10px;
+}
+
+.calmini-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.calmini-cabecera strong {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--f-titulo);
+  font-size: clamp(13px, 7cqi, 15px);
+}
+
+@container (max-width: 230px) {
+  .calmini-hoy {
+    display: none;
+  }
+}
+
+.calmini-rejilla {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr)); /* siete columnas que caben en la caja, por angosta que sea */
+  gap: 2px;
+  text-align: center;
+}
+
+.calmini-dia-semana {
+  padding: 2px 0 4px;
+  color: var(--tinta-3);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.calmini-dia {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: 26px;
+  /* Ancho de su columna: con aspect-ratio y el alto mínimo, el día se ensanchaba más que ella y se salía de la caja. */
+  width: 100%;
+  min-width: 0;
+  border-radius: var(--r-1);
+  font-size: var(--t-s);
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta);
+}
+
+.calmini-dia:hover {
+  background: var(--papel-3);
+}
+
+.calmini-dia.fuera {
+  color: var(--tinta-3);
+  opacity: 0.7;
+}
+
+.calmini-dia.hoy {
+  background: var(--acento);
+  color: var(--acento-sobre);
+  font-weight: 700;
+}
+
+.calmini-dia.con-diario::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 3px;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--acento-fuerte);
+}
+
+.calmini-dia.hoy.con-diario::after {
+  background: var(--acento-sobre);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-ajuste {
+    transition: none;
+  }
+}
+
+/* ---------- bloque «Botón» ---------- */
+.boton-pagina-caja {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 1px 0;
+}
+
+.boton-pagina {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 0 12px 0 9px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-2);
+  background: var(--papel);
+  color: var(--tinta);
+  font-size: var(--t-s);
+  font-weight: 600;
+  transition: background var(--dur), border-color var(--dur);
+}
+
+.boton-pagina svg {
+  color: var(--acento-fuerte);
+}
+
+.boton-pagina:hover {
+  background: var(--papel-2);
+  border-color: var(--tinta-3);
+}
+
+.boton-pagina:active {
+  transform: translateY(1px);
+}
+
+.boton-pagina.sin-destino {
+  border-style: dashed;
+  color: var(--tinta-3);
+}
+
+.boton-pagina-ajuste {
+  opacity: 0;
+}
+
+.boton-pagina-caja:hover .boton-pagina-ajuste,
+.boton-pagina-ajuste:focus-visible {
+  opacity: 1;
+}
+
+/* título 4: apenas mayor que el texto, en negrita; y su sangría en el bloque Índice */
+.editor-pagina [data-content-type='heading'][data-level='4'] {
+  --level: 1.08em;
+}
+
+.indice-item.nivel-4,
+.indice-item.nivel-5,
+.indice-item.nivel-6 {
+  padding-left: 74px;
+}
+
+/* bloque «Ruta» */
+.ruta-bloque {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px;
+  color: var(--tinta-2);
+  font-size: var(--t-s);
+}
+
+.ruta-paso {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.ruta-paso a,
+.ruta-actual {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 6px;
+  border-radius: var(--r-1);
+  color: inherit;
+  text-decoration: none;
+}
+
+.ruta-paso a:hover {
+  background: var(--papel-2);
+  color: var(--tinta);
+}
+
+.ruta-actual {
+  color: var(--tinta);
+  font-weight: 560;
+}
+
+/* botón «Copiar» de los bloques de código */
+.copiar-codigo {
+  position: fixed;
+  z-index: 15;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: 88px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: var(--r-1);
+  background: var(--flota);
+  border: 1px solid var(--linea);
+  color: var(--tinta-2);
+  font-size: var(--t-xs);
+}
+
+.copiar-codigo:hover {
+  color: var(--tinta);
+  border-color: var(--linea-fuerte);
+}
+
+/* visor de imágenes a pantalla completa */
+.visor-imagen {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(8, 10, 12, 0.9);
+}
+
+.visor-imagen img {
+  max-width: 92vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.visor-flecha,
+.visor-cerrar {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.visor-flecha:hover,
+.visor-cerrar:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.visor-flecha.izq { left: 18px; }
+.visor-flecha.der { right: 18px; }
+.visor-cerrar { top: 16px; right: 16px; }
+
+.visor-cuenta {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-size: var(--t-s);
+  opacity: 0.8;
+}
+
+@media print {
+  .copiar-codigo,
+  .visor-imagen {
+    display: none;
+  }
+}
+
+/* botón de página con color */
+.boton-pagina.con-color {
+  height: auto;
+  max-width: none;
+  border-color: transparent;
+}
+
+/* pestañas dentro de la página */
+/* Con .bn-editor delante: base.css ya usa .pestanas y .pestana para las pestañas de los diálogos
+   (fila flexible, letra pequeña y gris), y sin esto el contenido salía al lado de la barra. */
+.bn-editor .pestanas {
+  display: block;
+  margin: 4px 0;
+  padding: 0;
+  border-bottom: 0;
+}
+
+.bn-editor .pestana {
+  padding: 0;
+  margin-bottom: 0;
+  border-bottom: 0;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+.pestanas-barra {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow-x: auto;
+  overflow-y: hidden; /* el margen de -1px de las pestañas hacía salir una barra de desplazamiento vertical */
+  border-bottom: 1px solid var(--linea);
+  margin-bottom: 6px;
+  user-select: none;
+}
+
+.pestana-boton {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  color: var(--tinta-2);
+}
+
+.pestana-boton > button:first-child {
+  padding: 6px 10px;
+  font-size: var(--t-s);
+  font-weight: 560;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.pestana-boton:hover {
+  color: var(--tinta);
+}
+
+.pestana-boton.activa {
+  color: var(--tinta);
+  border-bottom-color: var(--acento);
+}
+
+.pestana-quitar,
+.pestana-mas {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-1);
+  color: var(--tinta-3);
+}
+
+.pestana-quitar:hover,
+.pestana-mas:hover {
+  background: var(--papel-2);
+  color: var(--tinta);
+}
+
+.pestana-nombre {
+  width: 130px;
+  height: 26px;
+  font-size: var(--t-s);
+}
+
+.pestana.oculta {
+  display: none;
+}
+
+@media print {
+  .pestana.oculta {
+    display: block;
+  }
+}
+
+/* lista numerada con letras o romanos: el número sale del atributo data-index que pone BlockNote */
+.editor-pagina .bn-block-outer > .bn-block .bn-block-content[data-content-type='numberedListItem'][data-estilo='letras']::before {
+  counter-set: yuva-lista attr(data-index type(<integer>), 1);
+  content: counter(yuva-lista, lower-alpha) '.';
+}
+
+.editor-pagina .bn-block-outer > .bn-block .bn-block-content[data-content-type='numberedListItem'][data-estilo='romanos']::before {
+  counter-set: yuva-lista attr(data-index type(<integer>), 1);
+  content: counter(yuva-lista, lower-roman) '.';
+}
+
+.formato-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: var(--t-s);
+  color: var(--tinta-2);
+}
+
+.formato-lista label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.formato-lista .campo {
+  width: 72px;
+  height: 26px;
+}
+
+/* bloque sincronizado */
+.sincronizado {
+  border: 1px solid transparent;
+  border-radius: var(--r-2);
+  padding: 2px 8px 6px;
+  transition: border-color var(--dur);
+}
+
+.sincronizado:hover,
+.sincronizado:focus-within,
+.sincronizado.vacio {
+  border-color: color-mix(in srgb, var(--acento) 55%, var(--linea));
+}
+
+.sincronizado.vacio {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.sincronizado-barra {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  opacity: 0;
+  transition: opacity var(--dur);
+}
+
+.sincronizado:hover .sincronizado-barra,
+.sincronizado:focus-within .sincronizado-barra {
+  opacity: 1;
+}
+
+.sincronizado-titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--tinta-3);
+  font-size: var(--t-xs);
+}
+
+.sincronizado-cuerpo .bn-editor {
+  padding-inline: 0;
+  background: transparent;
+}
+
+/* marcador web */
+.marcador {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-2);
+  padding: 4px 6px 4px 0;
+}
+
+.marcador.editando {
+  flex-direction: column;
+  align-items: stretch;
+  padding: 10px;
+}
+
+.marcador.vacio {
+  padding: 10px 12px;
+  color: var(--tinta-3);
+}
+
+.marcador-enlace {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  color: var(--tinta);
+  text-decoration: none;
+}
+
+.marcador-enlace:hover strong {
+  text-decoration: underline;
+}
+
+.marcador-icono {
+  flex: none;
+  color: var(--tinta-3);
+}
+
+.marcador-textos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.marcador-textos > * {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.marcador-descripcion {
+  color: var(--tinta-2);
+  font-size: var(--t-s);
+}
+
+.marcador-textos small {
+  color: var(--tinta-3);
+}
+
+/* ---------- ecuaciones (KaTeX) ---------- */
+.ecuacion-bloque {
+  width: 100%;
+  padding: 10px 8px;
+  border-radius: var(--r-2);
+  text-align: center;
+  overflow-x: auto;
+}
+.ecuacion-bloque.editable { cursor: pointer; }
+.ecuacion-bloque.editable:hover,
+.ecuacion-bloque.editable:focus-visible { background: var(--papel-2); outline: none; }
+.ecuacion-bloque.editando { border: 1px solid var(--linea); cursor: default; text-align: left; }
+.ecuacion-vista { min-height: 2.2em; display: flex; justify-content: center; align-items: center; padding: 6px 0 10px; overflow-x: auto; }
+.ecuacion-vista.chica { min-height: 1.6em; padding: 4px 0 8px; }
+.ecuacion-editor { display: flex; flex-direction: column; gap: 6px; }
+.ecuacion-campo { font-family: var(--f-mono); font-size: 13px; resize: vertical; width: 100%; }
+.ecuacion-pie { display: flex; justify-content: space-between; align-items: center; color: var(--tinta-3); }
+.ecuacion-flotante { padding: 10px; }
+.ecuacion-linea { padding: 0 2px; border-radius: var(--r-1); }
+.ecuacion-linea.editable { cursor: pointer; }
+.ecuacion-linea.editable:hover { background: var(--papel-2); }
+.ecuacion-error { color: var(--peligro); font-family: var(--f-mono); font-size: 12.5px; }
+.ecuacion-vacia { color: var(--tinta-3); font-size: 14px; }
+.ecuacion-formula .katex-display { margin: 0; }
+
+/* ---------- diagramas (Mermaid) ---------- */
+.diagrama { width: 100%; border: 1px solid var(--linea); border-radius: var(--r-2); overflow: hidden; }
+.diagrama-barra { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px; background: var(--papel-2); border-bottom: 1px solid var(--linea); }
+.diagrama-titulo { font-size: 12px; color: var(--tinta-3); font-weight: 600; letter-spacing: 0.02em; }
+.diagrama-cuerpo { display: grid; gap: 0; }
+.diagrama.modo-ambos .diagrama-cuerpo { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); }
+.diagrama-codigo {
+  font-family: var(--f-mono);
+  font-size: 13px;
+  line-height: 1.5;
+  border: 0;
+  border-right: 1px solid var(--linea);
+  background: var(--papel);
+  color: var(--tinta);
+  padding: 10px;
+  resize: vertical;
+  outline: none;
+  min-height: 100%;
+}
+.diagrama.modo-codigo .diagrama-codigo { border-right: 0; }
+.diagrama-svg, .diagrama-vacio, .diagrama-error { padding: 12px; display: flex; justify-content: center; align-items: center; overflow-x: auto; }
+.diagrama-svg svg { max-width: 100%; height: auto; }
+.diagrama-vacio { color: var(--tinta-3); font-size: 13px; }
+.diagrama-error { color: var(--peligro); font-size: 12.5px; font-family: var(--f-mono); justify-content: flex-start; }
+.segmentado.chico button { padding: 2px 8px; font-size: 12px; }
+@media (max-width: 640px) {
+  .diagrama.modo-ambos .diagrama-cuerpo { grid-template-columns: 1fr; }
+  .diagrama-codigo { border-right: 0; border-bottom: 1px solid var(--linea); }
+}

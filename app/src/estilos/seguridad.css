@@ -1,0 +1,214 @@
+/* Espacios, bloqueo y copias cifradas (S1). */
+
+/* ---------- cabecera de la barra lateral ---------- */
+.espacio-textos {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.15;
+}
+.espacio-actual {
+  font-size: 12px;
+  color: var(--barra-texto-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.espacio-flecha {
+  flex: none;
+  margin-left: auto;
+  color: var(--barra-texto-2);
+}
+.icono-espacio {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  background: var(--papel-3);
+  font-size: 13px;
+  font-weight: 700;
+}
+.form-espacio {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 8px 8px;
+}
+.form-espacio input {
+  width: 100%;
+}
+.form-espacio .botones-fila {
+  justify-content: flex-end;
+}
+.form-espacio-ayuda {
+  padding: 0 8px;
+  margin: 0;
+}
+
+/* ---------- pantalla de bloqueo ---------- */
+/* Mientras se comprueba si hay bloqueo, o mientras está bloqueada, la app no se ve. */
+html.yuva-comprobando body > *:not(#yuva-seguridad),
+html.yuva-bloqueada body > *:not(#yuva-seguridad) {
+  visibility: hidden !important;
+}
+.pantalla-bloqueo {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: radial-gradient(circle at 50% 30%, var(--barra-2), var(--barra) 70%);
+  color: var(--barra-texto);
+  -webkit-app-region: drag;
+}
+.bloqueo-caja {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: min(340px, 100%);
+  text-align: center;
+  -webkit-app-region: no-drag;
+}
+.bloqueo-caja img {
+  border-radius: 16px;
+}
+.bloqueo-caja h1 {
+  margin: 0;
+  font-family: var(--f-titulo);
+  font-size: 26px;
+}
+.bloqueo-espacio {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--barra-texto-2);
+  font-size: 14px;
+}
+.bloqueo-campo {
+  position: relative;
+  width: 100%;
+}
+.bloqueo-campo input {
+  width: 100%;
+  padding: 10px 40px 10px 14px;
+  font-size: 18px;
+  text-align: center;
+  letter-spacing: 0.15em;
+  border-radius: var(--r-2);
+  border: 1px solid var(--barra-linea);
+  background: var(--papel);
+  color: var(--tinta);
+}
+.bloqueo-campo .boton-icono {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--tinta-2);
+}
+.bloqueo-caja .boton-primario {
+  width: 100%;
+}
+.bloqueo-caja .boton-texto {
+  color: var(--barra-texto-2);
+}
+.bloqueo-caja .error {
+  margin: 0;
+  color: #ffb4b4;
+}
+.bloqueo-olvido {
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 12px 14px;
+  border-radius: var(--r-2);
+  background: var(--barra-2);
+  color: var(--barra-texto);
+}
+.bloqueo-olvido p {
+  margin: 0 0 8px;
+}
+.bloqueo-olvido p:last-child {
+  margin: 0;
+}
+.oculto-visual {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ---------- cuadro de contraseña ---------- */
+.velo-clave {
+  z-index: 300;
+}
+.cuadro-clave {
+  width: min(400px, calc(100vw - 32px));
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.cuadro-clave h2 {
+  margin: 0;
+  font-size: 17px;
+}
+.cuadro-clave .ayuda {
+  margin: 0;
+}
+.cuadro-clave input[type='password'],
+.cuadro-clave input[type='text'] {
+  width: 100%;
+}
+.cuadro-clave-ver {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--tinta-2);
+}
+
+/* ---------- ajustes ---------- */
+.aviso-seguridad {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: var(--r-2);
+  background: var(--acento-suave);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.aviso-seguridad p {
+  margin: 0;
+}
+.aviso-seguridad svg {
+  flex: none;
+  margin-top: 2px;
+}
+.id-espacio {
+  font-family: var(--f-mono);
+  font-size: 14px;
+  user-select: all;
+}
+.zona-peligro {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--peligro);
+  border-radius: var(--r-2);
+  background: var(--peligro-suave);
+}
+.zona-peligro p {
+  margin: 0;
+}
+.zona-peligro input {
+  max-width: 320px;
+}

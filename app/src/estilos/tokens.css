@@ -1,0 +1,206 @@
+/* Tokens del sistema visual (ver DESIGN.md). Ningún color o tamaño suelto fuera de aquí. */
+:root {
+  color-scheme: light;
+  /* papel y tinta */
+  --papel: #fcfcfa;
+  --papel-2: #f3f4f1;
+  --papel-3: #e9ebe7;
+  --tinta: #1a1f1e;
+  --tinta-2: #48524f;
+  --tinta-3: #5f6965;
+  --linea: #e1e4df;
+  --linea-fuerte: #c9cec8;
+  --flota: #ffffff;
+  --velo: rgba(17, 41, 42, 0.38);
+
+  /* barra lateral: tinta profunda */
+  --barra: #11292a;
+  --barra-2: #183637;
+  --barra-3: #21453f;
+  --barra-texto: #dce7e3;
+  --barra-texto-2: #9db3ad;
+  --barra-linea: #23403f;
+
+  /* acento (cambia con data-acento) */
+  --acento: #e8a13a;
+  --acento-sobre: #1a1f1e;
+  --acento-fuerte: #8a5600;
+  --acento-suave: rgba(232, 161, 58, 0.18);
+  --seleccion: rgba(232, 161, 58, 0.28);
+
+  --peligro: #b3381f;
+  --peligro-suave: #f9e1dc;
+  --exito: #23633a;
+
+  /* etiquetas: fondo / texto */
+  --e-gris: #ecedea;      --e-gris-t: #4b5451;
+  --e-marron: #f1e6dc;    --e-marron-t: #6b4a2f;
+  --e-naranja: #fce4cf;   --e-naranja-t: #8a4510;
+  --e-amarillo: #f9edc4;  --e-amarillo-t: #6e5307;
+  --e-verde: #dcefdf;     --e-verde-t: #23633a;
+  --e-azul: #dce8f7;      --e-azul-t: #1f4f8a;
+  --e-morado: #eae1f5;    --e-morado-t: #5b3a86;
+  --e-rosa: #f8e0ea;      --e-rosa-t: #8a2e5a;
+  --e-rojo: #f9deda;      --e-rojo-t: #9a2b1e;
+
+  /* tipografía */
+  --f-ui: 'Hanken Grotesk Variable', 'Segoe UI', system-ui, sans-serif;
+  --f-titulo: 'Bricolage Grotesque Variable', 'Hanken Grotesk Variable', system-ui, sans-serif;
+  --f-serif: 'Literata Variable', Georgia, serif;
+  --f-mono: 'JetBrains Mono Variable', Consolas, monospace;
+  --t-xs: 12px;
+  --t-s: 13px;
+  --t-m: 14px;
+  --t-cuerpo: 16.5px;
+  --t-l: 20px;
+  --t-xl: 28px;
+  --t-titulo: 42px;
+
+  /* forma */
+  --r-1: 5px;
+  --r-2: 8px;
+  --r-3: 12px;
+  --sombra-flota: 0 14px 36px rgba(17, 41, 42, 0.16), 0 2px 8px rgba(17, 41, 42, 0.1);
+  --sombra-panel: -18px 0 40px rgba(17, 41, 42, 0.14);
+  --anillo: 0 0 0 2px var(--acento);
+  --dur: 140ms;
+}
+
+:root[data-tema='oscuro'] {
+  color-scheme: dark;
+  --papel: #141a19;
+  --papel-2: #1c2422;
+  --papel-3: #26302e;
+  --tinta: #e6ecea;
+  --tinta-2: #b0bcb8;
+  --tinta-3: #8d9a96;
+  --linea: #2a3533;
+  --linea-fuerte: #3b4846;
+  --flota: #1e2725;
+  --velo: rgba(0, 0, 0, 0.55);
+
+  --barra: #0c1716;
+  --barra-2: #142422;
+  --barra-3: #1d332f;
+  --barra-texto: #d9e4e0;
+  --barra-texto-2: #93a8a2;
+  --barra-linea: #1c2e2c;
+
+  --acento-fuerte: #f0b45c;
+  --acento-suave: rgba(232, 161, 58, 0.16);
+  --seleccion: rgba(232, 161, 58, 0.3);
+  --peligro: #f08a75;
+  --peligro-suave: #3d1f1a;
+  --exito: #8fd4a5;
+
+  --e-gris: #2e3533;      --e-gris-t: #c8d0cd;
+  --e-marron: #3b2e24;    --e-marron-t: #e2c6ae;
+  --e-naranja: #47301b;   --e-naranja-t: #f4c08e;
+  --e-amarillo: #433a18;  --e-amarillo-t: #eed98a;
+  --e-verde: #1e3b29;     --e-verde-t: #a7ddb6;
+  --e-azul: #1c3049;      --e-azul-t: #a9c9f0;
+  --e-morado: #33284a;    --e-morado-t: #cdb8ec;
+  --e-rosa: #45243a;      --e-rosa-t: #f0b3cf;
+  --e-rojo: #4a2320;      --e-rojo-t: #f3afa5;
+
+  --sombra-flota: 0 14px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --sombra-panel: -18px 0 44px rgba(0, 0, 0, 0.45);
+}
+
+/* acentos seleccionables */
+:root[data-acento='cobalto'] { --acento: #3b5bdb; --acento-sobre: #ffffff; --acento-fuerte: #3451c6; --acento-suave: rgba(59, 91, 219, 0.14); --seleccion: rgba(59, 91, 219, 0.22); }
+:root[data-acento='pino'] { --acento: #1f7a55; --acento-sobre: #ffffff; --acento-fuerte: #1b6e4c; --acento-suave: rgba(31, 122, 85, 0.14); --seleccion: rgba(31, 122, 85, 0.22); }
+:root[data-acento='granada'] { --acento: #c2365e; --acento-sobre: #ffffff; --acento-fuerte: #ad2f54; --acento-suave: rgba(194, 54, 94, 0.13); --seleccion: rgba(194, 54, 94, 0.2); }
+:root[data-acento='grafito'] { --acento: #56626b; --acento-sobre: #ffffff; --acento-fuerte: #4c5760; --acento-suave: rgba(86, 98, 107, 0.15); --seleccion: rgba(86, 98, 107, 0.24); }
+:root[data-tema='oscuro'][data-acento='cobalto'] { --acento: #5b7cf0; --acento-fuerte: #9db0ff; --seleccion: rgba(91, 124, 240, 0.32); }
+:root[data-tema='oscuro'][data-acento='pino'] { --acento: #2a9d6d; --acento-fuerte: #6fd3a3; --seleccion: rgba(42, 157, 109, 0.3); }
+:root[data-tema='oscuro'][data-acento='granada'] { --acento: #d24a72; --acento-fuerte: #f497b0; --seleccion: rgba(210, 74, 114, 0.3); }
+:root[data-tema='oscuro'][data-acento='grafito'] { --acento: #7d8a94; --acento-fuerte: #b3bec6; --seleccion: rgba(125, 138, 148, 0.32); }
+
+/* ---------- colores de Yuva: vino y dorado (los del logo); «tinta» deja los de arriba ----------
+   Contrastes: texto de la barra 13,4:1 y 7,7:1; dorado sobre la barra 8,0:1; acento fuerte 6,3:1 sobre
+   el papel claro y 9,5:1 sobre el oscuro; tinta sobre el dorado 8,0:1. */
+:root[data-paleta='yuva'] {
+  /* El papel y las tintas toman un matiz vino para ir con la barra (tinta 16,5:1; tinta-3 5,9:1). */
+  --papel: #fcf8f7;
+  --papel-2: #f6eeec;
+  --papel-3: #ece1de;
+  --tinta: #22171a;
+  --tinta-2: #574549;
+  --tinta-3: #705b60;
+  --linea: #ebe1de;
+  --linea-fuerte: #d6c6c2;
+  --flota: #ffffff;
+  --velo: rgba(42, 10, 18, 0.4);
+  --barra: #3a0f1a;
+  --barra-2: #4a1422;
+  --barra-3: #5e1a2b;
+  --barra-texto: #f1e4e6;
+  --barra-texto-2: #c9a9ae;
+  --barra-linea: #52182a;
+  --sombra-flota: 0 14px 36px rgba(42, 10, 18, 0.16), 0 2px 8px rgba(42, 10, 18, 0.1);
+  --sombra-panel: -18px 0 40px rgba(42, 10, 18, 0.14);
+}
+
+:root[data-paleta='yuva'][data-tema='oscuro'] {
+  /* Fondo vino muy oscuro, a juego con la barra (tinta 15,4:1; tinta-3 6,1:1). */
+  --papel: #1c1215;
+  --papel-2: #26191d;
+  --papel-3: #322227;
+  --tinta: #f2e9ea;
+  --tinta-2: #cdb9bc;
+  --tinta-3: #a68f94;
+  --linea: #35252a;
+  --linea-fuerte: #4a353b;
+  --flota: #271b1f;
+  --velo: rgba(0, 0, 0, 0.55);
+  --barra: #2a0b14;
+  --barra-2: #36101b;
+  --barra-3: #461523;
+  --barra-texto: #eedfe2;
+  --barra-texto-2: #c4a6ab;
+  --barra-linea: #3a1220;
+  --sombra-flota: 0 14px 40px rgba(0, 0, 0, 0.5), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --sombra-panel: -18px 0 44px rgba(0, 0, 0, 0.45);
+}
+
+/* El acento por defecto («azafrán») se vuelve el dorado del logo. */
+:root[data-paleta='yuva'][data-acento='azafran'] {
+  --acento: #d9ae52;
+  --acento-sobre: #1a1f1e;
+  --acento-fuerte: #7a5810;
+  --acento-suave: rgba(217, 174, 82, 0.2);
+  --seleccion: rgba(217, 174, 82, 0.3);
+}
+
+:root[data-paleta='yuva'][data-tema='oscuro'][data-acento='azafran'] {
+  --acento-fuerte: #e3b85a;
+  --acento-suave: rgba(217, 174, 82, 0.16);
+  --seleccion: rgba(217, 174, 82, 0.3);
+}
+
+/* ---------- alto contraste (Ajustes › Apariencia): solo redefine tokens, con claro y con oscuro ---------- */
+:root[data-contraste='alto'][data-tema='claro'][data-paleta] {
+  --tinta: #0b0d0c;
+  --tinta-2: #262b29;
+  --tinta-3: #3b4240;
+  --linea: #878e8a;
+  --linea-fuerte: #5f6662;
+}
+
+:root[data-contraste='alto'][data-tema='oscuro'][data-paleta] {
+  --tinta: #ffffff;
+  --tinta-2: #e6ecea;
+  --tinta-3: #cfd8d4;
+  --linea: #87938f;
+  --linea-fuerte: #aab5b1;
+}
+
+:root[data-contraste='alto'] :focus-visible {
+  outline: 2px solid var(--tinta);
+  outline-offset: 2px;
+}
+
+:root[data-contraste='alto'] .etiqueta {
+  box-shadow: inset 0 0 0 1px currentColor;
+}

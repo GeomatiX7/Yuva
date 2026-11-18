@@ -1,0 +1,386 @@
+/* Agenda, calendarios ICS y bloque Grabación (S3). */
+
+.agenda {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 5vh var(--margen-pagina, 32px) 100px;
+}
+.agenda-cabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.agenda-cabeza h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-family: var(--f-titulo);
+  font-size: 36px;
+  letter-spacing: -0.02em;
+}
+.agenda-controles {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.agenda .segmentos {
+  display: inline-flex;
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.agenda .segmentos button {
+  border: 0;
+  background: transparent;
+  color: var(--tinta-2);
+  padding: 5px 12px;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.agenda .segmentos button.activo {
+  background: var(--acento-suave);
+  color: var(--acento-fuerte);
+  font-weight: 600;
+}
+.agenda-titulo {
+  margin: 10px 0 8px;
+  color: var(--acento-fuerte);
+  font-weight: 650;
+}
+.agenda-origenes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.agenda-origen {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--linea);
+  background: var(--papel);
+  color: var(--tinta-2);
+  border-radius: 999px;
+  padding: 3px 10px;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.agenda-origen.apagado {
+  opacity: 0.45;
+  text-decoration: line-through;
+}
+.cal-punto {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+  border: 0;
+  padding: 0;
+}
+.cal-punto.grande {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.agenda-rejilla {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  border-top: 1px solid var(--linea);
+  border-left: 1px solid var(--linea);
+}
+.agenda-dia-nombre {
+  padding: 6px 8px;
+  font-size: 12px;
+  color: var(--tinta-3);
+  text-transform: capitalize;
+  border-right: 1px solid var(--linea);
+  border-bottom: 1px solid var(--linea);
+}
+.agenda-celda {
+  min-height: 108px;
+  padding: 4px;
+  border-right: 1px solid var(--linea);
+  border-bottom: 1px solid var(--linea);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.agenda-rejilla.semana .agenda-celda {
+  min-height: 380px;
+}
+.agenda-celda.fuera {
+  background: var(--papel-2);
+}
+.agenda-celda.fuera .agenda-num {
+  color: var(--tinta-3);
+}
+.agenda-num {
+  font-size: 12px;
+  color: var(--tinta-2);
+  padding: 2px 4px;
+  align-self: flex-end;
+}
+.agenda-celda.hoy .agenda-num {
+  background: var(--acento);
+  color: var(--acento-sobre);
+  border-radius: 999px;
+  min-width: 22px;
+  text-align: center;
+  font-weight: 700;
+}
+.agenda-chip {
+  border: 0;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  max-width: 100%;
+}
+.agenda-rejilla.semana .agenda-chip {
+  white-space: normal;
+}
+.agenda-chip b {
+  font-weight: 650;
+}
+.agenda-mas {
+  border: 0;
+  background: none;
+  color: var(--tinta-3);
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+  padding: 0 6px;
+}
+
+.agenda-lista section {
+  margin-bottom: 16px;
+}
+.agenda-lista h3 {
+  font-size: 14px;
+  margin: 0 0 4px;
+  color: var(--tinta-2);
+}
+.agenda-lista section.hoy h3 {
+  color: var(--acento-fuerte);
+}
+.agenda-lista ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.agenda-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font: inherit;
+  color: var(--tinta);
+  text-align: left;
+  cursor: pointer;
+}
+.agenda-fila:hover {
+  background: var(--papel-2);
+}
+.agenda-hora {
+  width: 92px;
+  flex: none;
+  font-size: 12.5px;
+  color: var(--tinta-2);
+  font-variant-numeric: tabular-nums;
+}
+.agenda-fila-titulo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.agenda-fila small {
+  color: var(--tinta-3);
+  font-size: 12px;
+}
+
+.agenda-velo {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  background: var(--velo);
+}
+.agenda-detalle {
+  width: min(460px, calc(100vw - 32px));
+  max-height: 80vh;
+  overflow: auto;
+  background: var(--papel);
+  color: var(--tinta);
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  box-shadow: var(--flota);
+  padding: 16px 18px;
+  outline: none;
+}
+.agenda-detalle header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.agenda-detalle h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 18px;
+}
+.agenda-detalle p {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 0;
+  color: var(--tinta-2);
+  font-size: 13.5px;
+}
+.agenda-descripcion {
+  margin-top: 12px;
+  white-space: pre-wrap;
+  font-size: 13.5px;
+  border-top: 1px solid var(--linea);
+  padding-top: 10px;
+  overflow-wrap: anywhere;
+}
+.agenda-de {
+  display: block;
+  margin-top: 12px;
+  color: var(--tinta-3);
+}
+
+/* Capa ICS dentro de las vistas Calendario de las bases. */
+.capa-ics {
+  border: 0;
+  border-left: 3px solid currentColor;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font: inherit;
+  font-size: 11.5px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  opacity: 0.85;
+  cursor: pointer;
+  max-width: 100%;
+}
+
+/* Ajustes › Calendarios */
+.cal-suscribir {
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.cal-suscribir .campo-bloque:first-child {
+  flex: 1 1 280px;
+}
+.lista-calendarios {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.lista-calendarios li {
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.cal-cabeza {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cal-nombre {
+  flex: 1;
+}
+.cal-detalle {
+  margin: 6px 0 4px;
+}
+.cal-interruptores {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+.cal-color-sel {
+  position: relative;
+  display: inline-flex;
+}
+.cal-paleta {
+  position: absolute;
+  top: 22px;
+  left: 0;
+  z-index: 5;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: var(--papel);
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  box-shadow: var(--flota);
+}
+
+/* Bloque Grabación */
+.grabacion {
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+  background: var(--papel-2);
+}
+.grabacion-fila {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.grabacion-tiempo {
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  min-width: 54px;
+}
+.grabacion-punto {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--peligro);
+  animation: grabando 1.2s ease-in-out infinite;
+}
+@keyframes grabando {
+  50% {
+    opacity: 0.25;
+  }
+}
+.grabacion audio {
+  width: 100%;
+  height: 36px;
+}
+.grabacion small {
+  color: var(--tinta-3);
+}

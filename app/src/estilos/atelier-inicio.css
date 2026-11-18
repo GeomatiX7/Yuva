@@ -1,0 +1,929 @@
+/* «Atelier» · Inicio, bienvenida y puesta a punto (sesión S-E).
+   Fecha en mono con línea dorada, saludo que entra palabra a palabra, dibujo de línea con el monograma,
+   cuatro caminos numerados, la puesta a punto con su línea de avance y, debajo, la biblioteca de siempre.
+   Solo apariencia. Todo el movimiento se apaga con data-movimiento='reducido' y prefers-reduced-motion
+   (las reglas generales de movimiento.css dejan cada animación en su estado final). */
+
+/* ---------- lienzo ---------- */
+.atelier-inicio {
+  max-width: 1120px;
+  padding: 44px clamp(24px, 5vw, 72px) 96px;
+  container: inicio / inline-size;
+}
+
+.atelier-inicio .entra {
+  animation: inicio-entra 700ms var(--ease-salida) both;
+  animation-delay: calc(var(--i, 0) * 70ms);
+}
+
+@keyframes inicio-entra {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+/* ---------- pórtico: fecha, saludo, bajada, botones y dibujo ---------- */
+.inicio-portico {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 300px);
+  gap: 40px;
+  align-items: center;
+}
+
+.inicio-antetitulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  font: 500 11px var(--f-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--acento-fuerte);
+}
+
+.inicio-antetitulo::after {
+  content: '';
+  width: 40px;
+  height: 1px;
+  background: var(--acento);
+  transform-origin: left;
+  animation: inicio-crece 900ms 300ms var(--ease-salida) both;
+}
+
+@keyframes inicio-crece {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.atelier-inicio .inicio-saludo {
+  margin: 0;
+  font-family: var(--f-titulo);
+  font-size: clamp(30px, 4cqi, 44px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  font-variation-settings: 'opsz' 96;
+  color: var(--tinta);
+  overflow-wrap: anywhere;
+}
+
+.inicio-saludo-linea {
+  display: block;
+}
+
+.inicio-saludo-linea + .inicio-saludo-linea {
+  color: var(--tinta-2);
+}
+
+.inicio-palabra {
+  display: inline-block;
+  animation: inicio-palabra 800ms var(--ease-salida) both;
+  animation-delay: calc(var(--p, 0) * 55ms + 80ms);
+}
+
+@keyframes inicio-palabra {
+  from {
+    opacity: 0;
+    transform: translateY(0.4em);
+    filter: blur(4px);
+  }
+}
+
+.inicio-bajada {
+  max-width: 520px;
+  margin: 14px 0 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--tinta-2);
+}
+
+.atelier-inicio .inicio-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 24px 0 0;
+}
+
+.inicio-acciones .boton .atajo {
+  margin-left: 2px;
+  background: transparent;
+  border-color: var(--linea-fuerte);
+  color: var(--tinta-3);
+  line-height: 17px;
+}
+
+.inicio-acciones .boton-primario .atajo {
+  border-color: color-mix(in srgb, currentColor 35%, transparent);
+  color: inherit;
+  opacity: 0.8;
+}
+
+/* El dibujo: trazos que se dibujan solos y capas con paralaje (Inicio.tsx mueve los [data-prof]). */
+.inicio-dibujo {
+  width: 100%;
+  max-width: 300px;
+  justify-self: end;
+  overflow: visible;
+}
+
+.inicio-dibujo [data-prof] {
+  transition: transform 600ms var(--ease-salida);
+}
+
+.dib-traza {
+  fill: none;
+  stroke-dasharray: var(--l);
+  stroke-dashoffset: var(--l);
+  animation: dib-traza 1.8s var(--ease-salida) forwards;
+  animation-delay: calc(var(--d, 0) * 1ms);
+}
+
+@keyframes dib-traza {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+.dib-fina {
+  stroke: var(--linea-fuerte);
+  stroke-width: 1;
+}
+
+.dib-oro {
+  stroke: var(--acento);
+  stroke-width: 1.2;
+}
+
+.dib-vino {
+  stroke: var(--principal);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.dib-puntos {
+  fill: var(--linea-fuerte);
+}
+
+.dib-late {
+  animation: dib-late 3s ease-in-out infinite;
+}
+
+@keyframes dib-late {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.dib-satelite {
+  fill: var(--acento);
+}
+
+.dib-orbita {
+  transform-origin: 160px 125px;
+  animation: dib-gira 40s linear infinite;
+}
+
+@keyframes dib-gira {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.dib-monograma {
+  filter: drop-shadow(0 6px 14px rgba(42, 10, 18, 0.18));
+}
+
+.dib-esquina {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: dib-dobla 1s 900ms var(--ease-rebote) both;
+}
+
+@keyframes dib-dobla {
+  from {
+    opacity: 0;
+    transform: scale(0);
+  }
+}
+
+/* ---------- cuerpo: caminos y puesta a punto ---------- */
+.inicio-cuerpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 40px;
+  align-items: start;
+  margin: 44px 0 52px;
+}
+
+/* Cabecera de sección: raya de tinta, título apretado y un dato en mono a la derecha. */
+.inicio-tit {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 0 6px;
+  border-top: 1px solid var(--tinta);
+}
+
+.atelier-inicio .inicio-tit h2,
+.atelier-inicio .inicio-seccion > h2 {
+  margin: 0;
+  font-family: var(--f-titulo);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  color: var(--tinta);
+}
+
+.inicio-tit > span {
+  font: 500 11px var(--f-mono);
+  color: var(--tinta-3);
+  white-space: nowrap;
+}
+
+.atelier-inicio .inicio-seccion > h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 10px;
+  border-top: 1px solid var(--tinta);
+}
+
+.atelier-inicio .inicio-seccion > h2 svg {
+  color: var(--tinta-3);
+}
+
+/* Los cuatro caminos */
+.camino {
+  position: relative;
+  display: grid;
+  grid-template-columns: 44px 64px minmax(0, 1fr) auto 20px;
+  gap: 16px;
+  align-items: center;
+  width: 100%;
+  padding: 16px 8px;
+  border-bottom: 1px solid var(--linea);
+  border-radius: 4px;
+  text-align: left;
+  overflow: hidden;
+  color: var(--tinta);
+}
+
+.camino::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(260px circle at var(--x, 50%) var(--y, 50%), var(--acento-suave), transparent 70%);
+  opacity: 0;
+  transition: opacity var(--dur-media);
+  pointer-events: none;
+}
+
+.camino:hover::before,
+.camino:focus-visible::before {
+  opacity: 1;
+}
+
+.camino > * {
+  position: relative;
+}
+
+.camino-n {
+  font: 500 28px var(--f-titulo);
+  letter-spacing: -0.03em;
+  color: var(--linea-fuerte);
+  transition: color var(--dur-media), transform var(--dur-media) var(--ease-rebote);
+}
+
+.camino:hover .camino-n,
+.camino:focus-visible .camino-n {
+  color: var(--acento-fuerte);
+  transform: translateX(3px);
+}
+
+.camino-mini {
+  width: 64px;
+  height: 44px;
+  transition: transform var(--dur-media) var(--ease-rebote);
+}
+
+.camino:hover .camino-mini {
+  transform: rotate(-3deg) scale(1.06);
+}
+
+.camino-mini .m-linea {
+  fill: none;
+  stroke: var(--linea-fuerte);
+}
+
+.camino-mini .m-linea.fuerte {
+  stroke: var(--tinta-3);
+}
+
+.camino-mini .m-tinta {
+  fill: none;
+  stroke: var(--tinta-3);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.camino-mini .m-trazo-vino {
+  fill: none;
+  stroke: var(--principal);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+
+.camino-mini .m-vino {
+  fill: var(--principal);
+}
+
+.camino-mini .m-oro {
+  fill: var(--acento);
+}
+
+.camino-texto {
+  min-width: 0;
+}
+
+.camino-texto b {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.camino-texto span {
+  display: block;
+  margin-top: 2px;
+  font-size: 13px;
+  color: var(--tinta-2);
+}
+
+.camino .atajo {
+  justify-self: end;
+}
+
+.camino-flecha {
+  color: var(--tinta-3);
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: opacity var(--dur-media) var(--ease-salida), transform var(--dur-media) var(--ease-salida), color var(--dur-media);
+}
+
+.camino:hover .camino-flecha,
+.camino:focus-visible .camino-flecha {
+  opacity: 1;
+  transform: none;
+  color: var(--principal);
+}
+
+/* Columna de la derecha */
+.inicio-lado {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.inicio-mostrar-puesta {
+  align-self: flex-start;
+}
+
+/* ---------- puesta a punto ---------- */
+.puesta-a-punto {
+  position: relative;
+  padding: 16px;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  background: var(--papel);
+  overflow: hidden;
+  transition: border-color var(--dur-lenta);
+}
+
+.puesta-a-punto.completa {
+  border-color: var(--acento);
+}
+
+.pap-cabeza {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.atelier-inicio .pap-cabeza h2 {
+  margin: 0;
+  font-family: var(--f-titulo);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.pap-cuenta {
+  margin-left: auto;
+  font: 500 11px var(--f-mono);
+  color: var(--acento-fuerte);
+}
+
+.pap-ocultar {
+  align-self: center;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  color: var(--tinta-3);
+  opacity: 0;
+  transition: opacity var(--dur-rapida), background var(--dur-rapida);
+}
+
+.puesta-a-punto:hover .pap-ocultar,
+.pap-ocultar:focus-visible {
+  opacity: 1;
+}
+
+.pap-ocultar:hover {
+  background: var(--papel-3);
+  color: var(--tinta);
+}
+
+.pap-progreso {
+  height: 2px;
+  margin: 12px 0 8px;
+  background: var(--papel-3);
+  overflow: hidden;
+}
+
+.pap-progreso i {
+  display: block;
+  height: 100%;
+  background: var(--acento);
+  transition: width var(--dur-lenta) var(--ease-salida);
+}
+
+.pap-pasos {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pap-paso {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 4px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  text-align: left;
+  color: var(--tinta);
+  transition: background var(--dur-rapida);
+}
+
+.pap-paso:hover {
+  background: var(--papel-2);
+}
+
+.pap-casilla {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--linea-fuerte);
+  border-radius: 5px;
+  transition: background var(--dur-media) var(--ease-salida), border-color var(--dur-media), transform var(--dur-media) var(--ease-rebote);
+}
+
+.pap-casilla svg {
+  width: 10px;
+  height: 10px;
+  fill: none;
+  stroke: var(--papel);
+  stroke-width: 2.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 16;
+  stroke-dashoffset: 16;
+  transition: stroke-dashoffset 300ms 80ms var(--ease-salida);
+}
+
+.pap-paso.hecho .pap-casilla {
+  background: var(--tinta);
+  border-color: var(--tinta);
+  transform: scale(1.08);
+}
+
+.pap-paso.hecho .pap-casilla svg {
+  stroke-dashoffset: 0;
+}
+
+.pap-paso:active .pap-casilla {
+  transform: scale(0.85);
+}
+
+.pap-texto {
+  flex: 1;
+  min-width: 0;
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 55% / 0 1px;
+  transition: background-size var(--dur-media) var(--ease-salida), color var(--dur-media);
+}
+
+.pap-paso.hecho .pap-texto {
+  background-size: 100% 1px;
+  color: var(--tinta-3);
+}
+
+.pap-paso .atajo {
+  flex: none;
+  background: var(--papel);
+  line-height: 17px;
+}
+
+/* Estado final: «Ya conoces lo esencial» cubre la lista. */
+.pap-listo {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  text-align: center;
+  background: var(--papel);
+  opacity: 0;
+  visibility: hidden;
+  transform: scale(1.04);
+  transition: opacity var(--dur-lenta), transform var(--dur-lenta) var(--ease-salida), visibility 0s var(--dur-lenta);
+}
+
+.puesta-a-punto.completa .pap-listo {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity var(--dur-lenta), transform var(--dur-lenta) var(--ease-salida), visibility 0s;
+}
+
+.pap-listo b {
+  display: block;
+  margin: 8px 0 4px;
+  font: 600 20px var(--f-titulo);
+  letter-spacing: -0.02em;
+}
+
+.pap-listo small {
+  display: block;
+  max-width: 230px;
+  margin: 0 auto;
+  font-size: 12.5px;
+  color: var(--tinta-2);
+}
+
+.pap-listo-aro {
+  fill: none;
+  stroke: var(--acento);
+  stroke-width: 1.5;
+}
+
+.pap-listo-marca {
+  fill: none;
+  stroke: var(--principal);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+}
+
+.puesta-a-punto.completa .pap-listo-marca {
+  animation: dib-traza 700ms 250ms var(--ease-salida) forwards;
+  --l: 30;
+}
+
+.pap-listo-boton {
+  margin-top: 12px;
+}
+
+/* ---------- recorrido guiado ---------- */
+.inicio-recorrido {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px;
+  border-radius: 12px;
+  background: var(--barra);
+  box-shadow: inset 0 0 0 1px var(--barra-linea);
+  color: var(--barra-texto);
+  text-align: left;
+  overflow: hidden;
+  transition: transform var(--dur-media) var(--ease-salida), box-shadow var(--dur-media);
+}
+
+.inicio-recorrido:hover {
+  transform: translateY(-2px);
+  box-shadow: inset 0 0 0 1px var(--barra-linea), var(--sombra-suave);
+}
+
+:root[data-tema='oscuro'] .inicio-recorrido {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--barra-texto) 14%, transparent);
+}
+
+:root[data-contraste='alto'] .inicio-recorrido {
+  box-shadow: inset 0 0 0 1px var(--linea-fuerte);
+}
+
+.inicio-recorrido b {
+  display: block;
+  font-size: 14px;
+}
+
+.inicio-recorrido small {
+  font-size: 12.5px;
+  color: var(--barra-texto-2);
+}
+
+.inicio-recorrido-play {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--acento);
+  border-radius: 50%;
+  color: var(--acento);
+  transition: background var(--dur-media), color var(--dur-media), transform var(--dur-media) var(--ease-rebote);
+}
+
+.inicio-recorrido-play::after {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  border: 1px solid var(--acento);
+  border-radius: 50%;
+  animation: inicio-eco 2.2s infinite;
+}
+
+@keyframes inicio-eco {
+  from {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.inicio-recorrido:hover .inicio-recorrido-play {
+  background: var(--acento);
+  color: var(--barra);
+  transform: scale(1.08);
+}
+
+/* ---------- chispas (lib/puesta.ts) ---------- */
+.chispa {
+  position: fixed;
+  z-index: 200;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+/* ---------- lo de siempre, con forma Atelier ---------- */
+.atelier-inicio .inicio-seccion {
+  margin-bottom: 48px;
+}
+
+.atelier-inicio .biblioteca-barra {
+  margin: 4px 0 14px;
+}
+
+.atelier-inicio .segmentado {
+  border-radius: 9px;
+}
+
+.atelier-inicio .segmentado button {
+  border-radius: 7px;
+}
+
+.atelier-inicio .tarjeta-reciente {
+  border-radius: 12px;
+  background: var(--papel);
+  animation: inicio-entra 600ms var(--ease-salida) both;
+  animation-delay: calc(var(--i, 0) * 40ms + 200ms);
+  transition: border-color var(--dur-media), box-shadow var(--dur-media), transform var(--dur-media) var(--ease-salida);
+}
+
+.atelier-inicio .tarjeta-reciente:hover {
+  border-color: var(--linea-fuerte);
+  box-shadow: var(--sombra-suave);
+  transform: translateY(-2px);
+}
+
+.atelier-inicio .reciente-icono {
+  background: var(--papel);
+  box-shadow: 0 0 0 3px var(--papel);
+}
+
+.atelier-inicio .tarjeta-reciente small,
+.atelier-inicio .biblioteca-lista small,
+.atelier-inicio .proxima small {
+  font-family: var(--f-mono);
+  font-size: 11px;
+}
+
+.atelier-inicio .proximas {
+  border-top: 0;
+}
+
+.atelier-inicio .proxima {
+  border-radius: 6px;
+  border-bottom-color: var(--linea);
+  transition: background var(--dur-rapida);
+}
+
+.atelier-inicio .proxima:hover {
+  background: var(--papel-2);
+}
+
+.atelier-inicio .chip-fecha {
+  font: 500 12px var(--f-mono);
+  color: var(--tinta-2);
+}
+
+.atelier-inicio .chip-fecha.hoy {
+  color: var(--principal);
+  font-weight: 600;
+}
+
+.atelier-inicio .biblioteca-lista a {
+  border-radius: 7px;
+}
+
+/* ---------- anchos ---------- */
+@container inicio (max-width: 900px) {
+  .inicio-portico,
+  .inicio-cuerpo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .inicio-dibujo {
+    display: none;
+  }
+  .inicio-lado {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+    align-items: start;
+  }
+}
+
+@container inicio (max-width: 620px) {
+  .camino {
+    grid-template-columns: 34px minmax(0, 1fr) auto 18px;
+    gap: 12px;
+  }
+  .camino-mini {
+    display: none;
+  }
+  .camino-n {
+    font-size: 22px;
+  }
+}
+
+@container inicio (max-width: 440px) {
+  .camino .atajo,
+  .inicio-acciones .atajo {
+    display: none;
+  }
+  .camino {
+    grid-template-columns: 30px minmax(0, 1fr) 18px;
+  }
+}
+
+/* ---------- movimiento reducido: sin paralaje ni órbita ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .inicio-dibujo [data-prof] {
+    transform: none !important;
+  }
+  .inicio-recorrido-play::after {
+    display: none;
+  }
+}
+
+:root[data-movimiento='reducido'] .inicio-dibujo [data-prof] {
+  transform: none !important;
+}
+
+:root[data-movimiento='reducido'] .inicio-recorrido-play::after {
+  display: none;
+}
+
+/* ---------- tarjeta mínima de la barra lateral ---------- */
+.tarjeta-puesta {
+  position: relative;
+  flex: none;
+  margin: 0 10px;
+  border-top: 1px solid var(--barra-linea);
+}
+
+.tarjeta-puesta-abrir {
+  display: block;
+  width: 100%;
+  padding: 12px 8px 8px;
+  border-radius: 0 0 8px 8px;
+  text-align: left;
+  color: var(--barra-texto);
+  transition: background var(--dur-rapida);
+}
+
+.tarjeta-puesta-abrir:hover {
+  background: color-mix(in srgb, var(--barra-texto) 4%, transparent);
+}
+
+.tarjeta-puesta-fila {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding-right: 20px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.tarjeta-puesta-cuenta {
+  font: 500 11px var(--f-mono);
+  color: var(--acento);
+}
+
+.tarjeta-puesta-linea {
+  display: block;
+  height: 2px;
+  margin: 8px 0 5px;
+  border-radius: 2px;
+  background: var(--barra-linea);
+  overflow: hidden;
+}
+
+.tarjeta-puesta-linea i {
+  display: block;
+  height: 100%;
+  background: var(--acento);
+  transition: width var(--dur-lenta) var(--ease-salida);
+}
+
+.tarjeta-puesta small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--barra-texto-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tarjeta-puesta.destella .tarjeta-puesta-cuenta {
+  animation: tarjeta-destella 600ms var(--ease-rebote);
+}
+
+@keyframes tarjeta-destella {
+  40% {
+    transform: scale(1.35);
+  }
+}
+
+.tarjeta-puesta-cuenta {
+  display: inline-block;
+}
+
+.tarjeta-puesta-cerrar {
+  position: absolute;
+  top: 9px;
+  right: 4px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  color: var(--barra-texto-2);
+  opacity: 0;
+  transition: opacity var(--dur-rapida), background var(--dur-rapida);
+}
+
+.tarjeta-puesta:hover .tarjeta-puesta-cerrar,
+.tarjeta-puesta-cerrar:focus-visible {
+  opacity: 1;
+}
+
+.tarjeta-puesta-cerrar:hover {
+  background: var(--barra-2);
+  color: var(--barra-texto);
+}
+
+.tarjeta-puesta + .barra-pie.iconos {
+  margin-top: 4px;
+}

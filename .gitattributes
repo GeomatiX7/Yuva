@@ -1,0 +1,5 @@
+# Finales de línea iguales en todos los equipos: LF en el repositorio; los .cmd de Windows, con CRLF.
+* text=auto eol=lf
+*.cmd text eol=crlf
+*.png binary
+*.ico binary

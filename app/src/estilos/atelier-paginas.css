@@ -1,0 +1,699 @@
+/* «Atelier» (S-F): páginas y bases de datos.
+   Cabecera de página (portada dentro de la hoja, icono en un sello, título apretado), propiedades de las filas
+   como ficha, bases de datos (cápsula de vistas que se desliza, herramientas solo con icono, cabeceras en mono,
+   etiquetas como punto de color + texto, fichas del tablero que se levantan, «hoy» en vino) y los avisos y
+   bloques del editor. Solo apariencia: ninguna regla toca datos ni comportamiento.
+   Va antes de apariencia.css y tablero.css, así los temas de tablero de cada página siguen mandando.
+   */
+
+/* =================================================================== */
+/* Cabecera de página                                                    */
+/* =================================================================== */
+
+/* La portada va dentro de la hoja, con un margen y radio 12 (como la portada de las páginas con fondo). */
+.cabecera-pagina .portada {
+  margin: 12px 12px 0;
+  height: clamp(140px, 26vh, 250px);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tinta) 7%, transparent);
+}
+
+.cabecera-pagina.compacta .portada {
+  margin: 8px 8px 0;
+  height: 120px;
+  border-radius: 10px;
+}
+
+.boton-portada {
+  border-radius: 7px;
+  font-weight: 500;
+  backdrop-filter: blur(6px);
+  background: color-mix(in srgb, var(--flota) 88%, transparent);
+  transition: background var(--dur-rapida), color var(--dur-rapida), transform var(--dur-media) var(--ease-salida);
+}
+
+.boton-portada:hover {
+  transform: translateY(-1px);
+}
+
+.portada-acciones {
+  transition: opacity var(--dur-media) var(--ease-salida);
+}
+
+/* El icono es un sello: caja con borde fino y sombra suave; el símbolo lleva además la esquina dorada. */
+.icono-grande.sello {
+  width: 76px;
+  height: 76px;
+  padding: 0;
+  margin: 0 0 14px;
+  border-radius: 14px;
+  background: var(--flota);
+  border: 1px solid var(--linea);
+  box-shadow: var(--sombra-suave);
+  overflow: hidden;
+  transition: transform var(--dur-media) var(--ease-rebote), border-color var(--dur-rapida), box-shadow var(--dur-media);
+}
+
+.icono-grande.sello:hover:not(:disabled),
+.con-portada .icono-grande.sello:hover:not(:disabled) {
+  background: var(--flota);
+  border-color: var(--linea-fuerte);
+  transform: rotate(-4deg) scale(1.05);
+}
+
+.icono-grande.sello:disabled {
+  cursor: default;
+}
+
+.con-portada .icono-grande.sello {
+  margin-top: -38px;
+}
+
+.sello-simbolo::after {
+  content: '';
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  width: 16px;
+  height: 16px;
+  background: var(--acento);
+  transform: rotate(45deg);
+}
+
+.sello-imagen .icono-pagina img {
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.compacta .icono-grande.sello {
+  width: 56px;
+  height: 56px;
+  border-radius: 12px;
+  margin-bottom: 10px;
+}
+
+.compacta.con-portada .icono-grande.sello {
+  margin-top: -28px;
+}
+
+.compacta .sello-simbolo::after {
+  right: -7px;
+  top: -7px;
+  width: 13px;
+  height: 13px;
+}
+
+.modo-enfoque .con-portada .icono-grande.sello {
+  margin-top: 0;
+}
+
+.acciones-cabecera .boton-suave svg {
+  transition: transform var(--dur-media) var(--ease-rebote);
+}
+
+.acciones-cabecera .boton-suave:hover svg {
+  transform: rotate(-8deg) scale(1.1);
+}
+
+/* Título apretado (las fuentes serif y mono de la página siguen mandando con sus propias reglas). */
+.titulo-pagina {
+  font-weight: 650;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  font-variation-settings: 'opsz' 96;
+  border-radius: 6px;
+  transition: box-shadow var(--dur-rapida);
+}
+
+.titulo-pagina:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--acento-suave);
+}
+
+/* =================================================================== */
+/* Propiedades de una fila: ficha de dos columnas                        */
+/* =================================================================== */
+.panel-propiedades {
+  padding: 8px 10px;
+  margin-bottom: 22px;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--papel-2) 55%, transparent);
+}
+
+.fila-prop-pagina {
+  grid-template-columns: minmax(110px, 170px) minmax(0, 1fr);
+  gap: 2px 14px;
+  min-height: 32px;
+}
+
+.nombre-prop {
+  min-height: 30px;
+  color: var(--tinta-3);
+  font-size: var(--t-s);
+  transition: background var(--dur-rapida), color var(--dur-rapida);
+}
+
+.nombre-prop:hover {
+  background: var(--papel-3);
+  color: var(--tinta-2);
+}
+
+.nombre-prop svg {
+  flex: none;
+  opacity: 0.8;
+}
+
+.valor-prop-pagina {
+  min-height: 30px;
+  transition: background var(--dur-rapida);
+}
+
+.panel-propiedades .boton-texto {
+  color: var(--tinta-3);
+}
+
+.panel-propiedades .boton-texto:hover {
+  color: var(--tinta);
+}
+
+.panel-propiedades .agregar-prop svg {
+  transition: transform var(--dur-media) var(--ease-rebote);
+}
+
+.panel-propiedades .agregar-prop:hover svg {
+  transform: rotate(90deg);
+}
+
+.props-fijadas {
+  margin-bottom: 8px;
+}
+
+.prop-fijada {
+  border-radius: 9px;
+  background: var(--flota);
+}
+
+.prop-fijada-nombre {
+  font-family: var(--f-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* =================================================================== */
+/* Bases de datos                                                        */
+/* =================================================================== */
+.bd-barra {
+  gap: 8px 12px;
+  padding-bottom: 10px;
+  margin-bottom: 6px;
+  border-bottom-color: color-mix(in srgb, var(--tinta) 72%, transparent);
+}
+
+/* Selector de vistas: una cápsula; el resalte de la vista elegida se desliza de una a otra.
+   Se ancla a la pestaña elegida (anchor-scope: cada base de datos de la página tiene el suyo). */
+.bd-pestanas {
+  flex: 0 1 auto;
+  gap: 0;
+  padding: 2px;
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+  background: var(--papel-2);
+  position: relative;
+  isolation: isolate;
+  anchor-scope: --pestana-activa;
+}
+
+.bd-pestana {
+  z-index: 1;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: color var(--dur-rapida), background var(--dur-rapida);
+}
+
+.bd-pestana > svg {
+  transition: transform var(--dur-media) var(--ease-rebote);
+}
+
+.bd-pestana:hover {
+  background: color-mix(in srgb, var(--tinta) 5%, transparent);
+  color: var(--tinta);
+}
+
+.bd-pestana:hover > svg {
+  transform: scale(1.1);
+}
+
+.bd-pestana[aria-selected='true'] {
+  color: var(--tinta);
+  font-weight: 600;
+  anchor-name: --pestana-activa;
+}
+
+.bd-pestana[aria-selected='true'],
+.bd-pestana[aria-selected='true']:hover {
+  background: transparent;
+}
+
+.bd-pestana[aria-selected='true']::after {
+  content: none;
+}
+
+.bd-pestanas > .boton-icono {
+  position: relative;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  flex: none;
+}
+
+/* El resalte va al final del contenedor (::after) para que la pestaña ya esté colocada cuando se ancla. */
+.bd-pestanas::after {
+  content: '';
+  position: absolute;
+  z-index: 0;
+  position-anchor: --pestana-activa;
+  left: anchor(left, 2px);
+  top: anchor(top, 2px);
+  width: anchor-size(width, 0px);
+  height: anchor-size(height, 28px);
+  border-radius: 8px;
+  /* En oscuro, --flota casi no se distingue del fondo de la cápsula: se usa un papel más claro. */
+  background: light-dark(var(--flota), var(--papel-3));
+  box-shadow: 0 0 0 1px var(--linea), 0 1px 2px rgba(0, 0, 0, 0.06);
+  pointer-events: none;
+  transition: left var(--dur-media) var(--ease-rebote), width var(--dur-media) var(--ease-rebote), top var(--dur-media) var(--ease-salida);
+}
+
+@supports not (anchor-name: --a) {
+  .bd-pestanas::after {
+    content: none;
+  }
+  .bd-pestana[aria-selected='true'],
+  .bd-pestana[aria-selected='true']:hover {
+    background: light-dark(var(--flota), var(--papel-3));
+    box-shadow: 0 0 0 1px var(--linea);
+  }
+}
+
+/* Herramientas: solo el icono; su nombre sale en la pista. El contador de filtros u orden se conserva. */
+.bd-acciones {
+  gap: 2px;
+}
+
+.bd-acciones .ocultar-estrecho {
+  display: none;
+}
+
+.bd-acciones .boton-barra {
+  min-width: 30px;
+  height: 30px;
+  padding: 0 7px;
+  justify-content: center;
+  gap: 5px;
+  border-radius: 8px;
+  color: var(--tinta-3);
+  transition: background var(--dur-rapida), color var(--dur-rapida);
+}
+
+.bd-acciones .boton-barra:hover:not(:disabled) {
+  background: var(--papel-2);
+  color: var(--tinta);
+}
+
+.bd-acciones .boton-barra.activo {
+  color: var(--acento-fuerte);
+}
+
+.bd-acciones .boton-barra svg {
+  transition: transform var(--dur-media) var(--ease-rebote);
+}
+
+.bd-acciones .boton-barra:hover:not(:disabled) svg {
+  transform: scale(1.12);
+}
+
+.bd-busca {
+  border-radius: 8px;
+  animation: abrir-busca var(--dur-media) var(--ease-salida);
+}
+
+@keyframes abrir-busca {
+  from {
+    opacity: 0;
+    clip-path: inset(0 0 0 100% round 8px);
+  }
+}
+
+/* «Nueva»: el botón principal (vino); la flechita de plantillas lleva su separación con el color del botón. */
+.bd-acciones .nueva-con-plantillas .boton {
+  height: 30px;
+}
+
+.nueva-con-plantillas .flecha-plantillas {
+  border-left-color: color-mix(in srgb, var(--principal-sobre) 30%, transparent);
+}
+
+.bd-acciones .nueva-con-plantillas .boton:first-child svg {
+  transition: transform var(--dur-media) var(--ease-rebote);
+}
+
+.bd-acciones .nueva-con-plantillas .boton:first-child:hover svg {
+  transform: rotate(90deg);
+}
+
+/* ---------- tabla ---------- */
+.cabeza-boton {
+  font-family: var(--f-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tinta-3);
+  transition: background var(--dur-rapida), color var(--dur-rapida);
+}
+
+.cabeza-boton:hover {
+  color: var(--tinta);
+}
+
+.cabeza-boton svg {
+  width: 13px;
+  height: 13px;
+  opacity: 0.8;
+}
+
+.tabla-fila:not(.cabeza):not(.pie) {
+  transition: background var(--dur-rapida);
+}
+
+.tabla-fila:not(.cabeza):not(.pie):hover {
+  background: color-mix(in srgb, var(--papel-2) 85%, transparent);
+}
+
+.abrir-fila {
+  border-radius: 7px;
+  transition: opacity var(--dur-rapida), background var(--dur-rapida), transform var(--dur-rapida) var(--ease-salida);
+}
+
+.abrir-fila:hover {
+  transform: translate(1px, -1px);
+}
+
+.tabla-nueva,
+.columna-nueva {
+  transition: background var(--dur-rapida), color var(--dur-rapida);
+}
+
+.tabla-nueva svg,
+.columna-nueva svg {
+  transition: transform var(--dur-media) var(--ease-rebote);
+}
+
+.tabla-nueva:hover svg,
+.columna-nueva:hover svg {
+  transform: rotate(90deg);
+}
+
+.tabla-celda .valor-fecha,
+.tabla-celda .campo-valor.tipo-numero,
+.tabla-celda.pie,
+.boton-calculo {
+  font-variant-numeric: tabular-nums;
+}
+
+.tabla-celda .valor-fecha {
+  font-family: var(--f-mono);
+  font-size: 12.5px;
+  color: var(--tinta-2);
+}
+
+.calculo-nombre {
+  font-family: var(--f-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ---------- etiquetas y estados: punto de color + texto ----------
+   El color es el que eligió el usuario (el texto oscuro de cada color en claro y el claro en oscuro, que ya
+   cumplen el contraste sobre el papel); se quita el fondo pastel. */
+.etiqueta.etiqueta {
+  gap: 6px;
+  padding: 0 2px 0 0;
+  border-radius: 6px;
+  background: transparent;
+  font-weight: 500;
+}
+
+.etiqueta:not(.con-punto)::before,
+.etiqueta-punto {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  transition: transform var(--dur-media) var(--ease-rebote);
+}
+
+/* Los estados llevan un aro suave alrededor del punto, para distinguirlos de las etiquetas sueltas. */
+.etiqueta-punto {
+  width: 8px;
+  height: 8px;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent);
+}
+
+.etiqueta.con-punto {
+  padding-left: 3px;
+  gap: 8px;
+}
+
+.etiquetas {
+  gap: 4px 10px;
+}
+
+.campo-valor:hover .etiqueta-punto,
+.campo-valor:hover .etiqueta:not(.con-punto)::before {
+  transform: scale(1.25);
+}
+
+/* En alto contraste cada etiqueta lleva su borde: se le devuelve el relleno para que no toque el texto. */
+:root[data-contraste='alto'] .etiqueta.etiqueta {
+  padding: 0 7px;
+}
+
+/* ---------- tablero ---------- */
+.columna-tablero {
+  border-radius: 12px;
+}
+
+.columna-cabeza {
+  gap: 10px;
+}
+
+.contador-col {
+  font-family: var(--f-mono);
+  font-size: 11px;
+}
+
+.tarjeta {
+  border-radius: 10px;
+  transition: transform var(--dur-media) var(--ease-salida), box-shadow var(--dur-media) var(--ease-salida), border-color var(--dur-rapida);
+}
+
+.tarjeta:not(.alta):hover {
+  transform: translateY(-2px);
+  box-shadow: var(--sombra-suave);
+}
+
+/* Las tarjetas de color guardan su borde de color al levantarse. */
+.tablero .tarjeta.tarjeta-color:not(.alta):hover {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texto-tarjeta) 22%, transparent), var(--sombra-suave) !important;
+}
+
+.tarjeta[draggable='true']:active {
+  transform: rotate(1.5deg);
+}
+
+.tarjeta-menu {
+  border-radius: 7px;
+  transition: opacity var(--dur-rapida);
+}
+
+/* ---------- lista y galería ---------- */
+.lista-fila {
+  transition: background var(--dur-rapida);
+}
+
+.tarjeta-galeria {
+  border-radius: 12px;
+}
+
+.tarjeta-galeria:hover {
+  box-shadow: var(--sombra-suave);
+}
+
+/* ---------- calendario: «hoy» en vino ---------- */
+.calendario-dia-semana {
+  font-family: var(--f-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.calendario-num {
+  font-family: var(--f-mono);
+  font-size: 12px;
+}
+
+.calendario-dia {
+  transition: background var(--dur-rapida);
+}
+
+.calendario-dia:not(.fuera):hover {
+  background: color-mix(in srgb, var(--papel-2) 70%, transparent);
+}
+
+.calendario-dia.hoy .calendario-num span {
+  background: var(--principal);
+  color: var(--principal-sobre);
+  font-weight: 600;
+  animation: pulso-hoy 2.4s var(--ease-salida) 3;
+}
+
+/* Una página con color propio (tema de tablero) conserva su color para «hoy». */
+[style*='--acento'] .calendario-dia.hoy .calendario-num span {
+  background: var(--acento);
+  color: var(--acento-sobre);
+}
+
+@keyframes pulso-hoy {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--principal) 45%, transparent);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+.evento {
+  border-radius: 6px;
+  transition: border-color var(--dur-rapida), transform var(--dur-media) var(--ease-salida);
+}
+
+.evento:hover {
+  transform: translateY(-1px);
+}
+
+/* Cronograma: la línea de hoy también es vino (salvo en una página con color propio). */
+.crono-hoy {
+  background: var(--principal);
+}
+
+[style*='--acento'] .crono-hoy {
+  background: var(--acento);
+}
+
+/* =================================================================== */
+/* Editor: avisos y bloques                                              */
+/* =================================================================== */
+
+/* Aviso (callout): conserva su color de fondo y suma un borde fino del mismo color y radio 12. */
+.aviso {
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--texto-aviso, var(--e-amarillo-t)) 16%, transparent);
+  padding: 13px 16px 13px 14px;
+}
+
+.aviso-gris { --texto-aviso: var(--e-gris-t); }
+.aviso-marron { --texto-aviso: var(--e-marron-t); }
+.aviso-naranja { --texto-aviso: var(--e-naranja-t); }
+.aviso-amarillo { --texto-aviso: var(--e-amarillo-t); }
+.aviso-verde { --texto-aviso: var(--e-verde-t); }
+.aviso-azul { --texto-aviso: var(--e-azul-t); }
+.aviso-morado { --texto-aviso: var(--e-morado-t); }
+.aviso-rosa { --texto-aviso: var(--e-rosa-t); }
+.aviso-rojo { --texto-aviso: var(--e-rojo-t); }
+
+.aviso-icono {
+  border-radius: 8px;
+  transition: transform var(--dur-media) var(--ease-rebote), background var(--dur-rapida);
+}
+
+.aviso-icono:hover:not(:disabled) {
+  transform: rotate(-8deg) scale(1.08);
+}
+
+/* Cita: una línea fina dorada en lugar de la barra negra. */
+.editor-pagina .bn-block-content[data-content-type='quote'] blockquote,
+.editor-pagina .bn-block-content[data-content-type='quote'] {
+  border-left-color: var(--acento) !important;
+}
+
+/* Código: hoja con borde fino. */
+.editor-pagina .bn-block-content[data-content-type='codeBlock'] {
+  border: 1px solid var(--linea);
+  border-radius: 10px;
+}
+
+/* Tablas del editor: cabecera en mono y mayúsculas pequeñas, como las de las bases de datos. */
+.editor-pagina .bn-block-content[data-content-type='table'] th {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-2);
+}
+
+/* Separador: una línea que se desvanece en los extremos. */
+.editor-pagina .bn-block-content[data-content-type='divider'] hr {
+  border: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--linea-fuerte) 12%, var(--linea-fuerte) 88%, transparent);
+}
+
+/* Enlace a una subpágina: el icono se mueve un poco al pasar el ratón. */
+.bloque-pagina {
+  border-radius: 8px;
+  transition: background var(--dur-rapida);
+}
+
+.bloque-pagina .icono-pagina {
+  transition: transform var(--dur-media) var(--ease-rebote);
+}
+
+.bloque-pagina:hover .icono-pagina {
+  transform: rotate(-6deg) scale(1.1);
+}
+
+/* Bases de datos en línea dentro de una página: el título con la letra de los títulos, apretada. */
+.bd-titulo-campo {
+  letter-spacing: -0.02em;
+}
+
+/* =================================================================== */
+/* Movimiento reducido                                                   */
+/* =================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  .bd-pestanas::after,
+  .tarjeta,
+  .icono-grande.sello {
+    transition: none !important;
+  }
+  .calendario-dia.hoy .calendario-num span {
+    animation: none;
+  }
+}
+
+:root[data-movimiento='reducido'] .calendario-dia.hoy .calendario-num span {
+  animation: none;
+}
