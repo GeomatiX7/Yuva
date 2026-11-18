@@ -34,7 +34,7 @@
 
 /* Con los colores Yuva y el acento por defecto, el botón principal es vino; el dorado queda para marcas y foco. */
 :root[data-paleta='yuva'][data-acento='azafran'] {
-  --principal: #6b1e2e;
+  --principal: #5e1a2d; /* el vino del logo */
   --principal-sobre: #fff7f8;
   --principal-hover: #84283c;
 }

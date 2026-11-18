@@ -8,6 +8,6 @@ export const MARCA = {
   nombre: 'Yuva',
   autor: 'GeomatiX',
   lema: trad('Notas, documentos, tareas y bases de datos, sin internet'),
-  logo: '/logo.svg',
-  version: '0.7.0',
+  logo: `${import.meta.env.BASE_URL}logo.svg`,
+  version: '0.7.1',
 };

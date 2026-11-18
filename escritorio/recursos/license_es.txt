@@ -1,0 +1,16 @@
+﻿YUVA · PRIVACIDAD Y LICENCIA
+
+PRIVACIDAD
+Yuva guarda todo en tu equipo: no tiene cuentas, ni servidores propios, ni analítica, ni telemetría. El autor no recibe ningún dato tuyo.
+
+Yuva solo se conecta a internet en estos casos, y todos se pueden apagar:
+- Buscar actualizaciones: GitHub recibe tu dirección IP y la versión pedida, cada 6 horas. Se apaga en Ajustes › Programa › «Buscar actualizaciones solo».
+- Mapas (OpenStreetMap), clima y búsqueda de lugares (Open-Meteo), contenido incrustado (YouTube, Spotify…) y calendarios en línea: solo cuando usas esas funciones. Ese servicio recibe tu IP y lo que pides. Se apagan en Ajustes › Privacidad › «Funciones con internet».
+- Yuva MCP (para Claude) solo se conecta con tu propio equipo y viene apagado.
+
+Política completa: https://github.com/GeomatiX7/Yuva/blob/main/PRIVACIDAD.md
+
+LICENCIA
+Yuva es software libre con licencia Apache 2.0 (https://www.apache.org/licenses/LICENSE-2.0). Se entrega «tal cual», sin garantías de ningún tipo. El nombre «Yuva» y su logo son marcas de su autor, GeomatiX. Las licencias de los componentes de terceros están en AVISOS-DE-TERCEROS.txt, dentro de la carpeta de instalación.
+
+Desinstalar Yuva (Configuración de Windows › Aplicaciones) no borra tus datos, que están en %APPDATA%\espacio-notas.

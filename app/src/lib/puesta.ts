@@ -148,7 +148,7 @@ export function vigilarPuesta() {
 
 // ---------- chispas ----------
 
-const COLORES = ['#d9ae52', '#6b1e2e', '#c9a04a', '#b9475f'];
+const COLORES = ['#d9ae52', '#5e1a2d', '#c9a04a', '#b9475f'];
 
 function movimientoReducido() {
   return document.documentElement.dataset.movimiento === 'reducido' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;

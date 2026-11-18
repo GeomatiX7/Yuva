@@ -15,7 +15,9 @@ function serviceWorker(): Plugin {
 }
 
 // Puerto fijo: los datos viven en el navegador y van ligados al origen (localhost:5317).
+// YUVA_BASE=/Yuva/ compila la demo para GitHub Pages (github.io/Yuva/); sin ella, la app vive en la raíz.
 export default defineConfig({
+  base: process.env.YUVA_BASE || '/',
   plugins: [react(), serviceWorker()],
   server: { port: 5317, strictPort: true },
   preview: { port: 5317, strictPort: true },

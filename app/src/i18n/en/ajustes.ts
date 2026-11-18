@@ -180,8 +180,6 @@ export const en: Record<string, string> = {
   'Programa de escritorio, versión {version}.': 'Desktop app, version {version}.',
   'versión {version}': 'version {version}',
   'Creada por': 'Created by',
-  'Aplicación propia inspirada en el funcionamiento de Notion. No usa código, nombres ni gráficos de Notion y no está afiliada a Notion Labs.':
-    'An independent app inspired by how Notion works. It uses no code, names or graphics from Notion and is not affiliated with Notion Labs.',
   'Código abierto que usa': 'Open source it uses',
   'BlockNote (editor de bloques), MPL-2.0': 'BlockNote (block editor), MPL-2.0',
   'Lucide (iconos), ISC · date-fns, MIT · Emoji Mart (datos de emojis), MIT': 'Lucide (icons), ISC · date-fns, MIT · Emoji Mart (emoji data), MIT',
@@ -195,8 +193,8 @@ export const en: Record<string, string> = {
   'Yuva se distribuye con licencia Apache-2.0. Los textos completos de las licencias de terceros están en el archivo «AVISOS-DE-TERCEROS.txt» que acompaña al programa':
     'Yuva is distributed under the Apache-2.0 license. The full texts of third-party licenses are in the “AVISOS-DE-TERCEROS.txt” file that comes with the app',
   '(carpeta «resources» de la instalación)': '(“resources” folder of the installation)',
-  'y en el repositorio de Yuva. «Yuva» y su logo son marcas de su autor. Notion es una marca de Notion Labs, Inc.':
-    'and in Yuva’s repository. “Yuva” and its logo are trademarks of its author. Notion is a trademark of Notion Labs, Inc.',
+  'y en el repositorio de Yuva. «Yuva» y su logo son marcas de su autor; los demás nombres de productos son marcas de sus dueños.':
+    'and in Yuva’s repository. “Yuva” and its logo are trademarks of its author; other product names are trademarks of their owners.',
   'Ajustes': 'Settings',
   'Secciones de ajustes': 'Settings sections',
   'Buscar en ajustes': 'Search settings',

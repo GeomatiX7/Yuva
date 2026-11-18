@@ -20,4 +20,4 @@ Para pedir permiso, abre un *issue* en el repositorio.
 
 ---
 
-Notion es una marca de Notion Labs, Inc. Yuva es un proyecto independiente y no está afiliado a Notion Labs. Claude es una marca de Anthropic, PBC.
+Los nombres de otros productos que aparecen en Yuva o en su documentación (por ejemplo, en el importador o en Yuva MCP) son marcas de sus dueños.

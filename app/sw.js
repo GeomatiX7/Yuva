@@ -1,6 +1,10 @@
 // Service worker: guarda la app en caché para abrirla sin internet ni servidor.
 const CACHE = 'espacio-notas-__VERSION__'; // la versión la pone vite.config.ts en cada compilación
-const BASE = ['/', '/index.html', '/manifest.webmanifest', '/logo.svg'];
+// Rutas relativas al propio service worker: así sirve igual en la raíz (localhost, programa) y en una subcarpeta
+// (la demo de GitHub Pages en /Yuva/).
+const BASE = ['./', './index.html', './manifest.webmanifest', './logo.svg'];
+const RAIZ = new URL('./', self.location).pathname; // «/» o «/Yuva/»
+const RUTAS_BASE = BASE.map((p) => new URL(p, self.location).pathname);
 
 self.addEventListener('install', (e) => {
   e.waitUntil((async () => {
@@ -8,13 +12,13 @@ self.addEventListener('install', (e) => {
     await cache.addAll(BASE);
     // Precarga todos los archivos del build (Vite deja la lista en lista-build.json).
     try {
-      const res = await fetch('/lista-build.json', { cache: 'no-store' });
+      const res = await fetch('./lista-build.json', { cache: 'no-store' });
       const manifiesto = await res.json();
       const archivos = new Set();
       for (const entrada of Object.values(manifiesto)) {
-        archivos.add('/' + entrada.file);
-        (entrada.css || []).forEach((c) => archivos.add('/' + c));
-        (entrada.assets || []).forEach((a) => archivos.add('/' + a));
+        archivos.add('./' + entrada.file);
+        (entrada.css || []).forEach((c) => archivos.add('./' + c));
+        (entrada.assets || []).forEach((a) => archivos.add('./' + a));
       }
       await cache.addAll([...archivos]);
     } catch (err) {
@@ -41,13 +45,13 @@ self.addEventListener('fetch', (e) => {
     // Red primero para recibir versiones nuevas; sin red, la copia guardada.
     e.respondWith(fetch(req).then((r) => {
       const copia = r.clone();
-      caches.open(CACHE).then((c) => c.put('/index.html', copia));
+      caches.open(CACHE).then((c) => c.put('./index.html', copia));
       return r;
-    }).catch(() => caches.match('/index.html', { ignoreVary: true })));
+    }).catch(() => caches.match('./index.html', { ignoreVary: true })));
     return;
   }
   // Solo se guardan los archivos del build; lo demás (por ejemplo el servidor de desarrollo) va directo a la red.
-  if (!url.pathname.startsWith('/assets/') && !BASE.includes(url.pathname)) return;
+  if (!url.pathname.startsWith(RAIZ + 'assets/') && !RUTAS_BASE.includes(url.pathname)) return;
   // ignoreVary: el servidor puede enviar «Vary: Origin» y los scripts se piden con cabecera Origin.
   e.respondWith(caches.match(req, { ignoreVary: true }).then((hit) => hit || fetch(req).then((r) => {
     if (r.ok) { const copia = r.clone(); caches.open(CACHE).then((c) => c.put(req, copia)); }
@@ -67,6 +71,6 @@ self.addEventListener('notificationclick', (e) => {
       abierta.postMessage({ tipo: 'abrir', destino });
       return;
     }
-    await self.clients.openWindow('/' + destino);
+    await self.clients.openWindow(RAIZ + destino);
   })());
 });

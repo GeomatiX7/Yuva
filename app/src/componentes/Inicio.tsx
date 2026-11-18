@@ -93,9 +93,7 @@ function DibujoInicio() {
       </g>
       <g data-prof="-8">
         <g className="dib-monograma" transform="translate(128 93) scale(0.125)">
-          <rect width="512" height="512" rx="120" fill="#6B1E2E" />
-          <path d="M210 408 L210 296 L86 108 L186 108 L256 270 L326 108 L352 108 L385.3 169.8 L302 296 L302 408Z" fill="#FBF7F4" stroke="#FBF7F4" strokeWidth="16" strokeLinejoin="round" />
-          <path className="dib-esquina" d="M352 108 L311.3 169.8 L385.3 169.8Z" fill="#D9AE52" stroke="#D9AE52" strokeWidth="10" strokeLinejoin="round" />
+          <image href={MARCA.logo} width="512" height="512" />
         </g>
       </g>
       <g data-prof="5">

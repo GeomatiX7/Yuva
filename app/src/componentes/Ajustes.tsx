@@ -505,9 +505,6 @@ function Acerca() {
       <p className="acerca-autor">
         {trad('Creada por')} <strong>{MARCA.autor}</strong> · © {new Date().getFullYear()} {MARCA.autor}
       </p>
-      <p className="ayuda">
-        {trad('Aplicación propia inspirada en el funcionamiento de Notion. No usa código, nombres ni gráficos de Notion y no está afiliada a Notion Labs.')}
-      </p>
       <h3>{trad('Código abierto que usa')}</h3>
       <ul className="creditos">
         <li>{trad('BlockNote (editor de bloques), MPL-2.0')}</li>
@@ -520,7 +517,7 @@ function Acerca() {
       </ul>
       <p className="ayuda">
         {trad('Yuva se distribuye con licencia Apache-2.0. Los textos completos de las licencias de terceros están en el archivo «AVISOS-DE-TERCEROS.txt» que acompaña al programa')}
-        {enEscritorio ? ' ' + trad('(carpeta «resources» de la instalación)') : ''} {trad('y en el repositorio de Yuva. «Yuva» y su logo son marcas de su autor. Notion es una marca de Notion Labs, Inc.')}
+        {enEscritorio ? ' ' + trad('(carpeta «resources» de la instalación)') : ''} {trad('y en el repositorio de Yuva. «Yuva» y su logo son marcas de su autor; los demás nombres de productos son marcas de sus dueños.')}
       </p>
     </div>
   );

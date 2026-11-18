@@ -1,0 +1,16 @@
+﻿YUVA · PRIVACY AND LICENSE
+
+PRIVACY
+Yuva keeps everything on your computer: no accounts, no servers of its own, no analytics, no telemetry. The author receives no data about you.
+
+Yuva only connects to the internet in these cases, and all of them can be turned off:
+- Update check: GitHub receives your IP address and the requested version, every 6 hours. Turn it off in Settings › Desktop app › "Check for updates automatically".
+- Maps (OpenStreetMap), weather and place search (Open-Meteo), embeds (YouTube, Spotify…) and online calendars: only when you use those features. That service receives your IP and what you ask for. Turn them off in Settings › Privacy › "Online features".
+- Yuva MCP (for Claude) only connects to your own computer and is off by default.
+
+Full policy: https://github.com/GeomatiX7/Yuva/blob/main/PRIVACIDAD.md
+
+LICENSE
+Yuva is free software under the Apache 2.0 license (https://www.apache.org/licenses/LICENSE-2.0). It is provided "as is", without warranties of any kind. The "Yuva" name and logo are trademarks of its author, GeomatiX. Third-party component licenses are in AVISOS-DE-TERCEROS.txt, in the installation folder.
+
+Uninstalling Yuva (Windows Settings › Apps) does not delete your data, which lives in %APPDATA%\espacio-notas.

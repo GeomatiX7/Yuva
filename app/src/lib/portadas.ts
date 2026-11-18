@@ -16,7 +16,7 @@ export const NOMBRES_PATRON: Record<Patron, string> = {
 
 // [fondo, trazo principal, trazo secundario, luz]
 export const PALETAS: Record<string, [string, string, string, string]> = {
-  yuva: ['#3A0F1A', '#D9AE52', '#6B1E2E', '#F1E4E6'],
+  yuva: ['#3A0F1A', '#D9AE52', '#5E1A2D', '#F1E4E6'],
   laguna: ['#11292A', '#E8A13A', '#2F5A57', '#DCE7E3'],
   marino: ['#14213D', '#F2C14E', '#3A5A8C', '#E5E5E5'],
   musgo: ['#2F3E2C', '#C9D77A', '#5F7A4A', '#EDEFE0'],

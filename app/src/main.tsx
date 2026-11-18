@@ -52,7 +52,7 @@ if (enEscritorio) {
   vigilarBotonesVentana();
 } else if ('serviceWorker' in navigator) {
   if (import.meta.env.PROD) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => undefined));
+    window.addEventListener('load', () => navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL }).catch(() => undefined));
   } else {
     // En desarrollo no debe quedar ningún service worker sirviendo copias viejas.
     navigator.serviceWorker.getRegistrations().then((rs) => rs.forEach((r) => r.unregister()));

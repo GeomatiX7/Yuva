@@ -11,6 +11,7 @@
 
 <p align="center">
   <a href="../../releases/latest">Descargar para Windows</a> ·
+  <a href="https://geomatix7.github.io/Yuva/">Probar en el navegador</a> ·
   <a href="#qué-trae">Qué trae</a> ·
   <a href="#privacidad">Privacidad</a> ·
   <a href="#english">English</a>
@@ -22,13 +23,20 @@
 
 Yuva es un espacio de trabajo con páginas anidadas, un editor de bloques y bases de datos con varias vistas. **Todo se guarda en tu equipo**: no hay cuentas ni servidores, y funciona sin conexión. Está en **español e inglés** (Ajustes › Preferencias › Idioma; por defecto, el del sistema).
 
-<!-- Capturas: añade aquí 2 o 3 imágenes o un GIF corto (por ejemplo docs/capturas/inicio.png). -->
+<p align="center">
+  <img src="docs/capturas/es-inicio.png" alt="Inicio de Yuva: saludo, accesos rápidos y puesta a punto" width="49%">
+  <img src="docs/capturas/es-centro.png" alt="Plantilla Centro de mando con indicadores" width="49%">
+  <img src="docs/capturas/es-tareas.png" alt="Base de datos de tareas en vista de tabla" width="49%">
+  <img src="docs/capturas/es-proyecto.png" alt="Cronograma de hitos de un proyecto" width="49%">
+</p>
 
 ## Descargar
 
 1. Ve a **[Releases](../../releases/latest)** y descarga `Yuva-X.Y.Z-instalador.exe` (Windows 10 y 11, 64 bits).
 2. Ábrelo. Se instala solo para tu usuario, sin permisos de administrador.
 3. Mientras el instalador no esté firmado, Windows puede mostrar «Windows protegió su PC». Pulsa **Más información › Ejecutar de todas formas**.
+
+**¿Sin instalar nada?** Pruébala en el navegador: **[geomatix7.github.io/Yuva](https://geomatix7.github.io/Yuva/)**. Es la misma app; tus notas quedan en ese navegador y no llegan a ningún servidor. Para usarla en serio, mejor el programa de Windows: guarda en una carpeta tuya, hace copias diarias y avisa de los recordatorios aunque cierres la ventana.
 
 **Actualizaciones:** Yuva revisa esta página de Releases y, cuando hay una versión nueva, te avisa. Antes de instalarla comprueba que el archivo sea exactamente el publicado. La revisión automática se puede apagar en **Ajustes › Programa**.
 
@@ -45,6 +53,8 @@ Yuva es un espacio de trabajo con páginas anidadas, un editor de bloques y base
 - **Yuva MCP:** si lo activas, Claude (Claude Desktop o Claude Code) puede buscar, leer y escribir en tus páginas a través de una conexión local, con modo de solo lectura y un registro de lo que hizo.
 
 ## Privacidad
+
+Política completa: [PRIVACIDAD.md](PRIVACIDAD.md).
 
 - Tus páginas viven en tu equipo, en `%APPDATA%\espacio-notas`. Desinstalar Yuva no las borra.
 - No hay cuentas, analítica ni telemetría.
@@ -90,15 +100,19 @@ Estructura:
 
 Creada por **GeomatiX**, con **Claude** (Anthropic) como asistente de desarrollo.
 
-Yuva es un proyecto independiente, inspirado en cómo funcionan las herramientas de notas por bloques. No usa código, nombres ni gráficos de Notion y no está afiliada a Notion Labs, Inc.
-
 ---
 
 ## English
+
+<p align="center">
+  <img src="docs/capturas/en-inicio.png" alt="Yuva home screen in English" width="49%">
+  <img src="docs/capturas/en-proyecto.png" alt="Project template with indicators" width="49%">
+</p>
 
 **Yuva** (Turkish for *nest* and *home*) is a local-first workspace for Windows and the web: nested pages, a block editor, databases with table, board, calendar, timeline, chart and map views, templates, reminders, encrypted backups and an optional local MCP server so Claude can work with your notes.
 
 - Everything stays on your device: no account, no telemetry, and it works offline.
 - Available in English and Spanish (it follows your system language; change it in Settings › Preferences › Language).
-- Download the installer from [Releases](../../releases/latest). The app updates itself from this repository and verifies every download (SHA-512).
+- Download the installer from [Releases](../../releases/latest), or try it in your browser at [geomatix7.github.io/Yuva](https://geomatix7.github.io/Yuva/).
+- Privacy policy: [PRIVACIDAD.md](PRIVACIDAD.md) (Spanish and English). The app updates itself from this repository and verifies every download (SHA-512).
 - Code: Apache-2.0. The "Yuva" name and logo are reserved (see [MARCA.md](MARCA.md)).
