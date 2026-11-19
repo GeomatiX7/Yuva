@@ -957,4 +957,5 @@ export const en: Record<string, string> = {
   'Nuevo grupo': 'New group',
   'Nombre del grupo': 'Group name',
   'Nombre del nuevo grupo': 'New group name',
+  'Estilo 3D': '3D style',
 };

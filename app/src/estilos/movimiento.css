@@ -166,3 +166,67 @@
   animation-delay: 0ms !important;
   transition-duration: 1ms !important;
 }
+
+/* ---------- Gráficos: entradas animadas (se apagan con el movimiento reducido, como todo lo de arriba) ---------- */
+@keyframes gr-crecer-y { from { transform: scaleY(0); } }
+@keyframes gr-crecer-x { from { transform: scaleX(0); } }
+@keyframes gr-trazar { from { stroke-dashoffset: 1; } }
+@keyframes gr-aparecer { from { opacity: 0; } }
+@keyframes gr-asomar { from { opacity: 0; transform: scale(0.3); } }
+@keyframes gr-girar { from { opacity: 0; transform: rotate(-60deg) scale(0.82); } }
+@keyframes gr-subir { from { opacity: 0; transform: translateY(14px); } }
+
+/* Columnas (planas y 3D): crecen desde la base, una tras otra. */
+.gr-crece {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: gr-crecer-y var(--dur-larga) var(--ease-salida) both;
+  animation-delay: calc(min(var(--i, 0), 20) * 45ms);
+}
+.grafico-lienzo .grafico-valor {
+  animation: gr-aparecer 360ms ease-out both;
+  animation-delay: calc(420ms + min(var(--i, 0), 20) * 45ms);
+}
+
+/* Barras horizontales: se estiran desde la izquierda. */
+.grafico-barra {
+  transform-origin: 0 50%;
+  animation: gr-crecer-x var(--dur-larga) var(--ease-salida) both;
+  animation-delay: calc(min(var(--i, 0), 20) * 45ms);
+}
+
+/* Líneas: el trazo se dibuja de izquierda a derecha; el área y los puntos llegan detrás. */
+.grafico-linea {
+  stroke-dasharray: 1;
+  animation: gr-trazar 1100ms var(--ease-salida) both;
+}
+.grafico-area {
+  animation: gr-aparecer 700ms ease-out 500ms both;
+}
+.grafico-punto {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gr-asomar 380ms var(--ease-rebote) both;
+  animation-delay: calc(200ms + min(var(--i, 0), 30) * 900ms / max(var(--n, 1), 1));
+}
+
+/* Radar: el área se abre desde el centro. */
+.grafico-radar-area {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gr-asomar var(--dur-larga) var(--ease-salida) both;
+}
+
+/* Dona: cada porción entra girando desde arriba; la 3D sube entera. */
+.grafico-dona-cara .grafico-porcion {
+  transform-box: view-box;
+  transform-origin: 100px 100px;
+  animation: gr-girar var(--dur-larga) var(--ease-salida) both;
+  animation-delay: calc(min(var(--i, 0), 12) * 60ms);
+}
+.grafico-dona-3d .grafico-dona-cara .grafico-porcion {
+  animation: none;
+}
+.grafico-dona-3d {
+  animation: gr-subir var(--dur-larga) var(--ease-salida) both;
+}

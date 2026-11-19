@@ -1275,3 +1275,8 @@
     animation: none;
   }
 }
+
+/* Las cifras de los indicadores suben contando: números de ancho fijo para que no bailen. */
+.indicador-cifra strong {
+  font-variant-numeric: tabular-nums;
+}

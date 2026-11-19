@@ -43,7 +43,7 @@ Yuva es un espacio de trabajo con páginas anidadas, un editor de bloques y base
 ## Qué trae
 
 - **Páginas y editor de bloques:** menú `/`, atajos de Markdown, columnas, avisos, tablas, código con colores, ecuaciones (KaTeX), diagramas (Mermaid), menciones con `@` y enlaces a bloques.
-- **Bases de datos:** vistas de tabla, tablero, lista, galería, calendario, cronograma, agenda, gráfico, mapa, feed y formulario. Filtros, ordenación, agrupación, cálculos al pie, relaciones, resúmenes, fórmulas y botones.
+- **Bases de datos:** vistas de tabla, tablero, lista, galería, calendario, cronograma, agenda, gráfico, mapa, feed y formulario. Filtros, ordenación, agrupación, cálculos al pie, relaciones, resúmenes, fórmulas y botones. **Gráficos animados**, con estilo 3D en columnas y dona.
 - **Tableros personales:** paneles de reloj, pomodoro, progreso, clima y sonidos para concentrarte, indicadores, portadas generativas y temas por página.
 - **12 plantillas listas**, como Gestor de tareas, Proyecto, Biblioteca de lectura, Hábitos, Presupuesto, Revisión semanal o Centro de mando, con datos de ejemplo.
 - **Recordatorios** con notificaciones de Windows, aunque cierres la ventana.
@@ -109,7 +109,7 @@ Creada por **GeomatiX**, con **Claude** (Anthropic) como asistente de desarrollo
   <img src="docs/capturas/en-proyecto.png" alt="Project template with indicators" width="49%">
 </p>
 
-**Yuva** (Turkish for *nest* and *home*) is a local-first workspace for Windows and the web: nested pages, a block editor, databases with table, board, calendar, timeline, chart and map views, templates, reminders, encrypted backups and an optional local MCP server so Claude can work with your notes.
+**Yuva** (Turkish for *nest* and *home*) is a local-first workspace for Windows and the web: nested pages, a block editor, databases with table, board, calendar, timeline, animated (and 3D) chart and map views, templates, reminders, encrypted backups and an optional local MCP server so Claude can work with your notes.
 
 - Everything stays on your device: no account, no telemetry, and it works offline.
 - Available in English and Spanish (it follows your system language; change it in Settings › Preferences › Language).

@@ -187,6 +187,7 @@ export interface ConfigGrafico {
   semanas?: number; // calor: cuántas semanas hacia atrás
   fecha?: string; // semana: la propiedad de fecha (el eje agrupa: un renglón por hábito)
   suave?: boolean; // líneas: curva suave en vez de tramos rectos
+  tresD?: boolean; // columnas y dona: estilo 3D (columnas con fondo, dona en perspectiva con canto)
 }
 
 export type EscalaCronograma = 'dia' | 'semana' | 'mes' | 'trimestre';

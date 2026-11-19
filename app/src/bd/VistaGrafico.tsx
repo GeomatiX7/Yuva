@@ -246,7 +246,7 @@ function usoPista(contenedor: React.RefObject<HTMLDivElement | null>, setPista: 
 
 // ---------- formas ----------
 
-function Columnas({ puntos, fmt, marcas }: { puntos: Punto[]; fmt: (n: number) => string; marcas: (p: Punto) => object }) {
+function Columnas({ puntos, fmt, marcas, tresD }: { puntos: Punto[]; fmt: (n: number) => string; marcas: (p: Punto) => object; tresD?: boolean }) {
   const [ref, ancho] = useAncho<HTMLDivElement>();
   const alto = 260;
   const ticks = escala(Math.max(...puntos.map((p) => p.valor), 0));
@@ -254,10 +254,15 @@ function Columnas({ puntos, fmt, marcas }: { puntos: Punto[]; fmt: (n: number) =
   const izq = Math.max(28, Math.max(...ticks.map((t) => compacto.format(t).length)) * 7 + 10);
   const abajo = 30;
   const arriba = 18;
-  const w = ancho - izq - 4;
+  const ranuraPrevia = (ancho - izq - 4) / Math.max(1, puntos.length);
+  // En 3D cada columna tiene fondo: se corre hacia arriba a la derecha (perspectiva caballera).
+  const fondo = tresD ? Math.max(4, Math.min(12, ranuraPrevia * 0.3)) : 0;
+  const w = ancho - izq - 4 - fondo;
   const h = alto - abajo - arriba;
   const ranura = w / Math.max(1, puntos.length);
-  const barra = Math.min(24, ranura * 0.72);
+  const barra = Math.min(tresD ? 28 : 24, ranura * (tresD ? 0.62 : 0.72));
+  const dx = fondo;
+  const dy = -fondo * 0.6;
   const cabenEtiquetas = Math.max(1, Math.ceil(64 / ranura));
   const y = (v: number) => arriba + h - (tope ? (v / tope) * h : 0);
   return (
@@ -278,16 +283,23 @@ function Columnas({ puntos, fmt, marcas }: { puntos: Punto[]; fmt: (n: number) =
           const r = Math.min(4, barra / 2, alturaBarra);
           const top = y(0) - alturaBarra;
           return (
-            <g key={p.clave} className="grafico-marca" {...marcas(p)}>
+            <g key={p.clave} className="grafico-marca" style={{ '--i': i } as React.CSSProperties} {...marcas(p)}>
               <rect x={cx - ranura / 2} y={arriba} width={ranura} height={h} fill="transparent" />
-              {alturaBarra > 0 && (
-                <path className="grafico-serie" d={`M${x0},${y(0)} V${top + r} Q${x0},${top} ${x0 + r},${top} H${x0 + barra - r} Q${x0 + barra},${top} ${x0 + barra},${top + r} V${y(0)} Z`} />
+              {alturaBarra > 0 && !tresD && (
+                <path className="grafico-serie gr-crece" d={`M${x0},${y(0)} V${top + r} Q${x0},${top} ${x0 + r},${top} H${x0 + barra - r} Q${x0 + barra},${top} ${x0 + barra},${top + r} V${y(0)} Z`} />
+              )}
+              {alturaBarra > 0 && tresD && (
+                <g className="gr-crece grafico-columna-3d">
+                  <polygon className="grafico-serie grafico-cara-lado" points={`${x0 + barra},${y(0)} ${x0 + barra + dx},${y(0) + dy} ${x0 + barra + dx},${top + dy} ${x0 + barra},${top}`} />
+                  <polygon className="grafico-serie grafico-cara-tapa" points={`${x0},${top} ${x0 + dx},${top + dy} ${x0 + barra + dx},${top + dy} ${x0 + barra},${top}`} />
+                  <rect className="grafico-serie" x={x0} y={top} width={barra} height={alturaBarra} />
+                </g>
               )}
               {puntos.length <= 16 && p.valor !== 0 && (
                 <text
                   // El valor de la primera y la última barra no pasa el borde (letra de 11 px: ~6,6 px por carácter).
                   x={Math.min(Math.max(cx, compacto.format(p.valor).length * 3.3 + 2), ancho - compacto.format(p.valor).length * 3.3 - 2)}
-                  y={top - 5}
+                  y={top - 5 + dy}
                   textAnchor="middle"
                   className="grafico-valor"
                 >
@@ -317,8 +329,8 @@ function Barras({ puntos, fmt, marcas }: { puntos: Punto[]; fmt: (n: number) => 
   const max = Math.max(...puntos.map((p) => p.valor), 0);
   return (
     <div className="grafico-barras">
-      {puntos.map((p) => (
-        <div key={p.clave} className="grafico-barra-fila grafico-marca" {...marcas(p)}>
+      {puntos.map((p, i) => (
+        <div key={p.clave} className="grafico-barra-fila grafico-marca" style={{ '--i': i } as React.CSSProperties} {...marcas(p)}>
           <span className="grafico-barra-etiqueta recorte" title={p.etiqueta}>
             {p.etiqueta}
           </span>
@@ -378,9 +390,9 @@ function Lineas({ puntos, fmt, marcas, suave }: { puntos: Punto[]; fmt: (n: numb
           </g>
         ))}
         {area && <path d={area} className="grafico-area" />}
-        <path d={linea} className="grafico-linea" />
+        <path d={linea} className="grafico-linea" pathLength={1} />
         {puntos.map((p, i) => (
-          <g key={p.clave} className="grafico-marca" {...marcas(p)}>
+          <g key={p.clave} className="grafico-marca" style={{ '--i': i, '--n': puntos.length } as React.CSSProperties} {...marcas(p)}>
             <rect x={x(i) - Math.max(8, w / Math.max(1, puntos.length) / 2)} y={arriba} width={Math.max(16, w / Math.max(1, puntos.length))} height={h} fill="transparent" />
             <circle cx={x(i)} cy={y(p.valor)} r={4} className="grafico-punto" />
             {i % cada === 0 && (
@@ -406,12 +418,21 @@ function Lineas({ puntos, fmt, marcas, suave }: { puntos: Punto[]; fmt: (n: numb
   );
 }
 
-function Dona({ puntos, fmt, marcas }: { puntos: Punto[]; fmt: (n: number) => string; marcas: (p: Punto) => object }) {
+// Dona 3D: la cara se aplasta en vertical (vista en perspectiva) y el canto se dibuja con GROSOR_DONA copias.
+const GROSOR_DONA = 14;
+const APLASTAR_DONA = `translate(0 ${100 * (1 - 0.6) - GROSOR_DONA / 2 - 14}) scale(1 0.6)`;
+
+function Dona({ puntos, fmt, marcas, tresD }: { puntos: Punto[]; fmt: (n: number) => string; marcas: (p: Punto) => object; tresD?: boolean }) {
   const total = puntos.reduce((a, p) => a + p.valor, 0);
   const R = 84;
   const r = 54;
   const centro = textoQueCabe(fmt(total), total, (r - 8) * 2, 20);
   let angulo = -Math.PI / 2;
+  const porciones = puntos.map((p) => {
+    const a0 = angulo;
+    const a1 = (angulo += total ? (p.valor / total) * Math.PI * 2 : 0);
+    return { p, a0, a1 };
+  });
   const arco = (a0: number, a1: number) => {
     const grande = a1 - a0 > Math.PI ? 1 : 0;
     const p = (rad: number, ang: number) => `${100 + rad * Math.cos(ang)},${100 + rad * Math.sin(ang)}`;
@@ -420,19 +441,33 @@ function Dona({ puntos, fmt, marcas }: { puntos: Punto[]; fmt: (n: number) => st
   };
   return (
     <div className="grafico-dona">
-      <svg viewBox="0 0 200 200" width={200} height={200} role="group">
-        {puntos.map((p) => {
-          const a0 = angulo;
-          const a1 = (angulo += total ? (p.valor / total) * Math.PI * 2 : 0);
-          return <path key={p.clave} d={arco(a0, a1)} className={`grafico-porcion s${p.serie < 0 ? 'x' : (p.serie % 8) + 1}`} {...marcas(p)} />;
-        })}
-        <text x={100} y={96} textAnchor="middle" className="grafico-total" style={{ fontSize: centro.tam }}>
+      <svg viewBox="0 0 200 200" width={200} height={200} role="group" className={tresD ? 'grafico-dona-3d' : undefined}>
+        {tresD && (
+          // Canto de la dona: copias aplastadas y más oscuras, una por píxel de grosor, debajo de la cara de arriba.
+          <g className="grafico-dona-canto" aria-hidden="true">
+            {Array.from({ length: GROSOR_DONA }, (_, k) => GROSOR_DONA - k).map((k) => (
+              <g key={k} transform={`translate(0 ${k}) ${APLASTAR_DONA}`}>
+                {porciones.map((x) => (
+                  <path key={x.p.clave} d={arco(x.a0, x.a1)} className={`grafico-porcion s${x.p.serie < 0 ? 'x' : (x.p.serie % 8) + 1}`} />
+                ))}
+              </g>
+            ))}
+          </g>
+        )}
+        <g transform={tresD ? APLASTAR_DONA : undefined} className="grafico-dona-cara">
+          {porciones.map((x, i) => (
+            <path key={x.p.clave} d={arco(x.a0, x.a1)} style={{ '--i': i } as React.CSSProperties} className={`grafico-porcion s${x.p.serie < 0 ? 'x' : (x.p.serie % 8) + 1}`} {...marcas(x.p)} />
+          ))}
+        </g>
+        <text x={100} y={tresD ? 176 : 96} textAnchor="middle" className="grafico-total" style={{ fontSize: tresD ? Math.min(centro.tam, 18) : centro.tam }}>
           <title>{fmt(total)}</title>
           {centro.texto}
         </text>
-        <text x={100} y={116} textAnchor="middle" className="grafico-eje">
-          {trad('en total')}
-        </text>
+        {!tresD && (
+          <text x={100} y={116} textAnchor="middle" className="grafico-eje">
+            {trad('en total')}
+          </text>
+        )}
       </svg>
       <ul className="grafico-leyenda">
         {puntos.map((p) => (
@@ -740,13 +775,13 @@ export function VistaGrafico({ bd, vista, filas }: { bd: Pagina; vista: Vista; f
       ) : !puntos.length ? (
         <p className="vacio-chico">{trad('Elige qué agrupar en «Ajustes de la vista».')}</p>
       ) : conf.tipo === 'columnas' ? (
-        <Columnas puntos={visibles} fmt={fmt} marcas={marcas} />
+        <Columnas puntos={visibles} fmt={fmt} marcas={marcas} tresD={conf.tresD} />
       ) : conf.tipo === 'barras' ? (
         <Barras puntos={visibles} fmt={fmt} marcas={marcas} />
       ) : conf.tipo === 'lineas' ? (
         <Lineas puntos={puntos} fmt={fmt} marcas={marcas} suave={conf.suave} />
       ) : conf.tipo === 'dona' ? (
-        <Dona puntos={puntos} fmt={fmt} marcas={marcas} />
+        <Dona puntos={puntos} fmt={fmt} marcas={marcas} tresD={conf.tresD} />
       ) : (
         <RadarG puntos={puntos} fmt={fmt} marcas={marcas} />
       )}
@@ -874,6 +909,12 @@ export function AjustesGrafico({ bd, vista }: { bd: Pagina; vista: Vista }) {
             <option value="mayor">{trad('De mayor a menor')}</option>
             <option value="menor">{trad('De menor a mayor')}</option>
           </select>
+        </label>
+      )}
+      {(conf.tipo === 'columnas' || conf.tipo === 'dona') && (
+        <label className="casilla-linea">
+          <input type="checkbox" checked={!!conf.tresD} onChange={(e) => poner({ tresD: e.target.checked })} />
+          {trad('Estilo 3D')}
         </label>
       )}
       {conf.tipo === 'lineas' && (

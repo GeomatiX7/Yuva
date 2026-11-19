@@ -267,6 +267,37 @@ export const bloqueAccesos = createReactBlockSpec(
 
 // ---------- indicador ----------
 
+const movimientoReducido = () =>
+  document.documentElement.dataset.movimiento === 'reducido' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** Cifra que sube contando desde el valor anterior (o desde 0 al aparecer), en ~0,9 s con frenado al final. */
+function Conteo({ n, fmt }: { n: number; fmt: (x: number) => string }) {
+  const [mostrado, setMostrado] = useState(() => (movimientoReducido() ? n : 0));
+  const previo = useRef(movimientoReducido() ? n : 0);
+  useEffect(() => {
+    if (!Number.isFinite(n) || movimientoReducido()) {
+      previo.current = n;
+      setMostrado(n);
+      return;
+    }
+    const desde = previo.current;
+    const inicio = performance.now();
+    const DUR = 900;
+    let id = 0;
+    const paso = (t: number) => {
+      const k = Math.min(1, (t - inicio) / DUR);
+      const v = desde + (n - desde) * (1 - Math.pow(1 - k, 3));
+      setMostrado(k < 1 ? v : n);
+      if (k < 1) id = requestAnimationFrame(paso);
+    };
+    id = requestAnimationFrame(paso);
+    previo.current = n;
+    return () => cancelAnimationFrame(id);
+  }, [n]);
+  // Mientras cuenta, los enteros se muestran redondeados para que no salgan decimales de paso.
+  return <>{fmt(Number.isInteger(n) ? Math.round(mostrado) : mostrado)}</>;
+}
+
 export type MedidaIndicador = 'contar' | 'suma' | 'promedio' | 'min' | 'max' | 'marcadas';
 const NOMBRE_MEDIDA: Record<MedidaIndicador, string> = {
   contar: trad('Contar filas'), suma: trad('Sumar@indicador'), promedio: trad('Promedio'), min: trad('Mínimo'), max: trad('Máximo'), marcadas: trad('Casillas marcadas'),
@@ -398,7 +429,9 @@ function Indicador({ p, editable, alCambiar }: { p: PropsIndicador; editable: bo
             const corto = tramo ? texto.replace(/-?\d(?:[\d.,\s]*\d)?/, cifraCompacta.format(n)) : '';
             return (
               <strong className={tramo && corto !== texto ? `cifra-l${tramo}` : undefined} title={tramo ? texto : undefined} style={{ '--largo': texto.length } as React.CSSProperties}>
-                <span className="cifra-entera">{texto}</span>
+                <span className="cifra-entera">
+                  <Conteo n={n} fmt={fmt} />
+                </span>
                 {tramo > 0 && corto !== texto && <span className="cifra-corta">{corto}</span>}
               </strong>
             );
