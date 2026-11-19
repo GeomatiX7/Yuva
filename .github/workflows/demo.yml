@@ -1,0 +1,58 @@
+# Publica la versión web de Yuva en GitHub Pages: https://geomatix7.github.io/Yuva/
+# Es la misma app (sin el programa de escritorio). Cada visitante guarda sus notas en su propio navegador;
+# nada llega al repositorio ni al autor.
+#
+# Se lanza al subir cambios de la app a main, o a mano desde la pestaña Actions.
+# Requisito, una sola vez: Settings › Pages › Build and deployment › Source: «GitHub Actions».
+name: Demo web
+
+on:
+  push:
+    branches: [main]
+    paths: ['app/**', '.github/workflows/demo.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  compilar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Dependencias
+        working-directory: app
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Compilar para /Yuva/
+        working-directory: app
+        env:
+          YUVA_BASE: /Yuva/
+        run: npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: app/dist
+
+  publicar:
+    needs: compilar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v4
