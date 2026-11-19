@@ -54,6 +54,17 @@ jobs:
         working-directory: escritorio
         run: node preparar.cjs
 
+      # Se crea antes el borrador: si no existe, electron-builder sube los archivos en paralelo y cada subida
+      # puede crear su propio borrador (en la 0.7.1 salieron dos, con los archivos repartidos).
+      - name: Crear la publicación borrador
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1 || \
+            gh release create "${GITHUB_REF_NAME}" --draft --title "Yuva ${GITHUB_REF_NAME#v}" --notes "Novedades: (escríbelas antes de publicar)"
+
       # Los iconos (escritorio/recursos/*.png) ya están en el repositorio: no se regeneran aquí.
       - name: Empaquetar y subir a una publicación borrador
         working-directory: escritorio
