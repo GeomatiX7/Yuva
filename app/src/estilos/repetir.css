@@ -1,0 +1,218 @@
+/* Tareas recurrentes (bd/repetir.ts): el icono de repetir junto a la fecha (tabla, panel, tablero, galería, lista y
+   Mis tareas) y la sección «Repetir» del editor de fecha (bd/valores.tsx › EditorFecha). Todo por tokens: claro,
+   oscuro y alto contraste; el único movimiento (el resalte del segmentado) ya se apaga en atelier.css. */
+
+/* ---------- el icono ---------- */
+
+.repetir-icono {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  align-self: center;
+  margin-left: 4px;
+  color: var(--acento-fuerte);
+  vertical-align: -1px;
+}
+
+.valor-fecha .repetir-icono,
+.tarjeta-meta .repetir-icono {
+  margin-left: 2px;
+}
+
+:root[data-contraste='alto'] .repetir-icono {
+  color: var(--tinta);
+}
+
+/* En Mis tareas: «↻ Cada lunes» en la línea de la base, en el oro fuerte. */
+.tarea-repite {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--acento-fuerte);
+  white-space: nowrap;
+}
+
+.tarea-repite .repetir-icono {
+  margin-left: 0;
+}
+
+:root[data-contraste='alto'] .tarea-repite {
+  color: var(--tinta);
+}
+
+/* ---------- la sección «Repetir» del editor de fecha ---------- */
+
+.repetir-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--linea);
+}
+
+.repetir-titulo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--tinta-2);
+  font-family: var(--f-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.repetir-titulo svg {
+  color: var(--acento-fuerte);
+}
+
+:root[data-contraste='alto'] .repetir-titulo svg {
+  color: var(--tinta);
+}
+
+/* Cinco opciones en el ancho del editor: un poco más juntas que en un menú. */
+.segmentado.repetir-seg {
+  align-self: stretch;
+  justify-content: space-between;
+  padding: 3px;
+}
+
+.segmentado.repetir-seg > button {
+  flex: 1 1 auto;
+  padding: 0 6px;
+}
+
+.repetir-linea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--tinta-2);
+  font-size: var(--t-s);
+}
+
+.repetir-linea > span:first-child {
+  min-width: 46px;
+}
+
+.repetir-linea .campo {
+  min-width: 0;
+}
+
+.repetir-linea .repetir-n {
+  width: 62px;
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.repetir-linea input[type='date'] {
+  flex: 1 1 auto;
+}
+
+.repetir-linea select.campo {
+  flex: 1 1 auto;
+}
+
+/* «Al completarla» encima de su lista: las dos opciones son largas para ir al lado. */
+.repetir-linea.en-columna {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+}
+
+/* Los siete días: paralelogramos pequeños a −18°, como la casilla Pulso; el elegido, en el acento. */
+.repetir-dias {
+  display: flex;
+  justify-content: space-between;
+  gap: 3px;
+}
+
+.repetir-dia {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tinta-2);
+  font-family: var(--f-mono);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.repetir-dia::before {
+  content: '';
+  position: absolute;
+  inset: 2px 3px;
+  z-index: -1;
+  border: 1px solid var(--linea-fuerte);
+  border-radius: 4px;
+  background: var(--papel);
+  transform: skewX(var(--ang));
+  transition: background-color var(--dur-rapida, 120ms) ease-out, border-color var(--dur-rapida, 120ms) ease-out;
+}
+
+.repetir-dia:hover::before {
+  border-color: var(--acento-fuerte);
+}
+
+.repetir-dia[aria-pressed='true'] {
+  color: var(--acento-sobre);
+}
+
+.repetir-dia[aria-pressed='true']::before {
+  border-color: var(--acento);
+  background: var(--acento);
+}
+
+.repetir-dia:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+:root[data-contraste='alto'] .repetir-dia::before {
+  border-color: var(--tinta);
+}
+
+:root[data-contraste='alto'] .repetir-dia[aria-pressed='true'] {
+  color: var(--papel);
+}
+
+:root[data-contraste='alto'] .repetir-dia[aria-pressed='true']::before {
+  background: var(--tinta);
+}
+
+.repetir-quitar-hasta {
+  flex: none;
+}
+
+.repetir-resumen {
+  margin: 0;
+  color: var(--tinta);
+  font-size: var(--t-s);
+  font-weight: 600;
+}
+
+.repetir-nota {
+  margin: 0;
+  color: var(--tinta-3);
+  font-size: var(--t-s);
+  line-height: 1.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .repetir-dia::before {
+    transition: none;
+  }
+}
+
+:root[data-movimiento='reducido'] .repetir-dia::before {
+  transition: none;
+}

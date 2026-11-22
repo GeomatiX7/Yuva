@@ -32,6 +32,7 @@ const BLOQUES: [string, string][] = [
   [trad('Organizar'), trad('Columnas (arrastra un bloque al lado de otro), pestañas, índice, banda de sección, accesos y bloque sincronizado.')],
   [trad('Herramientas'), trad('Reloj, pomodoro, cuenta atrás, calendario del mes, progreso del tiempo, indicador, frase del día, clima y sonidos de ambiente.')],
   [trad('Contenido'), trad('Imagen, archivo, marcador de un enlace, insertar (vídeos y mapas), ecuación, diagrama y ruta.')],
+  [trad('Tablero de visión'), trad('«/visión»: un collage de tus imágenes con una frase en cada una, en mosaico, polaroid o cuadrícula. Arrastra para reordenar; con el teclado, Alt + flechas mueve y Supr quita.')],
   ['⋮⋮', trad('El asa a la izquierda de cada bloque: arrastrar, convertir, color, duplicar y borrar.')],
 ];
 

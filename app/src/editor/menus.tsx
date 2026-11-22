@@ -1,4 +1,5 @@
 // Menús del editor: «/» (comandos), «@» (mencionar páginas y fechas) y el menú del asa de arrastre.
+import { formatKeyboardShortcut } from '@blocknote/core';
 import { filterSuggestionItems, insertOrUpdateBlockForSlashMenu, SideMenuExtension, SuggestionMenu } from '@blocknote/core/extensions';
 import {
   BlockColorsItem,
@@ -12,19 +13,21 @@ import {
   useExtensionState,
   type DefaultReactSuggestionItem,
 } from '@blocknote/react';
-import { Sigma, Workflow, Bookmark, RefreshCw, PanelTop, Route, Paintbrush, Table2 as IconoTablaBD, FileOutput, AudioLines, CloudSun, Globe, Hand, Hourglass, LayoutGrid, Quote, Ribbon, SquareSigma, BellRing, MousePointerClick, CalendarDays, CalendarRange, ChartGantt, Clock, Gauge, Timer, Columns2, Columns3, Columns4, Database, FileText, Kanban, Lightbulb, Link2, ListTree, Plus, Table2, Copy, Link } from 'lucide-react';
-import { aPapelera, crearPagina, tituloDe, usar, estaOculta, avisar } from '../data/estado';
+import { Sigma, Workflow, Bookmark, RefreshCw, PanelTop, Route, Trash2, Table2 as IconoTablaBD, FileOutput, AudioLines, CloudSun, Globe, Hand, Hourglass, LayoutGrid, Quote, Ribbon, SquareSigma, BellRing, MousePointerClick, CalendarDays, CalendarRange, ChartGantt, Clock, Gauge, Timer, Columns2, Columns3, Columns4, Database, FileText, Kanban, Lightbulb, Link2, ListTree, Plus, Table2, Copy, Link } from 'lucide-react';
+import { aPapelera, enPlantillaPropia, crearPagina, tituloDe, usar, estaOculta, avisar } from '../data/estado';
 import { crearBaseDatos, crearFila } from '../bd/operaciones';
 import { hoyISO, fechaCorta } from '../lib/fechas';
 import { enlacePagina } from '../lib/ruta';
 import { IconoPagina } from '../componentes/IconoPagina';
+import { refSegmentado } from '../componentes/ui';
 import type { EditorApp } from './esquema';
 import { insertarColumnas } from './columnas';
 import { fechaRecordatorioNueva } from './FechaEnLinea';
-import { accionesDeBloque, convertirEnPagina } from './atajosEditor';
+import { accionesDeBloque, convertirEnPagina, type AccionDeBloque } from './atajosEditor';
 import { insertarPestanas } from './pestanas';
 import { insertarReunion } from './grabacion';
 import { Mic, Users } from 'lucide-react';
+import { Images as IconoVision } from 'lucide-react';
 import { insertarEcuacionEnLinea } from './ecuacion';
 import { cambiarPropiedad as _sinUso } from '../bd/operaciones';
 import { pedirPermiso } from '../lib/recordatorios';
@@ -36,9 +39,32 @@ function insertarYSeguir(editor: EditorApp, bloque: any) {
   insertOrUpdateBlockForSlashMenu(editor as any, bloque);
 }
 
+/** La «A» de color de BlockNote (la misma de «Colores» en el menú del asa), con sus mismos colores del tema. */
+function MuestraColor({ texto = 'default', fondo = 'default' }: { texto?: string; fondo?: string }) {
+  return (
+    <div
+      className="bn-color-icon"
+      data-text-color={texto}
+      data-background-color={fondo}
+      aria-hidden="true"
+      style={{ pointerEvents: 'none', fontSize: '13.5px', height: '18px', lineHeight: '18px', width: '18px', textAlign: 'center' }}
+    >
+      A
+    </div>
+  );
+}
+
+function iconoAccion(a: AccionDeBloque) {
+  if (a.tipo === 'duplicar') return <Copy size={18} />;
+  if (a.tipo === 'borrar') return <Trash2 size={18} />;
+  if (a.tipo === 'texto') return <MuestraColor texto={a.color} />;
+  if (a.tipo === 'fondo') return <MuestraColor fondo={a.color} />;
+  return <MuestraColor />;
+}
+
 export function itemsBarra(editor: EditorApp, paginaId: string): DefaultReactSuggestionItem[] {
   const base = getDefaultReactSlashMenuItems(editor as any);
-  // Los títulos también se encuentran escribiendo «título» (Notion los llama así): /titulo 4.
+  // Los títulos también se encuentran escribiendo «título»: /titulo 4.
   for (const item of base) {
     const n = item.aliases?.find((a) => /^h[1-6]$/.test(a))?.slice(1);
     if (n && !item.aliases!.includes('titulo')) item.aliases = [...item.aliases!, 'titulo', `titulo ${n}`, `titulo${n}`];
@@ -270,6 +296,14 @@ export function itemsBarra(editor: EditorApp, paginaId: string): DefaultReactSug
       onItemClick: () => insertarYSeguir(editor, { type: 'accesos' }),
     },
     {
+      title: trad('Tablero de visión'),
+      subtext: trad('Un collage de tus imágenes con una frase en cada una: mosaico, polaroid o cuadrícula'),
+      aliases: ['vision', 'visión', 'tablero de vision', 'tablero de visión', 'collage', 'moodboard', 'mood board', 'vision board', 'inspiracion', 'fotos', 'imagenes', 'polaroid', 'photos', 'images', 'inspiration'],
+      group: trad('Diseño'),
+      icon: <IconoVision size={18} />,
+      onItemClick: () => insertarYSeguir(editor, { type: 'vision' }),
+    },
+    {
       title: trad('Pestañas'),
       subtext: trad('Varias pestañas con su propio contenido, sin salir de la página'),
       aliases: ['pestanas', 'pestañas', 'tabs', 'fichas', 'tab'],
@@ -345,7 +379,8 @@ export function itemsBarra(editor: EditorApp, paginaId: string): DefaultReactSug
       title: a.titulo,
       aliases: a.alias,
       group: trad('Acciones'),
-      icon: <Paintbrush size={18} />,
+      icon: iconoAccion(a),
+      ...(a.atajo ? { badge: formatKeyboardShortcut(a.atajo) } : {}),
       onItemClick: a.hacer,
     })),
     {
@@ -360,7 +395,11 @@ export function itemsBarra(editor: EditorApp, paginaId: string): DefaultReactSug
 
   // Los propios van junto a su grupo para que el menú no repita encabezados.
   const resultado: DefaultReactSuggestionItem[] = [];
-  const pendientes = [...propios];
+  // En una plantilla propia no se ofrecen subpáginas ni bases nuevas: serían de la plantilla y no pasan a las páginas
+  // que se crean con ella (lib/plantillasPropias.ts › bloquesDePlantilla).
+  const enPlantilla = enPlantillaPropia(usar.getState().paginas, paginaId);
+  const creanHija = new Set([trad('Página'), trad('Base de datos: tabla'), trad('Base de datos: tablero'), trad('Base de datos: cronograma'), trad('Base de datos: página completa')]);
+  const pendientes = enPlantilla ? propios.filter((i) => !creanHija.has(i.title)) : [...propios];
   const grupos = [...new Set(base.map((i) => i.group))];
   for (const g of grupos) {
     resultado.push(...base.filter((i) => i.group === g));
@@ -369,7 +408,10 @@ export function itemsBarra(editor: EditorApp, paginaId: string): DefaultReactSug
       resultado.push(...pendientes.filter((i) => i.group === grupoBD));
     }
   }
-  resultado.push(...pendientes.filter((i) => !grupos.includes(i.group) && i.group !== grupoBD));
+  // Los grupos que BlockNote no tiene van al final, cada uno junto: «Insertar» (Diseño) viene después de las
+  // acciones en la lista de arriba y antes salía con un segundo encabezado «Diseño» al final del menú.
+  const sueltos = pendientes.filter((i) => !grupos.includes(i.group) && i.group !== grupoBD);
+  for (const g of new Set(sueltos.map((i) => i.group))) resultado.push(...sueltos.filter((i) => i.group === g));
   return resultado;
 }
 
@@ -426,8 +468,9 @@ export function itemsMencion(editor: EditorApp, paginaId: string, consulta: stri
       onItemClick: () => editor.insertInlineContent([{ type: 'fechaEnLinea', props: { fecha: iso } } as any, ' ']),
     });
   }
-  // Al final, para que «@hoy» + Enter ponga la fecha y no cree una página llamada «hoy».
-  if (q) {
+  // Al final, para que «@hoy» + Enter ponga la fecha y no cree una página llamada «hoy». En una plantilla propia no:
+  // la subpágina no pasaría a las páginas que nacen con ella.
+  if (q && !enPlantillaPropia(paginas, paginaId)) {
     items.push({
       title: trad('Nueva página «{titulo}»', { titulo: consulta.trim() }),
       group: trad('Páginas'),
@@ -442,7 +485,7 @@ export function itemsMencion(editor: EditorApp, paginaId: string, consulta: stri
 }
 
 // «[[» y «+»: buscador de páginas para enlazar, con la opción de crear una subpágina.
-// Con «[[» van primero las páginas existentes; con «+», como en Notion, primero la de crear.
+// Con «[[» van primero las páginas existentes; con «+», primero la de crear.
 export function itemsEnlacePagina(editor: EditorApp, paginaId: string, consulta: string, crearPrimero: boolean): DefaultReactSuggestionItem[] {
   // «+ » es una viñeta: con un espacio justo después del signo no hay nada que ofrecer.
   if (crearPrimero && consulta.startsWith(' ')) return [];
@@ -474,6 +517,7 @@ export function itemsEnlacePagina(editor: EditorApp, paginaId: string, consulta:
       insertarMencion(p.id, tituloDe(p));
     },
   };
+  if (enPlantillaPropia(paginas, paginaId)) return existentes; // ver itemsMencion
   return crearPrimero ? [crear, ...existentes] : [...existentes, crear];
 }
 
@@ -509,6 +553,7 @@ function ConvertirEnPagina({ children, paginaId }: { children: React.ReactNode; 
   const editor = useBlockNoteEditor<any, any, any>();
   const bloque = useExtensionState(SideMenuExtension, { editor, selector: (s) => s?.block });
   if (!bloque || !['inline', 'plain'].includes(editor.schema.blockSchema[bloque.type]?.content as string)) return null;
+  if (enPlantillaPropia(usar.getState().paginas, paginaId)) return null; // no pasaría a las páginas de la plantilla
   return (
     <Components.Generic.Menu.Item
       className="bn-menu-item"
@@ -537,6 +582,7 @@ function ConvertirEnBaseDatos({ children, paginaId }: { children: React.ReactNod
   const editor = useBlockNoteEditor<any, any, any>();
   const bloque = useExtensionState(SideMenuExtension, { editor, selector: (s) => s?.block });
   if (!bloque || bloque.type !== 'table') return null;
+  if (enPlantillaPropia(usar.getState().paginas, paginaId)) return null; // la base no pasaría a las páginas de la plantilla
   return (
     <Components.Generic.Menu.Item
       className="bn-menu-item"
@@ -569,6 +615,7 @@ function ConvertirEnBaseDatos({ children, paginaId }: { children: React.ReactNod
               aPapelera(base.id);
             },
           },
+          ctrlZ: false, // usa editor.undo(): fuera del editor podría deshacer otra cosa
         });
       }}
     >
@@ -596,7 +643,8 @@ function FormatoLista() {
   return (
     <div className="formato-lista" onMouseDown={(e) => e.stopPropagation()}>
       <span>{trad('Formato de lista')}</span>
-      <div className="segmentado" role="group" aria-label={trad('Formato de lista')}>
+      <div className="segmentado" role="group" aria-label={trad('Formato de lista')} ref={refSegmentado}>
+        <span className="seg-ind" aria-hidden="true" />
         {ESTILOS_LISTA.map(([valor, muestra]) => (
           <button
             key={valor}

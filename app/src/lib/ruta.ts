@@ -1,11 +1,12 @@
 // Rutas por hash: #/ (inicio) y #/p/<id>. Así funcionan atrás/adelante del navegador y los enlaces internos.
 import { useSyncExternalStore } from 'react';
 
-export type Ruta = { tipo: 'inicio' } | { tipo: 'agenda' } | { tipo: 'pagina'; id: string; bloque?: string };
+export type Ruta = { tipo: 'inicio' } | { tipo: 'agenda' } | { tipo: 'pulso' } | { tipo: 'pagina'; id: string; bloque?: string };
 
 export function leerRuta(): Ruta {
   const h = location.hash.replace(/^#\/?/, '');
   if (/^agenda\b/.test(h)) return { tipo: 'agenda' };
+  if (/^pulso\b/.test(h)) return { tipo: 'pulso' };
   const m = h.match(/^p\/([a-z0-9]+)(?:\?b=([\w-]+))?/i);
   if (m) return { tipo: 'pagina', id: m[1], bloque: m[2] };
   return { tipo: 'inicio' };
@@ -27,6 +28,11 @@ export function irInicio() {
 /** Vista Agenda (S3): calendario único con todo lo fechado. */
 export function irAgenda() {
   location.hash = '#/agenda';
+}
+
+/** Vista «Pulso del espacio»: mapa de actividad del año, rachas y semanas. */
+export function irPulso() {
+  location.hash = '#/pulso';
 }
 
 function suscribir(fn: () => void) {

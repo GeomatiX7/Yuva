@@ -221,7 +221,7 @@ function soltarAlLado(editor: EditorApp, destino: Destino, arrastrados: Bloque[]
 
 /**
  * Al arrastrar un bloque por su asa y soltarlo junto al borde izquierdo o derecho de otro,
- * los dos quedan en columnas (como en Notion). Si el otro ya está en columnas, se suma una columna.
+ * los dos quedan en columnas. Si el otro ya está en columnas, se suma una columna.
  */
 export function useSoltarEnColumnas(editor: EditorApp) {
   useEffect(() => {

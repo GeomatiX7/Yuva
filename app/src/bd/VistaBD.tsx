@@ -1,12 +1,14 @@
 // Contenedor de una base de datos: pestañas de vistas, barra (filtro, orden, búsqueda, propiedades) y la vista activa.
-import { useEffect, useMemo, useState } from 'react';
+// Las vistas poco usadas (cronograma, formulario y mapa, que trae Leaflet y su CSS) se cargan al abrir una de ellas.
+import { lazy, Suspense, useEffect, useMemo, useState, type ComponentType } from 'react';
 import { useShallow } from 'zustand/react/shallow';
+import { addDays, format, parseISO, startOfToday } from 'date-fns';
 import { Map as MapIcono } from 'lucide-react';
 import {
   Table2, Kanban, List as IconoLista, LayoutGrid, CalendarDays, Plus, Filter, ArrowUpDown, Search, SlidersHorizontal,
   Settings2, Maximize2, Copy, Trash2, Pencil, X, ChartGantt, ArrowUpRight, ChartColumn, Lock, ChevronDown, Newspaper, ClipboardList, Zap, Download,
 } from 'lucide-react';
-import { actualizarPagina, avisar, cambiarUi, duplicarPagina, tituloDe, usar } from '../data/estado';
+import { actualizarPagina, avisar, tituloDe, usar } from '../data/estado';
 import { descargar, nombreArchivoSeguro } from '../data/archivos';
 import { guardarLocal, leerLocal } from '../data/bd';
 import type { Pagina, TipoVista, ValorProp, Vista } from '../data/tipos';
@@ -16,19 +18,53 @@ import { ir } from '../lib/ruta';
 import { hoyISO } from '../lib/fechas';
 import {
   agregarVista, aplicarVista, crearFila, duplicarVista, eliminarVista, filasDe, NOMBRE_VISTA, cambiarVista, vistasDe, graficoInicial,
-  rangoRelativo, numerarFilas, plantillasDe, plantillaPorDefecto, crearPlantilla, crearDesdePlantilla, cambiarEsquema,
+  rangoRelativo, numerarFilas, plantillasDe, plantillaPorDefecto, crearDesdePlantilla, estadoInicial,
 } from './operaciones';
-import { MenuAjustesVista, MenuAutomatizaciones, MenuFiltros, MenuOrden, MenuPropiedades } from './menusBD';
+import { MenuAjustesVista, MenuAutomatizaciones, MenuFiltros, MenuNuevaFila, MenuOrden, MenuPropiedades } from './menusBD';
 import { useBdCalculada } from './derivadas';
 import { trad } from '../i18n';
+import { abrirFila } from './abrirFila';
 import { VistaTabla } from './VistaTabla';
 import { VistaTablero } from './VistaTablero';
 import { VistaCalendario, VistaGaleria, VistaLista } from './VistasSimples';
-import { VistaCronograma } from './VistaCronograma';
 import { VistaGrafico } from './VistaGrafico';
 import { VistaFeed } from './VistaFeed';
-import { VistaFormulario } from './VistaFormulario';
-import { VistaMapa } from './VistaMapa';
+
+// abrirFila vive en ./abrirFila (sin el editor ni las vistas); se reexporta para quien ya la importa de aquí.
+export { abrirFila } from './abrirFila';
+
+/** En lugar de una vista cuyo código no llegó: un aviso con la opción de recargar. */
+function VistaSinCargar() {
+  return (
+    <p className="vacio-chico" role="alert">
+      {trad('No se pudo cargar esta vista. Si la app se acaba de actualizar, recarga la página.')}{' '}
+      <button className="boton-texto" onClick={() => location.reload()}>{trad('Recargar')}</button>
+    </p>
+  );
+}
+
+/**
+ * Vista que se carga aparte. Si su código no llega (la app web se actualizó con ella abierta y el archivo viejo ya
+ * no existe), sale VistaSinCargar: el error no sube, porque en una base a página completa dejaría la app en blanco
+ * (la barrera de App.tsx solo se queda con sus propios fallos de carga) y en una base en línea la barrera del
+ * editor diría que el contenido de la página está dañado.
+ */
+function perezosa<P extends object>(importar: () => Promise<ComponentType<P>>) {
+  return lazy(() =>
+    importar().then(
+      (componente) => ({ default: componente }),
+      (error: unknown): { default: ComponentType<P> } => {
+        console.error('[Yuva] No se pudo cargar una vista de la base:', error);
+        return { default: VistaSinCargar };
+      },
+    ),
+  );
+}
+
+// Perezosas: su código (y, en el mapa, Leaflet con su CSS) solo se descarga al abrir una vista de ese tipo.
+const VistaCronograma = perezosa(() => import('./VistaCronograma').then((m) => m.VistaCronograma));
+const VistaFormulario = perezosa(() => import('./VistaFormulario').then((m) => m.VistaFormulario));
+const VistaMapa = perezosa(() => import('./VistaMapa').then((m) => m.VistaMapa));
 
 export const ICONO_VISTA: Record<TipoVista, typeof Table2> = {
   tabla: Table2,
@@ -43,7 +79,6 @@ export const ICONO_VISTA: Record<TipoVista, typeof Table2> = {
   mapa: MapIcono,
 };
 
-/** Abre una fila donde diga la vista: panel lateral (por defecto), ventana centrada o página completa. */
 /**
  * Descarga como SVG el gráfico que se está viendo. Los colores de la app son variables CSS, que fuera de ella
  * no existen: se copian a cada elemento los valores ya calculados para que el archivo se vea igual.
@@ -76,16 +111,62 @@ function descargarGraficoSVG(contenedor: Element | null | undefined, nombre: str
   descargar(`${nombreArchivoSeguro(nombre || trad('grafico'))}.svg`, new XMLSerializer().serializeToString(copia), 'image/svg+xml;charset=utf-8');
 }
 
-export function abrirFila(id: string, vista?: Vista) {
-  if (vista?.abrirEn === 'completa') {
-    cambiarUi({ vistazo: null });
-    ir(id);
-    return;
-  }
-  cambiarUi({ vistazo: id, vistazoCentro: vista?.abrirEn === 'centro' });
+/* ---------- fila nueva en un cronograma ---------- */
+// Viven aquí y no en VistaCronograma para que el cronograma se cargue solo al abrir una vista de ese tipo.
+
+// Una fila nueva creada en el cronograma dura dos semanas: de hoy a hoy + 13.
+const DIAS_FILA_NUEVA = 14;
+
+/**
+ * Pedido de «Nueva» en un cronograma: la barra de la fila `id` recibe el foco en cuanto se dibuja. Lo atiende solo
+ * el cronograma de la vista que lo hizo (con dos cronogramas a la vista, el otro no se lo queda) y caduca a los
+ * 2 s. VistaCronograma lo lee y lo borra.
+ */
+export const pedidoFoco: { actual: { id: string; vista: string; hasta: number } | null } = { actual: null };
+
+/** Pide que la barra de la fila `id` en la vista `vistaId` reciba el foco al dibujarse; si no llega a tener barra, la fila se abre. */
+export function enfocarBarraNueva(id: string, vistaId: string) {
+  pedidoFoco.actual = { id, vista: vistaId, hasta: Date.now() + 2000 };
 }
 
-/** Valores iniciales para una fila nueva a partir de los filtros de la vista (como hace Notion). */
+/** El día de un valor de fecha (AAAA-MM-DD…, o un número de una fórmula), a medianoche; null si no es fecha. */
+function diaDe(v: ValorProp): Date | null {
+  if (v === null || v === undefined || v === '') return null;
+  const d = typeof v === 'number' ? new Date(v) : parseISO(String(v).slice(0, 10));
+  if (isNaN(d.getTime())) return null;
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/**
+ * Fechas de una fila nueva en una vista de cronograma: desde hoy (o desde la fecha que ya traiga, por un filtro)
+ * y dos semanas de largo si la vista tiene fecha de fin. Fuera del cronograma, nada.
+ */
+export function fechasFilaNueva(bd: Pagina, vista: Vista, base: Record<string, ValorProp> = {}): Record<string, ValorProp> {
+  if (vista.tipo !== 'cronograma' || !vista.propFecha) return {};
+  const props = bd.esquema?.propiedades ?? [];
+  const pIni = props.find((p) => p.id === vista.propFecha);
+  if (pIni?.tipo !== 'fecha') return {};
+  // El inicio vacío a propósito (el «+» del grupo «Sin inicio»): la fila nace sin fechas, no con un fin suelto.
+  if (pIni.id in base && diaDe(base[pIni.id] ?? null) === null) return {};
+  const pFin = props.find((p) => p.id === vista.propFechaFin && p.id !== pIni.id);
+  // Con el fin ya dado (el «+» de un grupo por la fecha de fin) el inicio es hoy, salvo que ese fin ya pasó: entonces
+  // la barra dura un día, en el fin, para no guardar las fechas al revés.
+  const finDado = pFin?.tipo === 'fecha' ? diaDe(base[pFin.id] ?? null) : null;
+  const ini = diaDe(base[pIni.id] ?? null) ?? (finDado && finDado < startOfToday() ? finDado : startOfToday());
+  const res: Record<string, ValorProp> = { [pIni.id]: format(ini, 'yyyy-MM-dd') };
+  // En «Sin fin» (el fin vacío a propósito) tampoco se le pone uno.
+  if (pFin?.tipo === 'fecha' && base[pFin.id] === undefined) res[pFin.id] = format(addDays(ini, DIAS_FILA_NUEVA - 1), 'yyyy-MM-dd');
+  return res;
+}
+
+/* ---------- estado de una fila nueva ---------- */
+
+// estadoInicial vive en bd/operaciones.ts (así el botón de página y Yuva MCP lo usan sin cargar esta vista); se
+// reexporta aquí para quien ya lo importaba de VistaBD.
+export { estadoInicial };
+
+/** Valores iniciales para una fila nueva a partir de los filtros de la vista: la fila nueva ya cumple el filtro. */
 export function valoresDesdeFiltros(bd: Pagina, vista: Vista): Record<string, ValorProp> {
   const res: Record<string, ValorProp> = {};
   if (vista.modoFiltro === 'o') return res;
@@ -183,17 +264,32 @@ export function VistaBD({ bdId, enLinea, enlace }: { bdId: string; enLinea?: boo
     setVistaId(id);
     guardarLocal(claveVista, id);
   };
+  /**
+   * Valores de una fila nueva: los de los filtros, el estado inicial (si nadie le da uno, ni la plantilla que se
+   * usa) y, en el cronograma, sus fechas (de hoy a hoy + 13).
+   */
+  const valoresNuevos = (props?: Record<string, ValorProp>, plantilla?: Pagina) => {
+    const base = { ...valoresDesdeFiltros(bd, vista), ...(props ?? {}) };
+    return { ...estadoInicial(bd, vista, base, plantilla), ...fechasFilaNueva(bd, vista, base), ...base };
+  };
+  /** Tras crear: en el cronograma la fila se queda en su sitio y su barra recibe el foco; en las demás, se abre. */
+  const mostrarNueva = (fila: Pagina) => {
+    if (vista.tipo === 'cronograma') enfocarBarraNueva(fila.id, vista.id);
+    else abrirFila(fila.id, vista);
+  };
   const nuevaFila = (props?: Record<string, ValorProp>, abrir = true) => {
     // Con plantilla por defecto, «Nueva» y los «+» de las vistas la usan solos.
     const porDefecto = plantillaPorDefecto(bd, vista);
-    const valores = { ...valoresDesdeFiltros(bd, vista), ...(props ?? {}) };
+    const valores = valoresNuevos(props, porDefecto);
     const fila = porDefecto ? crearDesdePlantilla(bd.id, porDefecto.id, valores) : crearFila(bd.id, valores);
-    if (abrir) abrirFila(fila.id, vista);
+    if (abrir) mostrarNueva(fila);
     return fila;
   };
-  const filaDesde = (plantillaId: string) => {
-    const fila = crearDesdePlantilla(bd.id, plantillaId, valoresDesdeFiltros(bd, vista));
-    abrirFila(fila.id, vista);
+  /** Desde el menú de «Nueva»: con una plantilla o, con null, en blanco (aunque haya una plantilla por defecto). */
+  const filaDesde = (plantillaId: string | null) => {
+    const valores = valoresNuevos(undefined, plantillaId ? usar.getState().paginas[plantillaId] : undefined);
+    const fila = plantillaId ? crearDesdePlantilla(bd.id, plantillaId, valores) : crearFila(bd.id, valores);
+    mostrarNueva(fila);
   };
 
   return (
@@ -305,13 +401,21 @@ export function VistaBD({ bdId, enLinea, enlace }: { bdId: string; enLinea?: boo
           <button className="boton-barra" disabled={fija} onClick={(e) => setMenu({ tipo: 'ajustes', ancla: e.currentTarget })} title={trad('Ajustes de la vista')} aria-label={trad('Ajustes de la vista')}>
             <Settings2 size={15} />
           </button>
+          {/* «Nueva»: una sola tecla vino partida por la diagonal dorada; la flecha abre las plantillas. */}
           {!bloqueada && (
-            <span className="nueva-con-plantillas">
-              <button className="boton boton-primario chico" onClick={() => nuevaFila()}>
-                <Plus size={15} /> {trad('Nueva@fila')}
+            <span className="nueva-tecla">
+              <button className="nueva-crear" onClick={() => nuevaFila()}>
+                <Plus size={15} aria-hidden="true" /> {trad('Nueva@fila')}
               </button>
-              <button className="boton boton-primario chico flecha-plantillas" aria-label={trad('Plantillas de fila')} title={trad('Plantillas de fila')} aria-haspopup="menu" onClick={(e) => setMenu({ tipo: 'plantillas', ancla: e.currentTarget })}>
-                <ChevronDown size={14} />
+              <button
+                className="nueva-mas"
+                aria-label={trad('Plantillas de fila')}
+                title={trad('Plantillas de fila')}
+                aria-haspopup="dialog"
+                aria-expanded={menu?.tipo === 'plantillas'}
+                onClick={(e) => setMenu(menu?.tipo === 'plantillas' ? null : { tipo: 'plantillas', ancla: e.currentTarget })}
+              >
+                <ChevronDown size={14} aria-hidden="true" />
               </button>
             </span>
           )}
@@ -319,16 +423,19 @@ export function VistaBD({ bdId, enLinea, enlace }: { bdId: string; enLinea?: boo
       </div>
 
       <div className="bd-cuerpo">
-        {vista.tipo === 'tabla' && <VistaTabla bd={bd} vista={vista} filas={mostradas} todas={visibles} nuevaFila={nuevaFila} />}
+        {vista.tipo === 'tabla' && <VistaTabla bd={bd} vista={vista} filas={mostradas} todas={visibles} nuevaFila={nuevaFila} cargarMas={() => setTandas(tandas + 1)} />}
         {vista.tipo === 'tablero' && <VistaTablero bd={bd} vista={vista} filas={mostradas} nuevaFila={nuevaFila} />}
-        {vista.tipo === 'lista' && <VistaLista bd={bd} vista={vista} filas={mostradas} nuevaFila={nuevaFila} />}
+        {vista.tipo === 'lista' && <VistaLista bd={bd} vista={vista} filas={mostradas} todas={visibles} nuevaFila={nuevaFila} cargarMas={() => setTandas(tandas + 1)} />}
         {vista.tipo === 'galeria' && <VistaGaleria bd={bd} vista={vista} filas={mostradas} nuevaFila={nuevaFila} />}
         {vista.tipo === 'calendario' && <VistaCalendario bd={bd} vista={vista} filas={visibles} nuevaFila={nuevaFila} />}
-        {vista.tipo === 'cronograma' && <VistaCronograma bd={bd} vista={vista} filas={visibles} nuevaFila={nuevaFila} />}
         {vista.tipo === 'grafico' && <VistaGrafico bd={bd} vista={vista} filas={visibles} />}
         {vista.tipo === 'feed' && <VistaFeed bd={bd} vista={vista} filas={mostradas} nuevaFila={nuevaFila} />}
-        {vista.tipo === 'formulario' && <VistaFormulario bd={bd} vista={vista} />}
-        {vista.tipo === 'mapa' && <VistaMapa bd={bd} vista={vista} filas={visibles} />}
+        {/* Mientras llega el código de una vista perezosa (un instante, la primera vez) el cuerpo queda vacío. */}
+        <Suspense fallback={null}>
+          {vista.tipo === 'cronograma' && <VistaCronograma bd={bd} vista={vista} filas={visibles} nuevaFila={nuevaFila} />}
+          {vista.tipo === 'formulario' && <VistaFormulario bd={bd} vista={vista} />}
+          {vista.tipo === 'mapa' && <VistaMapa bd={bd} vista={vista} filas={visibles} />}
+        </Suspense>
         {['tabla', 'tablero', 'lista', 'galeria', 'feed'].includes(vista.tipo) && mostradas.length < visibles.length && (
           <button className="boton-texto cargar-mas" onClick={() => setTandas(tandas + 1)}>
             {trad('Cargar más ({n} sin mostrar)', { n: visibles.length - mostradas.length })}
@@ -357,64 +464,19 @@ export function VistaBD({ bdId, enLinea, enlace }: { bdId: string; enLinea?: boo
       )}
       {menu?.tipo === 'auto' && <MenuAutomatizaciones bd={bd} ancla={menu.ancla} alCerrar={() => setMenu(null)} />}
       {menu?.tipo === 'plantillas' && (
-        <Flotante ancla={menu.ancla} alCerrar={() => setMenu(null)} ancho={320} alinear="fin">
-          <div className="panel-bd menu-plantillas">
-            {plantillas.length === 0 && <p className="vacio-chico">{trad('Sin plantillas. Una plantilla es una fila modelo: título, valores y contenido.')}</p>}
-            {plantillas.map((p) => {
-              const enVista = vista.plantillaDefecto === p.id;
-              const enTodas = esquema.plantillaDefecto === p.id;
-              return (
-                <div key={p.id} className="plantilla-fila">
-                  <button className="plantilla-usar" title={trad('Crear una fila con esta plantilla')} onClick={() => { setMenu(null); filaDesde(p.id); }}>
-                    <IconoPagina pagina={p} tam={16} />
-                    <span>{p.titulo || trad('Plantilla sin título')}</span>
-                    {(enVista || enTodas) && <small>{enVista ? trad('por defecto aquí') : trad('por defecto')}</small>}
-                  </button>
-                  {!fija && (
-                    <>
-                      <button className="boton-icono chico" aria-label={trad('Duplicar la plantilla {titulo}', { titulo: p.titulo })} title={trad('Duplicar')} onClick={() => duplicarPagina(p.id)}>
-                        <Copy size={14} />
-                      </button>
-                      <button className="boton-icono chico" aria-label={trad('Editar la plantilla {titulo}', { titulo: p.titulo })} title={trad('Editar')} onClick={() => { setMenu(null); ir(p.id); }}>
-                        <Pencil size={14} />
-                      </button>
-                      <select
-                        className="campo plantilla-defecto"
-                        aria-label={p.titulo ? trad('Usar {titulo} por defecto', { titulo: p.titulo }) : trad('Usar la plantilla por defecto')}
-                        value={enVista ? 'vista' : enTodas ? 'todas' : ''}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          cambiarVista(bd.id, vista.id, { plantillaDefecto: v === 'vista' ? p.id : enVista ? undefined : vista.plantillaDefecto });
-                          cambiarEsquema(bd.id, (es) => {
-                            es.plantillaDefecto = v === 'todas' ? p.id : enTodas ? undefined : es.plantillaDefecto;
-                            return es;
-                          });
-                        }}
-                      >
-                        <option value="">{trad('No es la de por defecto')}</option>
-                        <option value="vista">{trad('Por defecto en esta vista')}</option>
-                        <option value="todas">{trad('Por defecto en todas')}</option>
-                      </select>
-                      <button
-                        className="boton-icono chico peligro"
-                        aria-label={trad('Eliminar la plantilla {titulo}', { titulo: p.titulo })}
-                        title={trad('Eliminar (va a la papelera)')}
-                        onClick={() => actualizarPagina(p.id, { enPapelera: true, borradoEn: Date.now() }, false)}
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </>
-                  )}
-                </div>
-              );
-            })}
-            {!fija && (
-              <button className="boton-texto" onClick={() => { setMenu(null); ir(crearPlantilla(bd.id).id); }}>
-                <Plus size={15} /> {trad('Nueva plantilla')}
-              </button>
-            )}
-          </div>
-        </Flotante>
+        <MenuNuevaFila
+          bd={bd}
+          vista={vista}
+          ancla={menu.ancla}
+          plantillas={plantillas}
+          fija={fija}
+          alCerrar={(devolverFoco) => {
+            const ancla = menu.ancla;
+            setMenu(null);
+            if (devolverFoco) ancla.focus({ preventScroll: true });
+          }}
+          alCrear={filaDesde}
+        />
       )}
       {menu?.tipo === 'nuevaVista' && (
         <Flotante ancla={menu.ancla} alCerrar={() => setMenu(null)} ancho={220}>

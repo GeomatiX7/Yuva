@@ -1,30 +1,29 @@
-// Página abierta: barra superior (ruta y acciones), cabecera, propiedades de fila, editor o base de datos.
-import { useEffect, useState, type CSSProperties } from 'react';
+// Página abierta: cabecera, propiedades de fila, editor o base de datos, y el menú «…» de la página.
+// La barra superior (migas, buscar, pestañas) está en BarraSuperior.tsx, sin el editor, y se reexporta desde aquí.
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
-  Star, MoreHorizontal, Clock, Focus, Link, Copy, FolderInput, Trash2, Lock, Unlock, Download, FileCode2, Printer,
-  FileSpreadsheet, ChevronRight, PanelLeft, RotateCcw, ArrowUpRight, Maximize2, X, Palette, Archive, ArchiveRestore, Presentation,
+  Star, Clock, Link, Copy, FolderInput, Trash2, Lock, Unlock, Download, FileCode2, Printer,
+  FileSpreadsheet, RotateCcw, ArrowUpRight, Maximize2, X, Palette, Archive, ArchiveRestore, Presentation,
 } from 'lucide-react';
-import { Globe, Search } from 'lucide-react';
-import { abrirPublicarSitio } from './PublicarSitio';
+import { Globe } from 'lucide-react';
+import { LayoutTemplate } from 'lucide-react';
 import { bd } from '../data/bd';
 import {
   abrirModal, actualizarPagina, alternarFavorito, ancestrosDe, aPapelera, archivar, desarchivar, avisar, cambiarUi, duplicarPagina, eliminarDefinitivo,
-  esFila, estaBorrada, hijosDe, restaurar, tituloDe, usar, visitar,
+  esFila, estaBorrada, restaurar, tituloDe, usar, visitar,
 } from '../data/estado';
 import { contarPalabras, minutosLectura } from '../data/contenido';
 import type { Fuente, Pagina } from '../data/tipos';
 import { enlacePagina, ir, irInicio } from '../lib/ruta';
-import { fechaHora, haceCuanto } from '../lib/fechas';
-import { exportarCSV, exportarHTML, exportarMarkdown, imprimir } from '../lib/exportar';
-import { fusionarCSV } from '../lib/importar';
+import { fechaHora } from '../lib/fechas';
 import { elegirArchivos } from '../data/archivos';
 import { CabeceraPagina } from './CabeceraPagina';
-import { IconoPagina } from './IconoPagina';
+import { EmpezarConPlantilla } from './EmpezarConPlantilla';
+import { pedirGuardarPlantilla } from '../lib/plantillasPropias';
 import { Enlazadas } from './Enlazadas';
 import { IndiceFlotante } from './IndiceFlotante';
-import { useShallow } from 'zustand/react/shallow';
-import { abrirPestanaNueva, cerrarPestana, elegirPestana, useEscribiendo, usePestanas } from '../lib/pestanas';
+import { BarraSuperior } from './BarraSuperior';
 import { registrarVisita, textoVisitas, useVisitas, visitasActivas } from '../lib/visitas';
 import { NotasPagina } from './NotasPagina';
 import { BuscarEnPagina, EVENTO_BUSCAR_EN_PAGINA } from './BuscarEnPagina';
@@ -34,16 +33,37 @@ import { VistaBD } from '../bd/VistaBD';
 import { PanelPropiedades } from '../bd/PanelPropiedades';
 import { MARCA } from '../marca';
 import { MenuApariencia } from './Apariencia';
+import { Sticker } from 'lucide-react';
+import { MenuPegatinas } from './Pegatinas';
 import { useArchivo } from '../data/archivos';
-import { clasesEstilo, variablesColor } from '../lib/apariencia';
+import { clasesEstilo, useContextoColor, variablesColorEstilo, variablesDePagina } from '../lib/apariencia';
 import { useTemaResuelto } from '../lib/tema';
 import { actualizarBotonesVentana } from '../lib/escritorio';
 import { useConEfecto } from '../lib/efectos';
 import { LOCALE, plural, trad } from '../i18n';
 
-/** Clases y variables de la apariencia propia de una página (tema de tablero, color, modo, fondo). */
+// Inicio, la Agenda y quien siga importándolas desde aquí las encuentran igual.
+export { BarraSuperior };
+export { FilaPestanas, Migas } from './BarraSuperior';
+
+// Exportar, importar (fusionar un CSV) y publicar como sitio pesan y casi no se usan: llegan al elegirlos en el menú.
+const exportador = () => import('../lib/exportar');
+/** Si el código de una de esas acciones no llega (la app web se actualizó con ella abierta), lo dice en vez de no
+ *  hacer nada. */
+function sinCodigo(err: unknown) {
+  console.error('[Yuva] No se pudo cargar una parte de la app:', err);
+  avisar(trad('No se pudo cargar esta parte de la app. Si se acaba de actualizar, recarga la página.'), {
+    tono: 'error',
+    accion: { etiqueta: trad('Recargar'), fn: () => location.reload() },
+  }, 8000);
+}
+
+/** Clases y variables de la apariencia propia de una página (tema de tablero, color, modo, fondo).
+ *  «Pulso»: también el color de la página (--c y --cs, lib/apariencia.ts › colorDePagina), que heredan las
+ *  rayas, las casillas y todo lo que hay dentro. */
 function useEstiloPagina(pagina: Pagina | undefined, conFondo: boolean): { clase: string; estilo: CSSProperties } {
   const temaApp = useTemaResuelto();
+  const { paleta } = useContextoColor();
   const e = pagina?.estilo;
   // El fondo usa la imagen original (sin el efecto de la portada), desenfocada.
   const portada = useArchivo(conFondo && e?.fondo === 'portada' && pagina?.portada?.tipo === 'imagen' ? pagina.portada.valor : null);
@@ -53,8 +73,10 @@ function useEstiloPagina(pagina: Pagina | undefined, conFondo: boolean): { clase
     // Los botones de la ventana del programa toman el color de la barra superior de esta página.
     requestAnimationFrame(actualizarBotonesVentana);
   }, [e?.modo, e?.color, temaApp]);
-  if (!e) return { clase: '', estilo: {} };
-  const estilo: CSSProperties = { ...variablesColor(e.color, oscuro) };
+  if (!pagina) return { clase: '', estilo: {} };
+  const colorPagina = variablesDePagina(pagina, oscuro, { paleta });
+  if (!e) return { clase: '', estilo: colorPagina };
+  const estilo: CSSProperties = { ...variablesColorEstilo(e, oscuro), ...colorPagina };
   if (desenfocada) (estilo as Record<string, string>)['--imagen-fondo'] = `url("${desenfocada}")`;
   return { clase: `${clasesEstilo(conFondo ? e : { ...e, fondo: 'ninguno' })} con-estilo`, estilo };
 }
@@ -73,7 +95,8 @@ function textoSeleccionado(): string {
   return nodo?.closest('.bn-editor') ? sel.toString() : '';
 }
 
-function MenuPagina({ pagina, ancla, alCerrar }: { pagina: Pagina; ancla: HTMLElement; alCerrar: () => void }) {
+/** Menú «…» de la página. BarraSuperior lo carga al abrirlo. */
+export function MenuPagina({ pagina, ancla, alCerrar }: { pagina: Pagina; ancla: HTMLElement; alCerrar: () => void }) {
   const { palabras, minutos } = useConteo(pagina.id);
   const visitas = useVisitas();
   // Con texto seleccionado, el contador habla de la selección (se lee una vez, al abrir el menú).
@@ -81,6 +104,7 @@ function MenuPagina({ pagina, ancla, alCerrar }: { pagina: Pagina; ancla: HTMLEl
   const palabrasSel = contarPalabras(seleccion);
   const [exportar, setExportar] = useState<HTMLElement | null>(null);
   const [apariencia, setApariencia] = useState<HTMLElement | null>(null);
+  const [pegatinas, setPegatinas] = useState<HTMLElement | null>(null);
   const cambiar = (c: Partial<Pagina>) => actualizarPagina(pagina.id, c, false);
   const fuentes: [Fuente, string][] = [
     ['sans', 'Sans'],
@@ -105,6 +129,11 @@ function MenuPagina({ pagina, ancla, alCerrar }: { pagina: Pagina; ancla: HTMLEl
             {trad('Apariencia')}
           </ItemMenu>
         )}
+        {pagina.tipo === 'pagina' && !pagina.bloqueada && !pagina.esSincronizado && (
+          <ItemMenu icono={<Sticker size={16} />} submenu onClick={(e) => setPegatinas(e.currentTarget)}>
+            {trad('Pegatinas')}
+          </ItemMenu>
+        )}
         <ItemMenu
           icono={<Link size={16} />}
           onClick={() => {
@@ -117,6 +146,11 @@ function MenuPagina({ pagina, ancla, alCerrar }: { pagina: Pagina; ancla: HTMLEl
         <ItemMenu icono={<Copy size={16} />} atajo={`${CTRL}+D`} onClick={async () => { alCerrar(); const n = await duplicarPagina(pagina.id); if (n) ir(n); }}>
           {trad('Duplicar')}
         </ItemMenu>
+        {pagina.tipo === 'pagina' && !pagina.esPlantilla && !pagina.esSincronizado && (
+          <ItemMenu icono={<LayoutTemplate size={16} />} onClick={() => { alCerrar(); pedirGuardarPlantilla(pagina.id); }}>
+            {trad('Guardar como plantilla…')}
+          </ItemMenu>
+        )}
         <ItemMenu icono={<FolderInput size={16} />} atajo={`${CTRL}+⇧+P`} onClick={() => { alCerrar(); abrirModal('mover', { moverId: pagina.id }); }}>
           {trad('Mover a…')}
         </ItemMenu>
@@ -160,7 +194,9 @@ function MenuPagina({ pagina, ancla, alCerrar }: { pagina: Pagina; ancla: HTMLEl
                 alCerrar();
                 const [archivo] = await elegirArchivos('.csv,text/csv');
                 if (!archivo) return;
-                const r = fusionarCSV(pagina.id, await archivo.text());
+                const importar = await import('../lib/importar').catch(sinCodigo);
+                if (!importar) return;
+                const r = importar.fusionarCSV(pagina.id, await archivo.text());
                 avisar(
                   r.filas
                     ? `${plural(r.filas, 'Se agregó {n} fila', 'Se agregaron {n} filas')}${r.ignoradas.length ? `. ${trad('Columnas sin propiedad con ese nombre: {columnas}', { columnas: r.ignoradas.join(', ') })}` : ''}`
@@ -194,7 +230,7 @@ function MenuPagina({ pagina, ancla, alCerrar }: { pagina: Pagina; ancla: HTMLEl
         <ItemMenu icono={<Download size={16} />} submenu onClick={(e) => setExportar(e.currentTarget)}>
           {trad('Exportar')}
         </ItemMenu>
-        <ItemMenu icono={<Globe size={16} />} onClick={() => { alCerrar(); abrirPublicarSitio(pagina.id); }}>
+        <ItemMenu icono={<Globe size={16} />} onClick={() => { alCerrar(); import('./PublicarSitio').then((m) => m.abrirPublicarSitio(pagina.id), sinCodigo); }}>
           {trad('Publicar como sitio')}
         </ItemMenu>
         <SeparadorMenu />
@@ -224,177 +260,23 @@ function MenuPagina({ pagina, ancla, alCerrar }: { pagina: Pagina; ancla: HTMLEl
         </div>
       </Menu>
       {apariencia && <MenuApariencia pagina={pagina} ancla={apariencia} alCerrar={() => setApariencia(null)} />}
+      {pegatinas && <MenuPegatinas pagina={pagina} ancla={pegatinas} alCerrar={() => setPegatinas(null)} alTerminar={alCerrar} />}
       {exportar && (
         <Flotante ancla={exportar} alCerrar={() => setExportar(null)} lado="derecha" ancho={220}>
           <Menu>
             {pagina.tipo === 'bd' ? (
-              <ItemMenu icono={<FileSpreadsheet size={16} />} onClick={() => { exportarCSV(pagina.id); alCerrar(); }}>CSV (Excel)</ItemMenu>
+              <ItemMenu icono={<FileSpreadsheet size={16} />} onClick={() => { exportador().then((m) => m.exportarCSV(pagina.id), sinCodigo); alCerrar(); }}>CSV (Excel)</ItemMenu>
             ) : (
               <>
-                <ItemMenu icono={<FileCode2 size={16} />} onClick={() => { exportarMarkdown(pagina.id); alCerrar(); }}>Markdown (.md)</ItemMenu>
-                <ItemMenu icono={<FileCode2 size={16} />} onClick={() => { exportarHTML(pagina.id); alCerrar(); }}>HTML</ItemMenu>
+                <ItemMenu icono={<FileCode2 size={16} />} onClick={() => { exportador().then((m) => m.exportarMarkdown(pagina.id), sinCodigo); alCerrar(); }}>Markdown (.md)</ItemMenu>
+                <ItemMenu icono={<FileCode2 size={16} />} onClick={() => { exportador().then((m) => m.exportarHTML(pagina.id), sinCodigo); alCerrar(); }}>HTML</ItemMenu>
               </>
             )}
-            <ItemMenu icono={<Printer size={16} />} onClick={() => { alCerrar(); setTimeout(imprimir, 100); }}>{trad('PDF (imprimir)')}</ItemMenu>
+            <ItemMenu icono={<Printer size={16} />} onClick={() => { alCerrar(); exportador().then((m) => setTimeout(m.imprimir, 100), sinCodigo); }}>{trad('PDF (imprimir)')}</ItemMenu>
           </Menu>
         </Flotante>
       )}
     </Flotante>
-  );
-}
-
-export function Migas({ pagina }: { pagina: Pagina }) {
-  const paginas = usar((s) => s.paginas);
-  const ancestros = ancestrosDe(paginas, pagina.id);
-  const cadena = ancestros.length > 3 ? [ancestros[0], null, ...ancestros.slice(-2)] : ancestros;
-  // La flechita entre dos pasos abre las páginas de ese nivel (las hermanas del paso siguiente), como en Notion.
-  const [nivel, setNivel] = useState<{ ancla: HTMLElement; padreId: string | null; actualId: string } | null>(null);
-  const flecha = (padreId: string | null, actualId: string) => (
-    <button
-      className="miga-sep miga-flecha"
-      aria-label={trad('Ver las páginas de este nivel')}
-      title={trad('Páginas de este nivel')}
-      aria-haspopup="menu"
-      onClick={(e) => setNivel({ ancla: e.currentTarget, padreId, actualId })}
-    >
-      <ChevronRight size={13} />
-    </button>
-  );
-  const hermanas = nivel ? hijosDe(paginas, nivel.padreId) : [];
-  return (
-    <nav className="migas" aria-label={trad('Ruta de la página')}>
-      {flecha(null, (ancestros[0] ?? pagina).id)}
-      {cadena.map((a, i) => (
-        <span key={a?.id ?? `corte-${i}`} className="miga-grupo">
-          {a ? (
-            <a href={`#/p/${a.id}`} className="miga" onClick={(e) => { e.preventDefault(); ir(a.id); }}>
-              <IconoPagina pagina={a} tam={15} />
-              <span>{tituloDe(a)}</span>
-            </a>
-          ) : (
-            <span className="miga corte">…</span>
-          )}
-          {a ? flecha(a.id, (cadena[i + 1] ?? (i === cadena.length - 1 ? pagina : null))?.id ?? '') : <ChevronRight size={13} className="miga-sep" aria-hidden="true" />}
-        </span>
-      ))}
-      <span className="miga actual" aria-current="page">
-        <IconoPagina pagina={pagina} tam={15} />
-        <span>{tituloDe(pagina)}</span>
-      </span>
-      {nivel && (
-        <Flotante ancla={nivel.ancla} alCerrar={() => setNivel(null)} ancho={260}>
-          <Menu className="menu-hermanas">
-            {hermanas.length === 0 && <p className="ayuda">{trad('No hay páginas en este nivel.')}</p>}
-            {hermanas.map((h) => (
-              <ItemMenu
-                key={h.id}
-                icono={<IconoPagina pagina={h} tam={16} />}
-                detalle={h.id === nivel.actualId ? '✓' : undefined}
-                onClick={() => {
-                  setNivel(null);
-                  ir(h.id);
-                }}
-              >
-                {tituloDe(h)}
-              </ItemMenu>
-            ))}
-          </Menu>
-        </Flotante>
-      )}
-    </nav>
-  );
-}
-
-/** Fila de pestañas, bajo la barra superior; solo aparece cuando hay más de una abierta. */
-function FilaPestanas() {
-  const pestanas = usePestanas();
-  const paginas = usar(useShallow((s) => Object.fromEntries(pestanas.ids.filter(Boolean).map((id) => [id, s.paginas[id]]))));
-  const ocultarSola = usar((s) => !!s.ajustes.ocultarPestanas);
-  const escribiendo = useEscribiendo(ocultarSola && pestanas.ids.length > 1);
-  if (pestanas.ids.length < 2) return null;
-  return (
-    <div className={`fila-pestanas${escribiendo ? ' escondida' : ''}`} role="tablist" aria-label={trad('Pestañas abiertas')}>
-      {pestanas.ids.map((id, i) => {
-        const p = id ? paginas[id] : undefined;
-        const nombre = id ? tituloDe(p) : trad('Inicio');
-        return (
-          <span key={`${id}-${i}`} className={`pestana-app${i === pestanas.activa ? ' activa' : ''}`}>
-            <button role="tab" aria-selected={i === pestanas.activa} title={nombre} onClick={() => elegirPestana(i)} onAuxClick={(e) => e.button === 1 && cerrarPestana(i)}>
-              {p && <IconoPagina pagina={p} tam={15} />}
-              <span>{nombre}</span>
-            </button>
-            <button className="pestana-app-cerrar" aria-label={trad('Cerrar la pestaña {nombre}', { nombre })} title={trad('Cerrar la pestaña')} onClick={() => cerrarPestana(i)}>
-              <X size={12} />
-            </button>
-          </span>
-        );
-      })}
-      <button className="pestana-app-nueva" aria-label={trad('Pestaña nueva')} title={trad('Pestaña nueva')} onClick={abrirPestanaNueva}>
-        +
-      </button>
-    </div>
-  );
-}
-
-export function BarraSuperior({ pagina, titulo = trad('Inicio') }: { pagina: Pagina | null; titulo?: string }) {
-  const barraAbierta = usar((s) => s.ui.barraAbierta);
-  const [menu, setMenu] = useState<HTMLElement | null>(null);
-  const [, refrescar] = useState(0);
-  useEffect(() => {
-    const t = window.setInterval(() => refrescar((n) => n + 1), 30_000);
-    return () => window.clearInterval(t);
-  }, []);
-  return (
-    <>
-    <div className="barra-superior">
-      {!barraAbierta && (
-        <button className="boton-icono" aria-label={trad('Mostrar barra lateral')} title={trad('Mostrar barra lateral ({atajo})', { atajo: `${CTRL}+\\` })} onClick={() => cambiarUi({ barraAbierta: true })}>
-          <PanelLeft size={18} />
-        </button>
-      )}
-      {pagina ? <Migas pagina={pagina} /> : <span className="migas"><span className="miga actual">{titulo}</span></span>}
-      <span className="espaciador" />
-      <button className="comando" aria-label={trad('Buscar, crear o ir a…')} title={trad('Buscar, crear o ir a… ({atajo})', { atajo: `${CTRL}+K` })} onClick={() => abrirModal('buscar')}>
-        <Search size={15} />
-        <span className="comando-texto">{trad('Buscar, crear o ir a…')}</span>
-        <kbd className="atajo">{CTRL}+K</kbd>
-      </button>
-      {pagina && (
-        <>
-          <span className="editado" title={fechaHora(pagina.editadoEn)}>
-            {trad('Editada {cuando}', { cuando: haceCuanto(pagina.editadoEn) })}
-          </span>
-          {pagina.bloqueada && (
-            <button className="boton-barra" onClick={() => actualizarPagina(pagina.id, { bloqueada: false }, false)} title={trad('Desbloquear')}>
-              <Lock size={14} /> {trad('Bloqueada')}
-            </button>
-          )}
-          <button className="boton-icono" aria-label={trad('Modo enfoque')} title={trad('Modo enfoque ({atajo})', { atajo: `${CTRL}+⇧+F` })} onClick={() => cambiarUi({ enfoque: true })}>
-            <Focus size={18} />
-          </button>
-          {pagina.tipo === 'pagina' && (
-            <button className="boton-icono" aria-label={trad('Historial de versiones')} title={trad('Historial de versiones')} onClick={() => cambiarUi({ historial: pagina.id })}>
-              <Clock size={18} />
-            </button>
-          )}
-          <button
-            className={`boton-icono${pagina.favorito ? ' favorito' : ''}`}
-            aria-label={pagina.favorito ? trad('Quitar de favoritos') : trad('Añadir a favoritos')}
-            aria-pressed={pagina.favorito}
-            title={pagina.favorito ? trad('Quitar de favoritos') : trad('Añadir a favoritos')}
-            onClick={() => alternarFavorito(pagina.id)}
-          >
-            <Star size={18} fill={pagina.favorito ? 'currentColor' : 'none'} />
-          </button>
-          <button className="boton-icono" aria-label={trad('Más opciones')} title={trad('Más opciones')} onClick={(e) => setMenu(e.currentTarget)}>
-            <MoreHorizontal size={18} />
-          </button>
-          {menu && <MenuPagina pagina={pagina} ancla={menu} alCerrar={() => setMenu(null)} />}
-        </>
-      )}
-    </div>
-    <FilaPestanas />
-    </>
   );
 }
 
@@ -437,24 +319,64 @@ function AvisoPapelera({ pagina }: { pagina: Pagina }) {
   );
 }
 
-export function CuerpoPagina({ pagina, enPanel }: { pagina: Pagina; enPanel?: boolean }) {
+/** Cómo entra la hoja al abrirse (estilos/pagina.css › «Entrada de página»): una página nueva sube con el destello
+ *  dorado; al volver con atrás/adelante sube sin destello; en el panel lateral llega desde la derecha; en la ventana
+ *  centrada (que aparece quieta) solo sube, sin destello. */
+type Entrada = 'nueva' | 'historial' | 'panel' | 'centrada';
+/** Lo que dura el destello (90 ms de espera + 760 ms), con margen: después ya no vuelve a cruzar. */
+const FIN_DESTELLO = 1000;
+
+// La última navegación fue atrás/adelante. El evento «navigate» llega antes que «hashchange», así que ya está al día
+// cuando la ruta nueva se pinta. Sin esa interfaz, cualquier «popstate» cuenta como historial (solo se pierde el
+// destello).
+let ultimaFueHistorial = false;
+if (typeof window !== 'undefined') {
+  const navegacion = (window as unknown as { navigation?: EventTarget }).navigation;
+  if (navegacion?.addEventListener) {
+    navegacion.addEventListener('navigate', (e) => {
+      ultimaFueHistorial = (e as Event & { navigationType?: string }).navigationType === 'traverse';
+    });
+  } else {
+    window.addEventListener('popstate', () => (ultimaFueHistorial = true));
+  }
+}
+
+export function CuerpoPagina({ pagina, enPanel, entrada }: { pagina: Pagina; enPanel?: boolean; entrada?: Entrada }) {
   const esUnaFila = usar((s) => esFila(s.paginas, pagina));
   const borrada = usar((s) => estaBorrada(s.paginas, pagina.id));
+  // Subpáginas que una plantilla propia ya tenía (de antes de cerrar esa puerta): no pasan a las páginas nuevas.
+  const subsPlantilla = usar((s) => (pagina.plantillaPagina ? Object.values(s.paginas).filter((x) => x.padreId === pagina.id && !x.enPapelera).length : 0));
   // En el panel lateral el artículo lleva su propia apariencia (sin fondo); en la vista normal la lleva el lienzo.
   const propio = useEstiloPagina(enPanel ? pagina : undefined, false);
+  // La entrada se fija al montarse la hoja (una por página abierta). El destello cruza una sola vez: al terminar se
+  // apaga, y añadir o quitar la portada con la página abierta ya no lo repite.
+  const [modoEntrada] = useState<Entrada>(() => entrada ?? (enPanel ? 'panel' : 'nueva'));
+  const [destello, setDestello] = useState(modoEntrada === 'nueva');
+  useEffect(() => {
+    if (!destello) return;
+    const t = window.setTimeout(() => setDestello(false), FIN_DESTELLO);
+    return () => window.clearTimeout(t);
+  }, [destello]);
   return (
     <article
       className={`pagina fuente-${pagina.fuente}${pagina.textoPequeno ? ' texto-pequeno' : ''}${pagina.anchoCompleto || pagina.tipo === 'bd' ? ' ancho-completo' : ''}${enPanel ? ' en-panel' : ''} ${propio.clase}`}
       style={propio.estilo}
+      data-entrada={modoEntrada}
+      data-destello={destello ? '' : undefined}
+      onAnimationEnd={destello ? (e) => { if (e.animationName === 'destello-cruza') setDestello(false); } : undefined}
     >
       {borrada && <AvisoPapelera pagina={pagina} />}
       {!borrada && <AvisoArchivada pagina={pagina} />}
       {!borrada && pagina.esPlantilla && (
         <div className="aviso-papelera aviso-archivada" role="status">
-          <span>{trad('Estás editando una plantilla de «{base}». Las filas creadas con ella copian su título, sus valores y su contenido.', { base: tituloDe(usar.getState().paginas[pagina.padreId ?? '']) })}</span>
+          <span>{pagina.plantillaPagina
+            ? trad('Estás editando tu plantilla «{nombre}». Las páginas creadas con ella copian su contenido, icono, portada y apariencia.', { nombre: tituloDe(pagina) })
+              + (subsPlantilla ? ' ' + plural(subsPlantilla, 'Su subpágina no pasa a ellas: solo llega su nombre.', 'Sus {n} subpáginas no pasan a ellas: solo llega su nombre.') : '')
+            : trad('Estás editando una plantilla de «{base}». Las filas creadas con ella copian su título, sus valores y su contenido.', { base: tituloDe(usar.getState().paginas[pagina.padreId ?? '']) })}</span>
         </div>
       )}
       <CabeceraPagina pagina={pagina} compacta={enPanel} alSalirTitulo={() => enfocarEditor(pagina.id)} />
+      {!borrada && <EmpezarConPlantilla pagina={pagina} />}
       <div className="pagina-cuerpo">
         {!pagina.esSincronizado && <NotasPagina pagina={pagina} />}
         {esUnaFila && <PanelPropiedades fila={pagina} />}
@@ -469,6 +391,8 @@ export function VistaPagina({ id }: { id: string }) {
   const pagina = usar((s) => s.paginas[id]);
   const apariencia = useEstiloPagina(pagina, true);
   const conIndice = usar((s) => s.ajustes.indiceFlotante !== false);
+  // Se decide una vez por página abierta: la hoja vuelve a montarse con cada id (key de CuerpoPagina).
+  const entrada = useMemo<Entrada>(() => (ultimaFueHistorial ? 'historial' : 'nueva'), [id]);
   // Buscar en la página (Ctrl+F): se abre con el atajo y se cierra al cambiar de página.
   const [buscando, setBuscando] = useState(false);
   useEffect(() => {
@@ -504,7 +428,7 @@ export function VistaPagina({ id }: { id: string }) {
     <div className={`vista-pagina ${apariencia.clase}`} style={apariencia.estilo}>
       <BarraSuperior pagina={pagina} />
       <div className="lienzo" id="lienzo">
-        <CuerpoPagina key={pagina.id} pagina={pagina} />
+        <CuerpoPagina key={pagina.id} pagina={pagina} entrada={entrada} />
       </div>
       {pagina.tipo === 'pagina' && conIndice && <IndiceFlotante key={`indice-${pagina.id}`} paginaId={pagina.id} />}
       {buscando && <BuscarEnPagina key={`buscar-${pagina.id}`}alCerrar={() => setBuscando(false)} />}
@@ -546,7 +470,7 @@ export function PanelVistazo() {
         </button>
       </div>
       <div className="panel-vistazo-cuerpo">
-        <CuerpoPagina key={pagina.id} pagina={pagina} enPanel />
+        <CuerpoPagina key={pagina.id} pagina={pagina} enPanel entrada={centrado ? 'centrada' : 'panel'} />
       </div>
     </aside>
     </>

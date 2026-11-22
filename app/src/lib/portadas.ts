@@ -197,4 +197,120 @@ export function patronAlAzar(): { valor: string; semilla: number } {
   return { valor: `${patron}:${paleta}`, semilla };
 }
 
+/** Portadas «Estudio 3D»: renderizadas en Blender con el kit de marca/blender/ y guardadas en public/portadas/
+ *  (<id>.webp, <id>-mini.webp y, si es animada, <id>.webm, un bucle corto sin sonido). */
+export const PORTADAS_ESTUDIO: { id: string; nombre: string; animada?: boolean }[] = [
+  { id: 'seda', nombre: trad('Seda'), animada: true },
+  { id: 'cintas', nombre: trad('Cintas de oro'), animada: true },
+  { id: 'esferas', nombre: trad('Esferas'), animada: true },
+  { id: 'papel', nombre: trad('Papel') },
+  { id: 'arcos', nombre: trad('Arcos') },
+  { id: 'bruma', nombre: trad('Bruma dorada') },
+  // «Pulso» (2026-11-20): la diagonal dorada del logo hecha raya de avance. «trama» se llama «Tejido» porque «Trama»
+  // ya es el nombre del patrón generativo de puntos.
+  { id: 'pulso', nombre: trad('Pulso'), animada: true },
+  { id: 'trama', nombre: trad('Tejido') },
+  { id: 'destello', nombre: trad('Destello'), animada: true },
+];
+
+export const esPortadaEstudio = (id: string) => PORTADAS_ESTUDIO.some((p) => p.id === id);
+export const portadaEstudio = (id: string) => PORTADAS_ESTUDIO.find((p) => p.id === id);
+export const urlEstudio = (id: string, tipo: 'webp' | 'mini' | 'webm' = 'webp') =>
+  `${import.meta.env.BASE_URL}portadas/${id}${tipo === 'mini' ? '-mini.webp' : tipo === 'webm' ? '.webm' : '.webp'}`;
+
+// ---------- color de una imagen de portada («Pulso») ----------
+// Se mide una sola vez (al elegir la imagen, o la primera vez que se pinta una portada vieja) y se guarda en la
+// portada: { tipo: 'imagen', …, color }. Lo usa lib/apariencia.ts › colorDePortada.
+
+const LADO_MUESTRA = 16;
+
+/** Color medio saturado de una imagen dibujada en 16×16: se ignoran los píxeles casi transparentes, casi negros, casi
+ *  blancos y grises; de los que quedan se toma el tono que más pesa (24 sectores de 15°, cada uno con sus dos vecinos)
+ *  y se promedian el tono, la saturación y el brillo de esos píxeles, pesados por su croma (lo vivo pesa más que lo
+ *  apagado). Así una foto de un atardecer da su naranja, y no un marrón mezclado con el azul del cielo, y el
+ *  promedio no se apaga como pasaría al mezclar en RGB. Devuelve '' si la imagen es neutra (menos de 8 píxeles con
+ *  color). lib/apariencia.ts ajusta después la luz al modo y mide el contraste. */
+export function colorMedioSaturado(fuente: CanvasImageSource): string {
+  const lienzo = document.createElement('canvas');
+  lienzo.width = LADO_MUESTRA;
+  lienzo.height = LADO_MUESTRA;
+  const ctx = lienzo.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('canvas');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(fuente, 0, 0, LADO_MUESTRA, LADO_MUESTRA);
+  const d = ctx.getImageData(0, 0, LADO_MUESTRA, LADO_MUESTRA).data; // con CORS sin permiso lanza SecurityError
+  const SECTORES = 24;
+  const peso = new Array<number>(SECTORES).fill(0);
+  const pixeles: { h: number; s: number; v: number; w: number; sector: number }[] = [];
+  for (let i = 0; i < d.length; i += 4) {
+    const [r, g, b, a] = [d[i], d[i + 1], d[i + 2], d[i + 3]];
+    if (a < 128) continue; // casi transparente
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    if (max < 40) continue; // casi negro
+    if (min > 225) continue; // casi blanco
+    const s = (max - min) / max;
+    if (s < 0.2) continue; // gris
+    const croma = max - min;
+    const h = (max === r ? ((g - b) / croma + 6) % 6 : max === g ? (b - r) / croma + 2 : (r - g) / croma + 4) * 60;
+    const sector = Math.floor(h / (360 / SECTORES)) % SECTORES;
+    const w = croma / 255;
+    peso[sector] += w;
+    pixeles.push({ h, s, v: max / 255, w, sector });
+  }
+  if (pixeles.length < 8) return '';
+  let mejor = 0;
+  let pesoMejor = -1;
+  for (let k = 0; k < SECTORES; k++) {
+    const p = peso[(k + SECTORES - 1) % SECTORES] + peso[k] + peso[(k + 1) % SECTORES];
+    if (p > pesoMejor) [mejor, pesoMejor] = [k, p];
+  }
+  // Promedio del tono en el círculo (el rojo de 355° y el de 5° dan 0°, no 180°), y de la saturación y el brillo.
+  let [x, y, s, v, total] = [0, 0, 0, 0, 0];
+  for (const p of pixeles) {
+    const dist = Math.abs(p.sector - mejor);
+    if (Math.min(dist, SECTORES - dist) > 1) continue;
+    x += Math.cos((p.h * Math.PI) / 180) * p.w;
+    y += Math.sin((p.h * Math.PI) / 180) * p.w;
+    s += p.s * p.w;
+    v += p.v * p.w;
+    total += p.w;
+  }
+  if (!total) return '';
+  const h = ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360;
+  [s, v] = [s / total, v / total];
+  const canal = (n: number) => {
+    const k = (n + h / 60) % 6;
+    return Math.round((v - v * s * Math.max(0, Math.min(k, 4 - k, 1))) * 255);
+  };
+  return `#${[canal(5), canal(3), canal(1)].map((c) => c.toString(16).padStart(2, '0')).join('')}`;
+}
+
+/** Mide el color de una imagen por su URL (blob:, data: o http). Falla si la imagen no carga, si otro sitio no deja
+ *  leerla (CORS) o si tarda más de `espera` ms: entonces la página sigue con su color de reserva. */
+export function colorDeImagen(url: string, espera = 8000): Promise<string> {
+  return new Promise((ok, mal) => {
+    if (!url || typeof document === 'undefined') return mal(new Error('sin imagen'));
+    const img = new Image();
+    // Las de otro sitio se piden con CORS: sin permiso, onerror (y no un lienzo «manchado» que no se puede leer).
+    if (/^https?:/i.test(url) && !url.startsWith(location.origin)) img.crossOrigin = 'anonymous';
+    img.decoding = 'async';
+    const reloj = window.setTimeout(() => mal(new Error('la imagen tarda demasiado')), espera);
+    img.onload = () => {
+      window.clearTimeout(reloj);
+      try {
+        ok(colorMedioSaturado(img));
+      } catch (err) {
+        mal(err);
+      }
+    };
+    img.onerror = () => {
+      window.clearTimeout(reloj);
+      mal(new Error('la imagen no carga'));
+    };
+    img.src = url;
+  });
+}
+
 export const COLORES_PORTADA = ['#11292A', '#E8A13A', '#2F5A57', '#14213D', '#E4572E', '#0B6E4F', '#8C1C13', '#5A6168', '#D8F3E8', '#E6F0F3', '#F2E3D5', '#25282B'];

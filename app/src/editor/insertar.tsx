@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createReactBlockSpec } from '@blocknote/react';
 import { ExternalLink, Globe, Link2, Settings2 } from 'lucide-react';
 import { Flotante } from '../componentes/ui';
+import { guardarLocal, leerLocal } from '../data/bd';
 import { MENSAJE_SIN_INTERNET, useInternet } from '../lib/internet';
 import { trad } from '../i18n';
 
@@ -11,6 +12,41 @@ export interface Insercion {
   src: string;
   sitio: string;
   alto: number;
+  /** Web cualquiera (o CodePen, que corre el código de quien hizo el pen): no se carga hasta que la persona lo pida. */
+  confirmar?: boolean;
+}
+
+/** Alto mínimo del marco: un bloque de 1 px sería un rastreador invisible. 80 deja caber el reproductor compacto de Spotify. */
+const ALTO_MINIMO = 80;
+
+// Sitios aceptados en este dispositivo. Una web cualquiera solo se carga sola si la persona la insertó con el
+// formulario del bloque o pulsó «Cargar» alguna vez; lo que llega pegado desde otra web, importado o escrito por
+// el asistente podría ser un rastreador. La lista va fuera del bloque a propósito: BlockNote lee las propiedades
+// de los atributos data-* del HTML pegado, así que una marca guardada en el bloque se podría falsificar.
+const CLAVE_SITIOS = 'insertar:sitios';
+let aceptados: Set<string> | null = null;
+
+function sitiosAceptados(): Set<string> {
+  if (!aceptados) {
+    const guardados = leerLocal<unknown>(CLAVE_SITIOS, []);
+    aceptados = new Set(Array.isArray(guardados) ? guardados.filter((h): h is string => typeof h === 'string') : []);
+  }
+  return aceptados;
+}
+
+function aceptarSitio(host: string) {
+  const lista = sitiosAceptados();
+  if (!host || lista.has(host)) return;
+  lista.add(host);
+  guardarLocal(CLAVE_SITIOS, [...lista]);
+}
+
+function hostDe(src: string): string {
+  try {
+    return new URL(src).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
 }
 
 /** Convierte un enlace normal en su versión para insertar. null si no es una dirección https válida. */
@@ -42,7 +78,7 @@ export function insercionDe(texto: string): Insercion | null {
   if (h === 'vimeo.com' && /^\d+$/.test(partes[0] ?? '')) return { src: `https://player.vimeo.com/video/${partes[0]}`, sitio: 'Vimeo', alto: 0 };
   if (h === 'soundcloud.com') return { src: `https://w.soundcloud.com/player/?url=${encodeURIComponent(u.href)}&visual=true`, sitio: 'SoundCloud', alto: 300 };
   if (h === 'figma.com') return { src: `https://www.figma.com/embed?embed_host=share&url=${encodeURIComponent(u.href)}`, sitio: 'Figma', alto: 450 };
-  if (h === 'codepen.io' && partes[1] === 'pen') return { src: `https://codepen.io/${partes[0]}/embed/${partes[2]}?default-tab=result`, sitio: 'CodePen', alto: 400 };
+  if (h === 'codepen.io' && partes[1] === 'pen') return { src: `https://codepen.io/${partes[0]}/embed/${partes[2]}?default-tab=result`, sitio: 'CodePen', alto: 400, confirmar: true };
   if ((h === 'google.com' || h.endsWith('.google.com')) && u.pathname.startsWith('/maps')) {
     if (u.pathname.startsWith('/maps/embed')) return { src: u.href, sitio: 'Google Maps', alto: 360 };
     const q = u.searchParams.get('q') ?? decodeURIComponent(partes[2] ?? '').replace(/\+/g, ' ');
@@ -50,7 +86,7 @@ export function insercionDe(texto: string): Insercion | null {
   }
   if (h === 'calendar.google.com' && u.pathname.includes('/embed')) return { src: u.href, sitio: 'Google Calendar', alto: 500 };
   if (h === 'docs.google.com') return { src: u.href.replace(/\/edit.*$/, '/preview'), sitio: 'Google Docs', alto: 480 };
-  return { src: u.href, sitio: h, alto: 420 };
+  return { src: u.href, sitio: h, alto: 420, confirmar: true };
 }
 
 function Insertar({ url, alto, editable, alCambiar }: { url: string; alto: number; editable: boolean; alCambiar: (p: Partial<{ url: string; alto: number }>) => void }) {
@@ -58,6 +94,9 @@ function Insertar({ url, alto, editable, alCambiar }: { url: string; alto: numbe
   const conInternet = useInternet();
   const [error, setError] = useState('');
   const [menu, setMenu] = useState<HTMLElement | null>(null);
+  // El sitio para el que la persona pulsó «Cargar» en este bloque. Se guarda el sitio y no un sí/no: si el enlace del
+  // bloque cambia luego (otro dispositivo, el asistente), el sitio nuevo vuelve a pedir permiso.
+  const [pedido, setPedido] = useState('');
   const caja = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = caja.current;
@@ -75,6 +114,9 @@ function Insertar({ url, alto, editable, alCambiar }: { url: string; alto: numbe
       return;
     }
     setError('');
+    // La escribió la persona: se fía de ese sitio. Solo si el enlace cambió: el campo «Enlace» del menú del bloque
+    // también guarda al perder el foco, y abrir y cerrar ese menú sobre un bloque pegado no es pedir que se cargue.
+    if (i.confirmar && borrador.trim() !== url.trim()) aceptarSitio(hostDe(i.src));
     alCambiar({ url: borrador.trim(), alto: 0 });
   };
 
@@ -103,14 +145,34 @@ function Insertar({ url, alto, editable, alCambiar }: { url: string; alto: numbe
     );
   }
 
-  const altoFinal = alto || ins.alto;
+  // El alto viene de las propiedades del bloque, que pueden llegar pegadas o importadas: siempre con un mínimo visible.
+  const altoFinal = alto > 0 ? Math.min(1200, Math.max(ALTO_MINIMO, alto)) : ins.alto;
+  const host = hostDe(ins.src);
+  const esperando = conInternet && !!ins.confirmar && pedido !== host && !sitiosAceptados().has(host);
   return (
     <div className="insertar" contentEditable={false} ref={caja}>
-      <div className={`insertar-marco${altoFinal ? '' : ' video'}`} style={altoFinal ? { height: altoFinal } : undefined}>
+      <div className={`insertar-marco${altoFinal || esperando ? '' : ' video'}`} style={altoFinal && !esperando ? { height: altoFinal } : undefined}>
         {!conInternet ? (
           <p className="insertar-error" role="status" style={{ margin: 0, padding: 16 }}>
             {MENSAJE_SIN_INTERNET} {trad('Este contenido de {sitio} no se carga.', { sitio: ins.sitio })}
           </p>
+        ) : esperando ? (
+          <div className="insertar-vacio">
+            <p className="insertar-ayuda">
+              <Globe size={16} /> {trad('Contenido de una web externa ({sitio}). No se carga hasta que lo pidas.', { sitio: ins.sitio })}
+            </p>
+            <button
+              className="boton chico"
+              type="button"
+              style={{ justifySelf: 'start' }}
+              onClick={() => {
+                aceptarSitio(host);
+                setPedido(host);
+              }}
+            >
+              {trad('Cargar contenido de {sitio}', { sitio: ins.sitio })}
+            </button>
+          </div>
         ) : (
         <iframe
           src={ins.src}
@@ -123,7 +185,8 @@ function Insertar({ url, alto, editable, alCambiar }: { url: string; alto: numbe
         />
         )}
       </div>
-      <div className="insertar-pie">
+      {/* En una web cualquiera el dominio se ve siempre, no solo al pasar el ratón. */}
+      <div className="insertar-pie" style={ins.confirmar ? { opacity: 1 } : undefined}>
         <span className="insertar-sitio">
           <Link2 size={13} /> {ins.sitio}
         </span>

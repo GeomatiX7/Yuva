@@ -119,7 +119,9 @@ export function crearGestorTareas(padreId: string | null): Pagina {
   // ---------- Vistas propias ----------
   const pendiente = filtro(estado, 'no_es', estados[4].id);
   const rojas = [colorSi(vence, 'es', ATRASADA, 'rojo'), colorSi(vence, 'es', HOY, 'amarillo')];
-  primeraVista(tareas, { nombre: trad('Tablero'), agruparPor: estado, colorPor: prio, sumaGrupo: horas, colores: rojas }, [nro, resp, limite, vence, empezar, terminar]);
+  // Los tableros no muestran «Vence»: la ficha ya dice cuánto falta junto a la fecha límite (VistaTablero › MetaFecha).
+  // La fórmula sigue en las tablas, en las listas y en los colores (rojas).
+  primeraVista(tareas, { nombre: trad('Tablero'), agruparPor: estado, colorPor: prio, sumaGrupo: horas, colores: rojas }, [nro, resp, limite, empezar, terminar]);
   vista(tareas, 'tabla', {
     nombre: trad('Todas'), ordenes: [orden(limite)], calculos: { titulo: 'contar', [horas]: 'suma' }, congeladas: 1, colores: rojas,
   }, [nro, estado, prio, resp, limite, vence, etq, horas, subs, bloqueadoPor]);
@@ -129,7 +131,7 @@ export function crearGestorTareas(padreId: string | null): Pagina {
   const abiertas = vista(tareas, 'tabla', { nombre: trad('Abiertas'), filtros: [pendiente], calculos: { [horas]: 'suma' } }, [estado, limite, horas]);
   const hechas = vista(tareas, 'tabla', { nombre: trad('Hechas'), filtros: [filtro(estado, 'es', estados[4].id)], ordenes: [orden(terminada, 'desc')] }, [terminada, resp]);
   vista(tareas, 'tablero', { nombre: trad('Matriz'), agruparPor: prio, filtros: [pendiente], colorPor: prio }, [cuadrante, limite]);
-  vista(tareas, 'tablero', { nombre: trad('Por persona'), agruparPor: resp, filtros: [pendiente], colorPor: prio, sumaGrupo: horas }, [limite, vence]);
+  vista(tareas, 'tablero', { nombre: trad('Por persona'), agruparPor: resp, filtros: [pendiente], colorPor: prio, sumaGrupo: horas }, [limite]);
   vista(tareas, 'calendario', { nombre: trad('Calendario'), propFecha: limite, colorPor: prio }, [resp]);
   vista(tareas, 'grafico', { nombre: trad('Carga por persona'), filtros: [pendiente], ...grafico({ tipo: 'barras', eje: resp, medida: 'suma', valorProp: horas, orden: 'mayor' }) });
   vista(tareas, 'grafico', { nombre: trad('Avance'), filtros: [filtro(terminada, 'lleno')], ...grafico({ tipo: 'lineas', eje: terminada, agruparFecha: 'dia', medida: 'contar', acumulado: true, suave: true }) });
@@ -188,7 +190,7 @@ export function crearGestorTareas(padreId: string | null): Pagina {
       [1, [h(3, trad('🗓️ Agéndalo · importante, no urgente')), cuadro(trad('Agéndalo'), 'sin_marcar', 'marcada'), h(3, trad('🍃 Suéltalo · ni una ni otra')), cuadro(trad('Suéltalo'), 'sin_marcar', 'sin_marcar')]],
     ),
     banda(trad('Tablero'), 'subrayado'),
-    enlazada(tareas, 'tablero', { nombre: trad('Por estado'), agruparPor: estado, colorPor: prio, sumaGrupo: horas, colores: rojas, tamTarjeta: 'p' }, [resp, limite, vence]),
+    enlazada(tareas, 'tablero', { nombre: trad('Por estado'), agruparPor: estado, colorPor: prio, sumaGrupo: horas, colores: rojas, tamTarjeta: 'p' }, [resp, limite]),
     banda(trad('Equipo y avance'), 'contorno', 'azul'),
     columnas(
       [1, [h(3, trad('Carga por persona (horas)')), enlazada(tareas, 'grafico', { nombre: trad('Carga por persona'), filtros: [pendiente], ...grafico({ tipo: 'barras', eje: resp, medida: 'suma', valorProp: horas, orden: 'mayor' }) })]],

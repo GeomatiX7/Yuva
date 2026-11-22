@@ -6,6 +6,8 @@ import type { Pagina, Propiedad, ValorProp, Vista } from '../data/tipos';
 import { crearFila, crearDesdePlantilla, cambiarVista, plantillaPorDefecto, propsVisibles } from './operaciones';
 import { actualizarPagina } from '../data/estado';
 import { IconoTipo } from './valores';
+// VistaBD carga este archivo con import(): importarla aquí no crea un ciclo al cargar (como VistaCronograma).
+import { estadoInicial } from './operaciones';
 import { trad } from '../i18n';
 
 const RESPONDIBLES = ['titulo', 'texto', 'numero', 'seleccion', 'estado', 'multiseleccion', 'fecha', 'casilla', 'url', 'correo', 'telefono'];
@@ -77,10 +79,17 @@ export function VistaFormulario({ bd, vista }: { bd: Pagina; vista: Vista }) {
     const { titulo, ...resto } = visibles;
     // Con plantilla por defecto (de la vista o de la base), la respuesta lleva su contenido, como «Nueva».
     const porDefecto = plantillaPorDefecto(bd, vista);
+    // El estado que no se pregunta (o se deja en «Elige…») entra con el inicial de la base, como «Nueva» en las demás
+    // vistas: la primera opción «Por hacer» (en el Gestor de tareas, la Bandeja), salvo que la plantilla traiga uno.
+    // Ese estado sin responder no se pasa vacío: con plantilla, un null pisaría el estado que trae la plantilla.
+    const esEstado = (id: string) => bd.esquema?.propiedades.some((p) => p.id === id && p.tipo === 'estado');
+    const respondidas: Record<string, ValorProp> = {};
+    for (const [id, v] of Object.entries(resto)) if (!(esEstado(id) && (v === null || v === ''))) respondidas[id] = v;
+    const deLaFila: Record<string, ValorProp> = { ...respondidas, ...estadoInicial(bd, vista, respondidas, porDefecto) };
     if (porDefecto) {
-      const fila = crearDesdePlantilla(bd.id, porDefecto.id, resto);
+      const fila = crearDesdePlantilla(bd.id, porDefecto.id, deLaFila);
       if (String(titulo ?? '').trim()) actualizarPagina(fila.id, { titulo: String(titulo) });
-    } else crearFila(bd.id, resto, String(titulo ?? ''));
+    } else crearFila(bd.id, deLaFila, String(titulo ?? ''));
     setValores({});
     setEnviado(true);
   };
@@ -136,13 +145,13 @@ export function VistaFormulario({ bd, vista }: { bd: Pagina; vista: Vista }) {
                   const lista = Array.isArray(v) ? v : [];
                   return (
                     <label key={o.id}>
-                      <input type="checkbox" checked={lista.includes(o.id)} onChange={(e) => poner(p.id, e.target.checked ? [...lista, o.id] : lista.filter((x) => x !== o.id))} /> {o.nombre}
+                      <input type="checkbox" className="casilla" checked={lista.includes(o.id)} onChange={(e) => poner(p.id, e.target.checked ? [...lista, o.id] : lista.filter((x) => x !== o.id))} /> {o.nombre}
                     </label>
                   );
                 })}
               </div>
             ) : p.tipo === 'casilla' ? (
-              <input id={idCampo} type="checkbox" checked={!!v} onChange={(e) => poner(p.id, e.target.checked)} />
+              <input id={idCampo} type="checkbox" className="casilla" checked={!!v} onChange={(e) => poner(p.id, e.target.checked)} />
             ) : (
               <input
                 id={idCampo}
@@ -158,6 +167,7 @@ export function VistaFormulario({ bd, vista }: { bd: Pagina; vista: Vista }) {
               <label className="pregunta-obligatoria">
                 <input
                   type="checkbox"
+                  className="casilla"
                   checked={obligatoria}
                   onChange={(e) => {
                     const nuevas = new Set(obligatorias);

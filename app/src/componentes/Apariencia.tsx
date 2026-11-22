@@ -4,8 +4,8 @@ import { Check } from 'lucide-react';
 import { actualizarPagina } from '../data/estado';
 import type { ColorEtiqueta, EstiloPagina, FondoPagina, Pagina, Superficie } from '../data/tipos';
 import { COLORES, NOMBRE_COLOR } from '../bd/operaciones';
-import { NOMBRE_FONDO, NOMBRE_SUPERFICIE, TEMAS_TABLERO, clasesEstilo, variablesColor } from '../lib/apariencia';
-import { Flotante, TituloMenu } from './ui';
+import { NOMBRE_FONDO, NOMBRE_SUPERFICIE, TEMAS_TABLERO, clasesEstilo, variablesColor, variablesColorEstilo } from '../lib/apariencia';
+import { Flotante, TituloMenu, refSegmentado } from './ui';
 import { trad } from '../i18n';
 
 const BASE: EstiloPagina = { fondo: 'ninguno', superficie: 'plana' };
@@ -25,7 +25,7 @@ export function MenuApariencia({ pagina, ancla, alCerrar }: { pagina: Pagina; an
               <button
                 key={t.id}
                 className={`tema-muestra ${clasesEstilo(t.estilo)}${temaActual === t.id ? ' activa' : ''}`}
-                style={variablesColor(t.estilo.color, oscuro) as CSSProperties}
+                style={variablesColorEstilo(t.estilo, oscuro) as CSSProperties}
                 aria-pressed={temaActual === t.id}
                 title={t.descripcion}
                 onClick={() =>
@@ -82,7 +82,8 @@ export function MenuApariencia({ pagina, ancla, alCerrar }: { pagina: Pagina; an
         </div>
 
         <TituloMenu>{trad('Modo')}</TituloMenu>
-        <div className="segmentado apariencia-modo" role="radiogroup" aria-label={trad('Modo de la página')}>
+        <div className="segmentado apariencia-modo" role="radiogroup" aria-label={trad('Modo de la página')} ref={refSegmentado}>
+          <span className="seg-ind" aria-hidden="true" />
           {([['', trad('Como la app')], ['claro', trad('Siempre claro')], ['oscuro', trad('Siempre oscuro')]] as const).map(([m, n]) => (
             <button key={m} role="radio" aria-checked={(estilo.modo ?? '') === m} className={(estilo.modo ?? '') === m ? 'activo' : ''} onClick={() => cambiar({ modo: m || undefined })}>
               {n}

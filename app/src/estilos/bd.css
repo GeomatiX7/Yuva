@@ -497,20 +497,16 @@
   border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
+/* La casilla de solo lectura (Casilla y Estado «como casilla»): la misma casilla sesgada de la app (.casilla en
+   atelier.css, que también pinta su caja en ::before y la palomita en ::after). Al marcarla se estira y encoge
+   (el «marcar» de movimiento.css). */
 .casilla-vista {
-  display: inline-grid;
-  place-items: center;
-  width: 17px;
-  height: 17px;
-  border-radius: 4px;
-  border: 1.5px solid var(--linea-fuerte);
-  background: var(--papel);
-  color: var(--acento-sobre);
-}
-
-.casilla-vista.marcada {
-  background: var(--acento);
-  border-color: var(--acento);
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  vertical-align: middle;
 }
 
 .valor-enlace {
@@ -696,54 +692,130 @@
   color: var(--tinta);
 }
 
-/* ---------- tablero ---------- */
+/* ---------- tablero («Pulso») ----------
+   Sin cajas grises: cada columna es su encabezado (el punto de la opción, el nombre, la cifra en mono y, si es de
+   un estado «hecho», las rayas de cuánto del tablero ya está ahí) y sus fichas. Cada ficha tiene el canto izquierdo
+   del color de la opción (--c, de .cb-* en la columna o de la página en «Sin…»), cortado en la diagonal de la firma.
+   Las superficies son las de siempre (--flota, --linea, --papel): los temas de página las siguen cambiando.
+   Van con `.tablero` delante porque atelier-paginas.css (que carga después) también da forma a estas clases. */
 .tablero {
   display: flex;
-  gap: 14px;
+  gap: 18px;
   overflow-x: auto;
   padding: 4px 2px 16px;
   align-items: flex-start;
 }
 
-.columna-tablero {
+.tablero .columna-tablero {
   flex: 0 0 272px;
-  border-radius: var(--r-3);
-  padding: 8px;
-  background: color-mix(in srgb, var(--fondo-col, var(--e-gris)) 45%, var(--papel));
-  transition: box-shadow var(--dur);
-}
-
-.col-gris { --fondo-col: var(--e-gris); }
-.col-marron { --fondo-col: var(--e-marron); }
-.col-naranja { --fondo-col: var(--e-naranja); }
-.col-amarillo { --fondo-col: var(--e-amarillo); }
-.col-verde { --fondo-col: var(--e-verde); }
-.col-azul { --fondo-col: var(--e-azul); }
-.col-morado { --fondo-col: var(--e-morado); }
-.col-rosa { --fondo-col: var(--e-rosa); }
-.col-rojo { --fondo-col: var(--e-rojo); }
-
-.columna-tablero.sobre {
-  box-shadow: inset 0 0 0 2px var(--acento);
-}
-
-.columna-tablero.agregar-grupo {
+  border-radius: 12px;
+  padding: 2px 6px 8px;
   background: transparent;
+  transition: box-shadow var(--dur), background-color var(--dur);
+}
+
+.tablero .columna-tablero.agregar-grupo {
   flex-basis: 220px;
 }
 
-.columna-cabeza {
+/* Mientras se arrastra, cada columna enseña su contorno: es donde se puede soltar. */
+.tablero.arrastrando .columna-tablero:not(.agregar-grupo, .grupos-ocultos) {
+  box-shadow: inset 0 0 0 1px var(--linea);
+}
+
+/* La columna que recibe la ficha se ilumina con el filo de oro. */
+.tablero .columna-tablero.sobre.sobre {
+  background: color-mix(in srgb, var(--oro-m) 7%, transparent);
+  box-shadow:
+    inset 0 0 0 1.5px var(--oro-m),
+    0 0 20px -8px color-mix(in srgb, var(--oro-m) 70%, transparent);
+}
+
+:root[data-contraste='alto'] .tablero .columna-tablero.sobre.sobre {
+  box-shadow: inset 0 0 0 2.5px var(--oro-m);
+}
+
+/* En una página que se ve siempre clara u oscura (temas de tablero), el oro de su modo y no el de la app. */
+:root .modo-claro .tablero {
+  --oro-m: #a8772f;
+}
+
+:root .modo-oscuro .tablero {
+  --oro-m: #eac46f;
+}
+
+:root[data-paleta='laguna'] .modo-claro .tablero {
+  --oro-m: #8a5600;
+}
+
+:root[data-paleta='laguna'] .modo-oscuro .tablero {
+  --oro-m: #f0b45c;
+}
+
+.tablero .columna-cabeza {
   display: flex;
   align-items: center;
   gap: 8px;
-  min-height: 30px;
-  padding: 0 2px 6px 4px;
+  min-height: 32px;
+  margin-bottom: 8px;
+  padding: 0 0 6px 4px;
+  border-bottom: 2px solid color-mix(in srgb, var(--c) 32%, var(--linea));
+}
+
+.tablero .columna-tablero.sin-opcion .columna-cabeza {
+  border-bottom-color: var(--linea);
+}
+
+.tablero .columna-tablero.sobre .columna-cabeza {
+  border-bottom-color: color-mix(in srgb, var(--oro-m) 60%, var(--linea));
+}
+
+.col-punto {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--c);
+}
+
+/* Los estados llevan el aro suave de sus etiquetas. */
+.col-punto.de-estado {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 20%, transparent);
+}
+
+.col-nombre {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 650 13.5px/1.3 var(--f-ui);
+  color: var(--tinta);
+}
+
+.col-nombre.sin-grupo {
+  font-weight: 560;
+  color: var(--tinta-2);
 }
 
 .contador-col {
   color: var(--tinta-3);
   font-size: var(--t-s);
   font-variant-numeric: tabular-nums;
+}
+
+.tablero .columna-cabeza .contador-col {
+  flex: none;
+  font: 500 11.5px var(--f-mono);
+  color: var(--tinta-2);
+}
+
+/* Columna de un estado «hecho»: las rayas dicen qué parte del tablero ya llegó aquí. Las vacías van en tinta al 20 %,
+   como en las fichas, para que se distingan de las llenas también en alto contraste. */
+.tablero .col-avance {
+  --raya-alto: 10px;
+  --raya-vacia: color-mix(in srgb, var(--tinta) 20%, transparent);
+  flex: none;
 }
 
 .sin-grupo {
@@ -782,10 +854,97 @@
   cursor: grabbing;
 }
 
+/* La ficha: el canto izquierdo es el color de la opción, cortado arriba y abajo en la diagonal de la firma
+   (5 px de ancho por 15 px de alto: tan 18°). Ocupa el lugar del borde de la izquierda. */
+.tablero .tarjeta {
+  --canto: 5px;
+  --canto-corte: 15px;
+  --raya-vacia: color-mix(in srgb, var(--tinta) 20%, transparent);
+  padding: 10px 12px 10px 17px;
+  border-radius: 5px 10px 10px 5px;
+  border-left-width: 0;
+  transition:
+    transform var(--dur-media) var(--ease-salida),
+    box-shadow var(--dur-media) var(--ease-salida),
+    filter var(--dur-media) var(--ease-salida),
+    border-color var(--dur-rapida),
+    opacity var(--dur-rapida);
+}
+
+.tablero .tarjeta:not(.alta)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--canto);
+  background: var(--c);
+  clip-path: polygon(0 var(--canto-corte), 100% 0, 100% calc(100% - var(--canto-corte)), 0 100%);
+  pointer-events: none;
+}
+
+.tablero .tarjeta.alta {
+  border-left-width: 1px;
+  padding-left: 12px;
+}
+
+.tablero .tarjeta-titulo {
+  font: 600 14px/1.3 var(--f-titulo);
+  letter-spacing: -0.01em;
+  padding-right: 20px;
+}
+
+.tablero .tarjeta-titulo .vacio {
+  color: var(--tinta-3);
+  font-weight: 500;
+}
+
+/* Al tomarla con el ratón se levanta: sube y gira 1,5° (no al pulsar uno de sus botones, ni cuando ya es el hueco
+   de un arrastre: el ratón sigue pulsado y :active pisaría el hueco plano). */
+.tablero .tarjeta[draggable='true']:not(.alta, .tomada):active:not(:has(button:active, a:active)) {
+  transform: translateY(-4px) rotate(1.5deg);
+  filter: drop-shadow(0 10px 14px rgba(17, 20, 20, 0.18));
+  transition-duration: 120ms;
+}
+
+/* Mientras se arrastra queda su hueco, tenue y con el contorno de su color; la copia levantada sigue al ratón. */
+.tablero .tarjeta.tomada:not(.alta) {
+  opacity: 0.4;
+  transform: none;
+  filter: saturate(0.6);
+  outline: 1.5px dashed color-mix(in srgb, var(--c) 60%, transparent);
+  outline-offset: -1px;
+}
+
+/* La copia que el navegador lleva bajo el ratón (VistaTablero.tsx, levantar): fuera de la vista y sin botones. */
+.tarjeta-fantasma {
+  position: absolute;
+  top: -10000px;
+  left: -10000px;
+  padding: 16px;
+  pointer-events: none;
+}
+
+.tarjeta-fantasma .tarjeta.levantada {
+  transform: translateY(-2px) rotate(1.5deg);
+  filter: drop-shadow(0 12px 16px rgba(17, 20, 20, 0.22));
+  opacity: 1;
+  outline: 0;
+  transition: none;
+}
+
+.tarjeta-fantasma .tarjeta-menu {
+  display: none;
+}
+
 .tarjeta-portada {
   height: 92px;
   margin: -10px -12px 2px;
   background-size: cover;
+}
+
+.tablero .tarjeta-portada {
+  margin-left: -17px;
 }
 
 .tarjeta-titulo {
@@ -803,6 +962,54 @@
   flex-wrap: wrap;
   font-size: var(--t-s);
   color: var(--tinta-2);
+}
+
+/* La fecha, como la meta del cronograma: «24 nov · faltan 4 d», «3 d tarde» en rojo. */
+.tarjeta-meta {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0 6px;
+  font: 500 11.5px/1.5 var(--f-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-2);
+}
+
+.tarjeta-meta i {
+  font: italic 400 12.5px/1.5 var(--f-serif);
+  color: var(--tinta-3);
+}
+
+.tarjeta-meta .mal {
+  font: 700 11.5px/1.5 var(--f-mono);
+  color: var(--peligro);
+}
+
+.tm-sep {
+  color: var(--tinta-3);
+}
+
+.tarjeta-meta.hecha .tm-fecha {
+  color: var(--tinta-3);
+}
+
+.tarjeta-meta .campana-fecha {
+  align-self: center;
+}
+
+/* Las casillas de la página de la fila: rayas pequeñas al pie. */
+.tarjeta-rayas {
+  --raya-alto: 9px;
+  display: flex;
+  min-width: 0;
+}
+
+.tarjeta-rayas .rayas-cifra {
+  font-size: 11.5px;
+}
+
+.tarjeta-rayas .rayas-cifra .falta {
+  font-size: 12px;
 }
 
 .tarjeta-menu {
@@ -836,6 +1043,59 @@
 .columna-nueva:hover {
   background: color-mix(in srgb, var(--tinta) 6%, transparent);
   color: var(--tinta-2);
+}
+
+/* Alto contraste: la ficha con la tinta alrededor. Por la izquierda también hay filo (1 px), así el contorno queda
+   cerrado en las puntas cortadas del canto; el canto va justo dentro y el relleno pierde ese píxel. */
+:root[data-contraste='alto'] .tablero .tarjeta {
+  border-color: var(--tinta);
+}
+
+:root[data-contraste='alto'] .tablero .tarjeta:not(.alta) {
+  border-left-width: 1px;
+  padding-left: 16px;
+}
+
+:root[data-contraste='alto'] .tablero.tam-p .tarjeta:not(.alta) {
+  padding-left: 12px;
+}
+
+:root[data-contraste='alto'] .tablero.tam-g .tarjeta:not(.alta) {
+  padding-left: 20px;
+}
+
+:root[data-contraste='alto'] .tablero .tarjeta-portada {
+  margin-left: -16px;
+}
+
+:root[data-contraste='alto'] .tablero.tam-p .tarjeta-portada {
+  margin-left: -12px;
+}
+
+:root[data-contraste='alto'] .tablero.tam-g .tarjeta-portada {
+  margin-left: -20px;
+}
+
+@media (forced-colors: active) {
+  .tablero .tarjeta:not(.alta)::before,
+  .col-punto {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+  .tablero .columna-tablero.sobre.sobre {
+    outline: 2px solid Highlight;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tablero .columna-tablero,
+  .tablero .tarjeta {
+    transition: none !important;
+  }
+}
+
+:root[data-movimiento='reducido'] :is(.tablero .columna-tablero, .tablero .tarjeta) {
+  transition: none !important;
 }
 
 /* ---------- lista ---------- */
@@ -897,6 +1157,60 @@
   white-space: nowrap;
 }
 
+/* La fecha, como la meta del tablero, en un solo renglón: lo que no cabe se corta. */
+.lista-props .tarjeta-meta {
+  flex-wrap: nowrap;
+}
+
+/* Las casillas de la página de la fila: rayas pequeñas a la derecha, con el color de la fila (--c). En una lista
+   angosta queda solo «3/8»; el «faltan 5» lo sigue diciendo la etiqueta de las rayas. */
+.lista-bd {
+  container-type: inline-size;
+}
+
+.lista-rayas {
+  --raya-alto: 9px;
+  --raya-vacia: color-mix(in srgb, var(--tinta) 20%, transparent);
+  display: flex;
+  flex: none;
+  min-width: 0;
+}
+
+.lista-rayas .rayas-cifra {
+  font-size: 11.5px;
+}
+
+.lista-rayas .rayas-cifra .falta {
+  font-size: 12px;
+}
+
+/* En una lista angosta (una columna, el panel lateral) el título se queda con su renglón y las propiedades y las
+   rayas bajan al de abajo, alineadas con él; de las rayas queda «3/8» (el «faltan 5» lo dice su etiqueta). */
+@container (max-width: 640px) {
+  .lista-fila {
+    flex-wrap: wrap;
+    row-gap: 2px;
+    padding-block: 6px;
+  }
+  .lista-titulo {
+    flex: 1 1 calc(100% - 40px);
+  }
+  .lista-props {
+    flex: 1 1 auto;
+    max-width: none;
+    justify-content: flex-start;
+  }
+  .lista-fila > :first-child:not(.lista-titulo) ~ .lista-props {
+    padding-left: 28px;
+  }
+  .lista-rayas {
+    margin-left: auto;
+  }
+  .lista-rayas .rayas-cifra .falta {
+    display: none;
+  }
+}
+
 /* ---------- galería ---------- */
 .galeria {
   display: grid;
@@ -906,50 +1220,198 @@
   padding: 4px 0 8px;
 }
 
+/* La ficha de la galería, como la del tablero («Pulso»): el canto izquierdo es el color de la fila (--c: de .cb-* si
+   la vista colorea las tarjetas; si no, el de su página, en línea desde VistasSimples.tsx), cortado arriba y abajo
+   en la diagonal de la firma. El título va en Bricolage, la fecha como la meta del cronograma y, si la página de la
+   fila tiene casillas, sus rayas al pie. */
 .tarjeta-galeria {
+  --canto: 5px;
+  --canto-corte: 15px;
+  --raya-vacia: color-mix(in srgb, var(--tinta) 20%, transparent);
+  position: relative;
   display: flex;
   flex-direction: column;
-  border-radius: var(--r-3);
+  min-width: 0;
+  border-radius: 5px var(--r-3) var(--r-3) 5px;
   border: 1px solid var(--linea);
+  border-left-width: 0;
   background: var(--flota);
   overflow: hidden;
   cursor: pointer;
   text-align: left;
-  transition: border-color var(--dur);
+}
+
+/* movimiento.css se carga después y fija la transición de .tarjeta-galeria (subir y sombra): con la galería
+   delante esta gana y suma el cambio suave del filo. */
+.galeria .tarjeta-galeria {
+  transition: transform var(--dur-media) var(--ease-salida), box-shadow var(--dur-media) var(--ease-salida),
+    border-color var(--dur);
+}
+
+.tarjeta-galeria::before {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--canto);
+  background: var(--c);
+  clip-path: polygon(0 var(--canto-corte), 100% 0, 100% calc(100% - var(--canto-corte)), 0 100%);
+  pointer-events: none;
 }
 
 .tarjeta-galeria:hover {
   border-color: var(--linea-fuerte);
 }
 
+/* La portada se acerca un poco (3 %) al pasar el ratón, dentro de su marco. En oscuro va bajo un velo que la apaga
+   para que no deslumbre junto al papel oscuro; una página que se ve siempre clara no lo lleva. */
+.galeria-marco {
+  position: relative;
+  flex: none;
+  overflow: hidden;
+  border-bottom: 1px solid var(--linea);
+}
+
 .galeria-portada {
   height: 128px;
   background-size: cover;
   background-position: center;
-  border-bottom: 1px solid var(--linea);
+  transition: transform 300ms var(--ease-salida, ease-out);
+}
+
+.tarjeta-galeria:hover .galeria-portada {
+  transform: scale(1.03);
+}
+
+.galeria-marco::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 6, 8, 0.26);
+  opacity: 0;
+  pointer-events: none;
+}
+
+:root[data-tema='oscuro'] .galeria-marco::after,
+.modo-oscuro .galeria-marco::after {
+  opacity: 1;
+}
+
+:root[data-tema='oscuro'] .modo-claro .galeria-marco::after {
+  opacity: 0;
 }
 
 .galeria-cuerpo {
-  padding: 10px 12px 12px;
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px 12px 17px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.tarjeta-galeria.nueva {
-  align-items: center;
-  justify-content: center;
-  flex-direction: row;
-  gap: 8px;
-  min-height: 190px;
-  color: var(--tinta-3);
-  border-style: dashed;
-  background: transparent;
+.tarjeta-galeria .tarjeta-titulo {
+  font: 600 15px/1.3 var(--f-titulo);
+  letter-spacing: -0.01em;
+  padding-right: 0;
 }
 
-.tarjeta-galeria.nueva:hover {
-  color: var(--tinta-2);
-  background: var(--papel-2);
+.tarjeta-galeria .tarjeta-titulo .vacio {
+  color: var(--tinta-3);
+  font-weight: 500;
+}
+
+/* Las rayas, al pie aunque la ficha sea más alta que su contenido (las de una fila de la rejilla miden lo mismo). */
+.tarjeta-galeria .tarjeta-rayas {
+  margin-top: auto;
+  padding-top: 2px;
+}
+
+.galeria.tam-p .tarjeta-galeria {
+  --canto: 4px;
+  --canto-corte: 12px;
+}
+
+.galeria.tam-p .galeria-cuerpo {
+  padding: 8px 10px 10px 13px;
+  gap: 4px;
+}
+
+.galeria.tam-p .tarjeta-titulo {
+  font-size: 13.5px;
+}
+
+.galeria.tam-g .galeria-cuerpo {
+  padding: 14px 16px 16px 21px;
+  gap: 8px;
+}
+
+.galeria.tam-g .tarjeta-titulo {
+  font-size: 16.5px;
+}
+
+/* «Nueva»: la tecla vino de la barra de la vista (.nueva-tecla), en su renglón al final, con la diagonal dorada
+   cerrándola en vez de la flecha de las plantillas. Aquí no hay plantillas: la diagonal va dentro del mismo botón,
+   así toda la tecla crea la fila y no parece partida. */
+.galeria-nueva {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.galeria-nueva .nueva-crear {
+  padding-right: 0;
+}
+
+.galeria-nueva .nueva-mas {
+  position: relative;
+  flex: none;
+  align-self: stretch;
+  width: 14px;
+  padding: 0;
+}
+
+.galeria-nueva .nueva-mas::before {
+  left: 3px;
+}
+
+/* Alto contraste: la ficha con la tinta alrededor y filo también a la izquierda, como en el tablero. */
+:root[data-contraste='alto'] .tarjeta-galeria {
+  border-color: var(--tinta);
+  border-left-width: 1px;
+}
+
+:root[data-contraste='alto'] .galeria-cuerpo {
+  padding-left: 16px;
+}
+
+/* El filo izquierdo le quita 1 px al relleno en cada tamaño, como en el tablero (12, 16 y 20 px). */
+:root[data-contraste='alto'] .galeria.tam-p .galeria-cuerpo {
+  padding-left: 12px;
+}
+
+:root[data-contraste='alto'] .galeria.tam-g .galeria-cuerpo {
+  padding-left: 20px;
+}
+
+@media (forced-colors: active) {
+  .tarjeta-galeria::before {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+}
+
+/* Con el movimiento reducido la ficha no sube ni la portada se acerca. */
+@media (prefers-reduced-motion: reduce) {
+  :root .tarjeta-galeria:hover,
+  :root .tarjeta-galeria:hover .galeria-portada {
+    transform: none;
+  }
+}
+
+:root[data-movimiento='reducido'] :is(.tarjeta-galeria:hover, .tarjeta-galeria:hover .galeria-portada) {
+  transform: none;
 }
 
 /* ---------- calendario ---------- */
@@ -1680,12 +2142,87 @@
   min-height: 30px;
 }
 
-/* ---------- cronograma ---------- */
+/* ---------- cronograma («Pulso») ----------
+   Las barras terminan en la diagonal del logo (-18°) y dicen cómo va: el color de la fila mezclado con el papel,
+   más fuerte en lo hecho y más claro en lo que falta, con la tinta normal encima; sin propiedad de avance, se
+   raya tenue el tiempo que ya pasó. VistaCronograma.tsx coloca las etiquetas (data-corta, data-fuera,
+   data-elipsis, data-izq, --sh y --sd) al dibujar y al desplazar.
+   El color de la fila (--c) es la tinta fuerte de su etiqueta (--e-*-t) o el color de su página. Mezclas: en claro
+   42 % lo hecho y 15 % lo que falta (tinta a 7,8:1 o más; 5,9:1 sobre el papel crema); en oscuro 40 % y 20 %
+   (tinta a 4,8:1 o más). La cifra de la columna va en --c: de 5,8:1 a 13:1 sobre el papel. */
 .crono {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  --mezcla-hecho: 42%;
+  --mezcla-pista: 15%;
+  --mezcla-entregada: 30%;
+  --mezcla-tiempo: 22%;
+  /* la etiqueta «HOY»: tinta sobre el oro de la firma (4,6:1 a 11:1) */
+  --hoy-tinta: #1c1215;
+  /* el oro para texto (la unidad de hoy en la escala): de 5,6:1 a 9,4:1 sobre el papel */
+  --oro-t: #7a5810;
 }
+
+:root[data-tema='oscuro'] .crono {
+  --mezcla-hecho: 40%;
+  --mezcla-pista: 20%;
+  --mezcla-entregada: 26%;
+  --oro-t: #e3b85a;
+}
+
+:root[data-paleta='laguna'] .crono {
+  --hoy-tinta: #ffffff;
+  --oro-t: #8a5600;
+}
+
+:root[data-paleta='laguna'][data-tema='oscuro'] .crono {
+  --hoy-tinta: #141a19;
+  --oro-t: #f0b45c;
+}
+
+/* Una página que se ve siempre clara u oscura (temas de tablero, Crema, Cuaderno…): las mezclas y el oro de su
+   modo, no los de la app (la línea de hoy en oro oscuro sobre papel claro quedaba a 1,3:1). */
+:root .modo-claro .crono {
+  --mezcla-hecho: 42%;
+  --mezcla-pista: 15%;
+  --mezcla-entregada: 30%;
+  --oro-m: #a8772f;
+  --oro-t: #7a5810;
+  --hoy-tinta: #1c1215;
+}
+
+:root .modo-oscuro .crono {
+  --mezcla-hecho: 40%;
+  --mezcla-pista: 20%;
+  --mezcla-entregada: 26%;
+  --oro-m: #eac46f;
+  --oro-t: #e3b85a;
+  --hoy-tinta: #1c1215;
+}
+
+:root[data-paleta='laguna'] .modo-claro .crono {
+  --oro-m: #8a5600;
+  --oro-t: #8a5600;
+  --hoy-tinta: #ffffff;
+}
+
+:root[data-paleta='laguna'] .modo-oscuro .crono {
+  --oro-m: #f0b45c;
+  --oro-t: #f0b45c;
+  --hoy-tinta: #141a19;
+}
+
+/* Colores de etiqueta (estado o selección de la fila): su tinta fuerte, que ya cambia con el modo de la página. */
+.cb-gris { --c: var(--e-gris-t); }
+.cb-marron { --c: var(--e-marron-t); }
+.cb-naranja { --c: var(--e-naranja-t); }
+.cb-amarillo { --c: var(--e-amarillo-t); }
+.cb-verde { --c: var(--e-verde-t); }
+.cb-azul { --c: var(--e-azul-t); }
+.cb-morado { --c: var(--e-morado-t); }
+.cb-rosa { --c: var(--e-rosa-t); }
+.cb-rojo { --c: var(--e-rojo-t); }
 
 .crono-herramientas {
   display: flex;
@@ -1694,31 +2231,54 @@
   flex-wrap: wrap;
 }
 
-.segmentado {
-  display: inline-flex;
-  padding: 2px;
-  border-radius: var(--r-2);
-  background: var(--papel-2);
-  border: 1px solid var(--linea);
+/* El segmentado (escala del cronograma y los de los menús) tiene un solo estilo, en atelier.css. */
+
+.crono-ir-hoy-fecha {
+  font: 600 11px var(--f-mono);
+  opacity: 0.8;
 }
 
-.segmentado button {
-  min-height: 26px;
-  padding: 0 10px;
-  border-radius: var(--r-1);
-  font-size: var(--t-s);
+.crono-avance-boton {
+  gap: 5px;
   color: var(--tinta-2);
 }
 
-.segmentado button:hover {
+.crono-avance-boton b {
+  color: var(--tinta);
+  font-weight: 600;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crono-avance-boton svg {
+  transition: transform var(--dur-rapida, 160ms);
+}
+
+.crono-avance-boton[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+/* Resumen arriba a la derecha: «1 entregado / 2 entregas este mes / 0 atrasados». */
+.crono-resumen {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-left: auto; /* a la derecha, también cuando baja a otra línea */
+  font-size: 12.5px;
+  color: var(--tinta-3);
+}
+
+.crono-resumen b {
+  font: 650 14px var(--f-titulo);
+  font-variant-numeric: tabular-nums;
   color: var(--tinta);
 }
 
-.segmentado button[aria-pressed='true'] {
-  background: var(--papel);
-  color: var(--tinta);
-  font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--linea);
+.crono-resumen .mal,
+.crono-resumen .mal b {
+  color: var(--peligro);
 }
 
 .crono-marco {
@@ -1727,6 +2287,7 @@
   border: 1px solid var(--linea);
   border-radius: var(--r-2);
   background: var(--papel);
+  scrollbar-width: thin;
 }
 
 .crono-lienzo {
@@ -1746,10 +2307,10 @@
   flex: none;
   display: flex;
   align-items: flex-end;
-  padding: 6px 10px;
+  padding: 6px 10px 8px;
   background: var(--papel-2);
   border-right: 1px solid var(--linea);
-  font-size: var(--t-xs);
+  font: 500 11px var(--f-mono);
   color: var(--tinta-3);
   overflow: hidden;
   white-space: nowrap;
@@ -1779,15 +2340,18 @@
 }
 
 .crono-escala-fila.arriba > span {
+  /* clip y no hidden: hidden haría de cada tramo su propio contenedor de desplazamiento y el nombre no se pegaría */
+  overflow: clip;
   border-left: 1px solid var(--linea);
-  font-weight: 650;
+  font: 700 11.5px var(--f-mono);
   color: var(--tinta);
 }
 
-/* El nombre del mes o año se queda visible mientras se desplaza */
+/* El nombre del mes o año se queda visible mientras se desplaza, justo a la derecha de la columna de títulos
+   (con left: 0 quedaba debajo de la esquina fija y no se veía el mes de hoy). */
 .crono-etiqueta-fija {
   position: sticky;
-  left: 0;
+  left: var(--crono-titulos, 0px);
   padding: 0 8px;
   /* Cuando el mes apenas asoma por la izquierda, se abrevia con «…» en vez de cortarse a secas («Septiemb»). */
   min-width: 0;
@@ -1799,13 +2363,34 @@
 .crono-escala-fila.abajo > span {
   justify-content: center;
   border-left: 1px solid var(--linea);
+  font: 500 10.5px var(--f-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--tinta-3);
   font-variant-numeric: tabular-nums;
 }
 
+/* La unidad que contiene hoy (el día, la semana, el mes o el trimestre). */
 .crono-escala-fila.abajo > span.es-hoy {
-  color: var(--acento-fuerte);
+  color: var(--oro-t);
   font-weight: 700;
+}
+
+/* «HOY · 19»: una ficha en paralelogramo con el oro de la firma, sobre la línea de hoy. */
+.crono-hoy-rotulo {
+  position: absolute;
+  top: 4px;
+  z-index: 3;
+  transform: translateX(-50%);
+  padding: 3px 9px 3px 7px;
+  font: 700 10.5px/1 var(--f-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--hoy-tinta);
+  background: var(--oro-m);
+  clip-path: polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+  pointer-events: none;
 }
 
 .crono-cuerpo {
@@ -1835,14 +2420,16 @@
   opacity: 0.6;
 }
 
-.crono-hoy {
+/* La línea de hoy pasa por detrás de las barras (z 1 frente a z 2). */
+.crono-hoy-linea {
   position: absolute;
   top: 0;
   bottom: 0;
   width: 2px;
   margin-left: -1px;
-  background: var(--acento);
   z-index: 1;
+  background: var(--oro-m);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--oro-m) 45%, transparent);
 }
 
 .crono-fila {
@@ -1854,6 +2441,10 @@
 
 .crono-fila:last-child {
   border-bottom: 0;
+}
+
+.crono-fila:hover {
+  background: color-mix(in srgb, var(--tinta) 3%, transparent);
 }
 
 .crono-titulo {
@@ -1868,16 +2459,36 @@
   background: var(--papel);
   border-right: 1px solid var(--linea);
   font-size: var(--t-s);
-  font-weight: 560;
+  font-weight: 600;
   color: var(--tinta);
   text-align: left;
 }
 
-.crono-titulo:hover {
+.crono-titulo:hover,
+.crono-fila:hover .crono-titulo {
   background: var(--papel-2);
 }
 
 .crono-titulo .vacio {
+  color: var(--tinta-3);
+}
+
+.crono-titulo .recorte {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+/* El avance en la columna de títulos («70 %», «3/5», «—»), en mono y con el color de la fila. */
+.crono-pct-col {
+  flex: none;
+  margin-left: auto;
+  padding-left: 4px;
+  font: 600 11px var(--f-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--c);
+}
+
+.crono-pct-col.vacia {
   color: var(--tinta-3);
 }
 
@@ -1887,9 +2498,15 @@
   border-right: 0;
 }
 
+.crono-titulo.nueva:hover {
+  color: var(--tinta);
+}
+
+/* El carril recorta la meta que se saldría por el final del lienzo (no alarga el desplazamiento). */
 .crono-carril {
   position: relative;
   flex: none;
+  overflow: hidden;
 }
 
 .crono-carril.sin-fecha {
@@ -1900,69 +2517,388 @@
   background: color-mix(in srgb, var(--acento) 8%, transparent);
 }
 
+/* ---------- la barra ---------- */
 .crono-barra {
   position: absolute;
-  top: 6px;
-  height: 26px;
+  top: 7px;
+  height: 24px;
   z-index: 2;
-  display: flex;
-  align-items: center;
-  border-radius: 6px;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tinta) 14%, transparent);
-  font-size: var(--t-s);
+  min-width: 6px;
+  border-radius: 7px 3px 3px 7px;
+  color: var(--tinta);
+  font-size: 12.5px;
   cursor: pointer;
   user-select: none;
   touch-action: none;
+  transition: transform var(--dur-rapida, 160ms), filter var(--dur-rapida, 160ms);
+  /* el filo: un trazo tenue del color de la fila (en alto contraste, la tinta) */
+  --filo: color-mix(in srgb, var(--c) 34%, transparent);
+  --filo-ancho: 1px;
 }
 
-.crono-barra.sin-color {
-  background: color-mix(in srgb, var(--acento) 26%, var(--papel));
-  color: var(--tinta);
+/* La forma: corte en diagonal por la derecha, con el mismo sesgo de la firma (24 px × tan 18° ≈ 8 px). Con avance,
+   lo hecho lleva más color que lo que falta; la tinta encima es la de siempre. */
+.crono-barra::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--c) var(--mezcla-hecho), var(--papel)) var(--p, 0%),
+    color-mix(in srgb, var(--c) var(--mezcla-pista), var(--papel)) var(--p, 0%)
+  );
+  box-shadow: inset 0 0 0 var(--filo-ancho) var(--filo);
+}
+
+/* El filo del corte en diagonal: el clip-path se lleva el borde de la derecha, así que se traza aparte. */
+.crono-barra::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 4px;
+  width: var(--filo-ancho);
+  height: 100%;
+  background: var(--filo);
+  transform: translateX(50%) skewX(-18.43deg);
+  pointer-events: none;
+}
+
+/* Una barra de un día en una escala apretada: sin corte (no cabe) y sin su filo. */
+.crono-barra.angosta::before {
+  clip-path: none;
+  border-radius: 3px;
+}
+
+.crono-barra.angosta::after {
+  content: none;
+}
+
+/* Sin avance: un rayado tenue (del sesgo de la firma) sobre el tiempo que ya pasó, para no confundirlo con lo hecho. */
+.crono-barra.modo-tiempo::before {
+  background:
+    repeating-linear-gradient(108deg, color-mix(in srgb, var(--c) 34%, transparent) 0 1.5px, transparent 1.5px 6px) 0 0 / var(--t, 0%) 100% no-repeat,
+    color-mix(in srgb, var(--c) var(--mezcla-tiempo), var(--papel));
+}
+
+/* Entregada: se calma y lleva ✓. */
+.crono-barra.modo-hecha::before {
+  background: color-mix(in srgb, var(--c) var(--mezcla-entregada), var(--papel));
 }
 
 .crono-barra.editable {
   cursor: grab;
 }
 
+.crono-barra:hover {
+  transform: translateY(-1px);
+}
+
+.crono-barra:hover::before {
+  filter: brightness(1.08);
+}
+
+:root[data-tema='oscuro'] .crono-barra:hover::before {
+  filter: brightness(1.15);
+}
+
 .crono-barra.arrastrando {
   cursor: grabbing;
-  box-shadow: var(--sombra-flota), inset 0 0 0 1px color-mix(in srgb, var(--tinta) 20%, transparent);
+  transform: translateY(-2px);
+  filter: drop-shadow(0 6px 12px rgba(0, 0, 0, 0.28));
   z-index: 5;
 }
 
 .crono-barra:focus-visible {
-  outline: 2px solid var(--acento);
+  outline: 2px solid var(--tinta);
   outline-offset: 2px;
+  border-radius: 8px;
 }
 
+/* La fila que acaba de crear «Nueva»: un anillo de oro que se abre una vez. */
+.crono-barra.recien {
+  animation: crono-recien 0.6s ease-out;
+}
+
+@keyframes crono-recien {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--oro-m) 65%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 10px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crono-barra.recien {
+    animation: none;
+  }
+}
+
+:root[data-movimiento='reducido'] .crono-barra.recien {
+  animation: none;
+}
+
+/* El texto ocupa toda la barra; --sh lo corre hasta el borde visible cuando la barra empieza antes y --sd lo recoge
+   hasta el borde derecho visible cuando sigue después (así el «…» cae donde se ve). */
 .crono-barra-texto {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
-  gap: 5px;
-  min-width: 0;
-  padding: 0 9px;
+  padding: 0 calc(14px + var(--sd, 0px)) 0 calc(9px + var(--sh, 0px));
   overflow: hidden;
   white-space: nowrap;
-  text-overflow: ellipsis;
-  font-weight: 560;
+  font-weight: 600;
+  pointer-events: none;
 }
 
-.crono-barra-texto:not(.fuera) {
-  position: sticky;
+.crono-barra-nombre {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
-.crono-barra-texto small {
+.crono-barra[data-corta] .crono-barra-nombre::before {
+  content: '←';
   font-weight: 500;
-  opacity: 0.8;
+  color: var(--tinta-2);
 }
 
-/* Barra corta: el título va a su derecha */
-.crono-barra-texto.fuera {
+/* Fuera no cabía por ningún lado: el título se queda dentro y se abrevia con «…». */
+.crono-marco:not(.midiendo) .crono-barra[data-elipsis] .crono-barra-nombre {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.crono-marco:not(.midiendo) .crono-barra[data-elipsis] .cbn-t {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Se mide siempre el título solo: sin la flecha del borde (se suma aparte) ni el «…». */
+.crono-marco.midiendo .crono-barra-nombre::before {
+  content: none;
+}
+
+.crono-barra[data-fuera] .crono-barra-texto {
+  visibility: hidden;
+}
+
+.crono-barra-icono {
+  display: inline-flex;
+}
+
+.crono-pct {
+  margin-left: 3px;
+  font: 600 11px var(--f-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Alto contraste: el filo es la tinta, más grueso, también en el corte en diagonal. */
+:root[data-contraste='alto'] .crono-barra {
+  --filo: var(--tinta);
+  --filo-ancho: 1.5px;
+}
+
+/* ---------- la meta: «25 nov · faltan 6 d», a la derecha o, si no cabe, a la izquierda ---------- */
+.crono-meta {
   position: absolute;
-  left: 100%;
-  padding-left: 8px;
-  overflow: visible;
+  top: 0;
+  height: 37px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  /* Cada tramo saca su papel 4 px por cada lado y la tecla sesgada saca su esquina: la meta les deja ese sitio con
+     su relleno, y el margen negativo (y, a la izquierda, el desplazamiento) devuelven el texto a donde estaba. Así
+     nada se sale de su caja. */
+  padding: 0 4px;
+  margin-left: -4px;
+  white-space: nowrap;
+  pointer-events: none;
+  font: 500 11px var(--f-mono);
+  color: var(--tinta-2);
+}
+
+.crono-meta[data-izq] {
+  transform: translateX(calc(-100% + 8px));
+}
+
+/* Más larga que todo lo visible: el título se abrevia con «…» (la flecha del borde se queda). Se recorta con margen
+   para no cortar la tecla sesgada (unos 4 px de esquina) ni su anillo de foco; el «…» lo pone .cm-t. */
+.crono-meta[data-max] {
+  overflow: clip;
+  overflow-clip-margin: 8px;
+}
+
+.crono-meta[data-max] > .cm-tit {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.crono-meta[data-max] .cm-t {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.crono-marco.midiendo .crono-meta {
+  max-width: none !important;
+}
+
+.crono-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* La línea de hoy no atraviesa el texto de la meta: cada tramo lleva el papel del cronograma detrás. */
+.crono-meta > span:not(:empty) {
+  padding: 1px 4px;
+  margin: 0 -4px;
+  border-radius: 4px;
+  background: var(--papel);
+}
+
+.crono-meta > .cm-tit,
+.crono-meta > .cm-izq,
+.crono-meta[data-izq] > .cm-der {
+  display: none;
+}
+
+.crono-meta[data-fuera] > .cm-tit,
+.crono-meta[data-izq] > .cm-izq,
+.crono-marco.midiendo .crono-meta > span {
+  display: inline-flex;
+}
+
+/* Sin sitio para la fecha: solo el título. */
+.crono-meta[data-corto] > :is(.cm-der, .cm-izq),
+.crono-meta[data-corto] > .cm-tit > .cm-sep {
+  display: none;
+}
+
+.crono-marco.midiendo .crono-meta .cm-sep {
+  display: inline;
+}
+
+.cm-tit {
+  font: 600 12.5px var(--f-ui);
   color: var(--tinta);
+}
+
+/* La barra quedó atrás (o está más adelante): la etiqueta se pega a ese borde con una tecla «←» o «→» hacia ella.
+   La tecla lleva el desplazamiento hasta la barra (irABarra en VistaCronograma.tsx). Es una ficha sesgada como la
+   pastilla del segmentado, con el color de la fila; solo ella recibe el ratón (la meta deja pasar los clics). */
+.cm-ir {
+  display: none;
+  position: relative;
+  flex: none;
+  order: -1;
+  width: 20px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--c) 38%, transparent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--c) 12%, var(--papel));
+  color: var(--tinta);
+  transform: skewX(var(--ang));
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background var(--dur-rapida, 160ms), border-color var(--dur-rapida, 160ms);
+}
+
+/* El área de toque llega a los 24 px de alto aunque la ficha mida 22. */
+.cm-ir::after {
+  content: '';
+  position: absolute;
+  inset: -4px -3px;
+}
+
+.cm-ir::before {
+  content: '←';
+  display: block;
+  font: 600 12.5px/20px var(--f-ui);
+  transform: skewX(calc(-1 * var(--ang)));
+  transition: transform var(--dur-rapida, 160ms) var(--ease-salida, ease-out);
+}
+
+.crono-meta:is([data-atras], [data-adelante]) > .cm-ir {
+  display: block;
+}
+
+.crono-meta[data-adelante] > .cm-ir {
+  order: 9;
+}
+
+.crono-meta[data-adelante] > .cm-ir::before {
+  content: '→';
+}
+
+.cm-ir:hover {
+  background: color-mix(in srgb, var(--c) 26%, var(--papel));
+  border-color: color-mix(in srgb, var(--c) 60%, transparent);
+}
+
+/* Al pasar el ratón la flecha se adelanta un poco hacia su barra. */
+.crono-meta[data-atras] > .cm-ir:hover::before {
+  transform: skewX(calc(-1 * var(--ang))) translateX(-2px);
+}
+
+.crono-meta[data-adelante] > .cm-ir:hover::before {
+  transform: skewX(calc(-1 * var(--ang))) translateX(2px);
+}
+
+.cm-ir:active {
+  background: color-mix(in srgb, var(--c) 34%, var(--papel));
+}
+
+.cm-ir:focus-visible {
+  outline: 2px solid var(--oro-m);
+  outline-offset: 1px;
+  border-radius: 4px;
+}
+
+:root[data-contraste='alto'] .cm-ir {
+  border-color: var(--tinta);
+}
+
+:root[data-contraste='alto'] .cm-ir:focus-visible {
+  outline-color: var(--tinta);
+}
+
+.crono-marco.midiendo .cm-ir {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cm-ir,
+  .cm-ir::before {
+    transition: none;
+  }
+}
+
+:root[data-movimiento='reducido'] :is(.cm-ir, .cm-ir::before) {
+  transition: none;
+}
+
+.crono-meta i {
+  font: italic 400 12px var(--f-serif);
+  color: var(--tinta-3);
+}
+
+.crono-meta .mal {
+  color: var(--peligro);
+  font-weight: 700;
+}
+
+.cm-sep {
+  color: var(--tinta-3);
 }
 
 .crono-borde {
@@ -1980,15 +2916,15 @@
 }
 
 .crono-borde.fin {
-  right: -2px;
+  right: 4px;
   border-radius: 0 6px 6px 0;
 }
 
 .crono-barra:hover .crono-borde::after {
   content: '';
   position: absolute;
-  top: 7px;
-  bottom: 7px;
+  top: 6px;
+  bottom: 6px;
   left: 3px;
   width: 2px;
   border-radius: 2px;
@@ -2000,10 +2936,117 @@
   margin: 0;
 }
 
+/* ---------- vista rápida: título, «1 oct → 25 nov · 56 días», el avance según el modo y la meta ---------- */
+.crono-tip {
+  position: fixed;
+  z-index: 300;
+  max-width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--flota);
+  border: 1px solid var(--linea-fuerte);
+  box-shadow: var(--sombra-flota);
+  font-size: 13px;
+  color: var(--tinta);
+  pointer-events: none;
+}
+
+.crono-tip[hidden] {
+  display: none;
+}
+
+.crono-tip b {
+  font: 650 14px var(--f-titulo);
+  overflow-wrap: anywhere;
+}
+
+.crono-tip .ct-rango {
+  font: 500 11.5px var(--f-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-2);
+}
+
+.crono-tip .ct-avance {
+  font-size: 12.5px;
+}
+
+.crono-tip i {
+  font: italic 400 12.5px var(--f-serif);
+  color: var(--tinta-3);
+}
+
+.crono-tip i.mal,
+.crono-tip .ct-incumplida {
+  color: var(--peligro);
+}
+
+.crono-tip i.mal {
+  font-weight: 700;
+}
+
+.crono-tip .ct-incumplida {
+  font-size: 12px;
+}
+
 @media (hover: none) {
   .crono-borde {
     width: 14px;
   }
+}
+
+/* ---------- menú «Avance desde…» ---------- */
+.menu-pulso .titulo-menu {
+  padding: 6px 8px 4px;
+}
+
+.mp-item {
+  position: relative;
+  padding-left: 16px;
+}
+
+.mp-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* «Otra propiedad…»: abre los números que no dicen solos cuánto está hecho. */
+.mp-otras .mp-chevron {
+  margin-left: auto;
+  flex: none;
+  color: var(--tinta-3);
+  transition: transform var(--dur-rapida, 160ms);
+}
+
+.mp-otras[aria-expanded='true'] .mp-chevron {
+  transform: rotate(180deg);
+}
+
+.mp-texto small,
+.nf-texto small {
+  font: italic 400 12px/1.3 var(--f-serif);
+  color: var(--tinta-3);
+}
+
+/* La elegida (y la plantilla de siempre en «Nueva») lleva la diagonal dorada de la firma. */
+.mp-item[aria-checked='true']::before,
+.nf-item.defecto::before {
+  content: '';
+  position: absolute;
+  left: 5px;
+  top: 10px;
+  bottom: 10px;
+  width: 2.5px;
+  border-radius: 1px;
+  background: var(--oro-m);
+  transform: skewX(var(--ang));
+}
+
+.mp-item[aria-checked='true'] {
+  font-weight: 600;
 }
 
 /* ---------- propiedad «Botón» ---------- */
@@ -2681,15 +3724,42 @@
   flex-basis: 340px;
 }
 
+/* El relleno de la izquierda deja sitio al canto de color (más el hueco de siempre). */
 .tablero.tam-p .tarjeta {
-  padding: 7px 9px;
+  --canto: 4px;
+  --canto-corte: 12px;
+  padding: 7px 9px 7px 13px;
   gap: 4px;
   font-size: var(--t-s);
 }
 
+.tablero.tam-p .tarjeta-titulo {
+  font-size: 13px;
+}
+
 .tablero.tam-g .tarjeta {
-  padding: 14px 16px;
+  padding: 14px 16px 14px 21px;
   gap: 8px;
+}
+
+.tablero.tam-g .tarjeta-titulo {
+  font-size: 15.5px;
+}
+
+.tablero.tam-p .tarjeta.alta {
+  padding-left: 9px;
+}
+
+.tablero.tam-g .tarjeta.alta {
+  padding-left: 16px;
+}
+
+.tablero.tam-p .tarjeta-portada {
+  margin: -7px -9px 2px -13px;
+}
+
+.tablero.tam-g .tarjeta-portada {
+  margin: -14px -16px 2px -21px;
 }
 
 .galeria.tam-p {
@@ -2838,23 +3908,45 @@
   background: color-mix(in srgb, var(--fondo-tarjeta) 55%, var(--papel));
 }
 
-/* tabla: casillas de selección y barra de acciones en bloque */
-.casilla-fila {
+/* tabla: casillas de selección y barra de acciones en bloque. Es la .casilla de la app (atelier.css), con el mismo
+   hueco que la de antes (18 + 1 + 4 = 23 px, como 15 + 2 + 6) para no mover el título ni la altura de la fila. Asoma al
+   pasar el ratón con el rebote de las casillas; con movimiento reducido aparece sin más. */
+.casilla.casilla-fila {
   flex: none;
-  width: 15px;
-  height: 15px;
-  margin: 0 2px 0 6px;
+  width: 18px;
+  height: 18px;
+  margin: 0 1px 0 4px;
   align-self: center;
-  accent-color: var(--acento);
   opacity: 0;
-  cursor: pointer;
+  transform: scale(0.6);
+  transition:
+    opacity 120ms ease,
+    transform 260ms var(--ease-rebote, cubic-bezier(0.34, 1.56, 0.64, 1));
 }
 
-.tabla-fila:hover .casilla-fila,
-.casilla-fila:checked,
-.casilla-fila:focus-visible,
-.tabla-fila.cabeza:hover .casilla-fila {
+.tabla-fila:hover .casilla.casilla-fila,
+.casilla.casilla-fila:is(:checked, :indeterminate),
+.casilla.casilla-fila:focus-visible,
+.tabla-fila.cabeza:hover .casilla.casilla-fila {
   opacity: 1;
+  transform: none;
+}
+
+/* el anillo se recorta contra la fila marcada (el mismo tono que su fondo, ya mezclado con el papel) */
+.tabla-fila.marcada .casilla-fila {
+  --casilla-fondo: color-mix(in srgb, var(--acento) 14%, var(--papel));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .casilla.casilla-fila {
+    transform: none;
+    transition: none;
+  }
+}
+
+:root[data-movimiento='reducido'] .casilla.casilla-fila {
+  transform: none;
+  transition: none;
 }
 
 .tabla-fila.marcada .tabla-celda {
@@ -2903,54 +3995,181 @@
   color: var(--tinta-2);
 }
 
-/* plantillas de fila */
-.nueva-con-plantillas {
+/* ---------- «Nueva» («Pulso»): una sola tecla vino partida por la diagonal dorada ----------
+   Usa la ficha del segmentado (--seg-fondo, --seg-texto y su filo; atelier.css): vino con texto crema de 8,7:1
+   a 11,9:1, o el acento con su texto en las demás paletas. La diagonal es el oro de la firma; en Laguna, donde
+   el oro es el mismo azafrán del botón, es el texto al 55 %. */
+.nueva-tecla {
+  --nueva-diag: var(--oro-c);
+  position: relative;
   display: inline-flex;
+  align-items: stretch;
+  height: 30px;
+  flex: none;
+  border-radius: 9px;
+  background: var(--seg-fondo);
+  color: var(--seg-texto);
+  box-shadow: inset 0 0 0 1px var(--seg-filo), inset 0 -2px 0 rgba(0, 0, 0, 0.16);
 }
 
-.nueva-con-plantillas .boton:first-child {
-  border-top-right-radius: 0;
-  border-bottom-right-radius: 0;
+:root[data-paleta='laguna'] .nueva-tecla {
+  --nueva-diag: color-mix(in srgb, var(--seg-texto) 55%, transparent);
 }
 
-.nueva-con-plantillas .flecha-plantillas {
-  padding: 0 6px;
-  border-top-left-radius: 0;
-  border-bottom-left-radius: 0;
-  border-left: 1px solid color-mix(in srgb, var(--acento-sobre) 35%, transparent);
+.nueva-tecla > button {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+  background: transparent;
+  border-radius: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background var(--dur-rapida, 160ms), transform var(--dur-rapida, 160ms);
 }
 
-.menu-plantillas {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
+.nueva-tecla > button:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.plantilla-fila {
+.nueva-tecla > button:active {
+  transform: translateY(1px);
+}
+
+.nueva-crear {
+  padding: 0 12px 0 10px;
+}
+
+.nueva-crear svg {
+  transition: transform var(--dur-media, 240ms) var(--ease-rebote, ease);
+}
+
+.nueva-crear:hover svg {
+  transform: rotate(90deg);
+}
+
+.nueva-mas {
+  padding: 0 8px 0 10px;
+}
+
+/* La diagonal que parte la tecla: el mismo sesgo de la firma. */
+.nueva-mas::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 1.6px;
+  border-radius: 1px;
+  background: var(--nueva-diag);
+  transform: skewX(var(--ang));
+}
+
+.nueva-mas svg {
+  transition: transform var(--dur-rapida, 160ms);
+}
+
+.nueva-mas[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+
+.nueva-tecla > button:focus-visible {
+  outline: 2px solid var(--tinta);
+  outline-offset: 2px;
+}
+
+/* Menú de la flecha: en blanco o con una plantilla; la de siempre lleva la diagonal (regla junto a .mp-item). */
+.menu-nueva {
+  gap: 2px;
+}
+
+.menu-nueva .titulo-menu {
+  padding: 4px 8px 2px;
+}
+
+.nf-fila {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 4px;
 }
 
-.plantilla-usar {
+.nf-item {
+  position: relative;
   flex: 1 1 100%;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
-  padding: 6px 8px;
+  padding: 6px 10px 6px 16px;
   border-radius: var(--r-2);
   text-align: left;
+  color: var(--tinta);
 }
 
-.plantilla-usar:hover {
+.nf-item:hover,
+.nf-item:focus-visible {
   background: var(--papel-2);
 }
 
-.plantilla-usar small {
+.nf-item.defecto {
+  font-weight: 600;
+}
+
+.nf-icono {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  flex: none;
+  color: var(--tinta-2);
+}
+
+.nf-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.nf-texto small {
+  font-weight: 400;
+}
+
+/* «4×»: cuántas filas salieron de esa plantilla. */
+.nf-usos {
   margin-left: auto;
-  color: var(--tinta-3);
+  flex: none;
+  padding-left: 8px;
+  font: 500 11px/1 var(--f-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--tinta-2);
+}
+
+/* Las acciones de cada plantilla (duplicar, editar, por defecto, eliminar), discretas hasta que se pasa por la fila. */
+.nf-admin {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1 1 100%;
+  padding-left: 40px;
+  opacity: 0.55;
+  transition: opacity var(--dur-rapida, 160ms);
+}
+
+.nf-fila:hover .nf-admin,
+.nf-admin:focus-within {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .nf-admin {
+    opacity: 1;
+  }
+}
+
+.nf-nueva-plantilla {
+  align-self: flex-start;
 }
 
 .plantilla-defecto {
@@ -3266,6 +4485,13 @@
   outline-offset: 1px;
 }
 
+/* Con el foco del teclado, el contorno pasa a la tinta y el rojo queda dentro: el foco se distingue. */
+.crono-barra.incumplida:focus-visible {
+  outline: 2px solid var(--tinta);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 2px var(--peligro);
+}
+
 /* formulario: lógica condicional */
 .pregunta-condicion {
   display: flex;
@@ -3310,6 +4536,194 @@
 
 .crono-flechas path.incumplida {
   stroke: var(--peligro);
+}
+
+/* Una dependencia con una fila de un grupo plegado sale de (o llega a) la línea resumen del grupo: punteada. */
+.crono-flechas path.plegada {
+  stroke-dasharray: 4 3;
+}
+
+/* ---------- cronograma agrupado (Vista.agrupar, bd/agrupar.tsx) ----------
+   Cada grupo lleva un carril de cabecera de 30 px (ALTO_GRUPO en VistaCronograma.tsx): la cabecera plegable de la
+   Tabla y la Lista (.grupo-cabeza) en la columna de títulos, pegada a la izquierda (sin columna, al borde del marco),
+   y en el carril una línea fina del inicio más temprano al fin más tardío del grupo, con los cantos a −18°, en el
+   color del grupo (--c de .cb-*) o en oro. Plegado, la línea engorda un poco y sigue ahí. */
+.crono-grupo {
+  --cg: var(--oro-m);
+  position: relative;
+  display: flex;
+  height: 30px;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--linea);
+  background: var(--grupo-fondo);
+}
+
+.crono-grupo.con-color {
+  --cg: var(--c);
+}
+
+/* La última fila de un grupo conserva su raya: separa del carril de cabecera del grupo siguiente. */
+.crono-grupo-filas > .crono-fila:last-child {
+  border-bottom: 1px solid var(--linea);
+}
+
+/* La columna de títulos de la cabecera es un ancla pegada al borde del marco (de ancho 0 sin columna). Encima flota la
+   ficha con la cabecera: al menos tan ancha como la columna y, si el nombre y la cifra no caben (la columna de 130 px
+   del móvil, el alto contraste), se alarga sobre el carril hasta 280 px; después, «…». Es opaca: tapa las barras y la
+   línea que pasan por debajo al desplazar en horizontal. */
+.crono-grupo-titulo {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  flex: none;
+}
+
+.crono-grupo-ficha {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  box-sizing: border-box;
+  min-width: 100%;
+  max-width: 280px;
+  height: 100%;
+  padding-right: 4px;
+  background: linear-gradient(var(--grupo-fondo), var(--grupo-fondo)), var(--papel);
+  border-right: 1px solid var(--linea);
+  white-space: nowrap;
+}
+
+.crono-grupo .grupo-cabeza {
+  flex: 0 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 26px;
+  gap: 5px;
+  padding: 2px 6px 2px 15px;
+  font-size: var(--t-s);
+}
+
+.crono-grupo .grupo-cabeza .etiqueta.con-punto {
+  gap: 6px;
+}
+
+.crono-grupo .grupo-cifra {
+  font-size: 11px;
+}
+
+.crono-grupo-nueva {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+  border-radius: 6px;
+  color: var(--tinta-3);
+}
+
+.crono-grupo-nueva:hover {
+  background: var(--papel-2);
+  color: var(--tinta);
+}
+
+.crono-grupo-carril {
+  position: relative;
+  flex: none;
+  height: 100%;
+  overflow: hidden;
+}
+
+.crono-grupo-linea {
+  position: absolute;
+  top: 13px;
+  z-index: 2;
+  height: 4px;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--cg) 55%, transparent);
+}
+
+.crono-grupo-linea::before,
+.crono-grupo-linea::after {
+  content: '';
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--cg);
+  transform: skewX(var(--ang));
+}
+
+.crono-grupo-linea::before {
+  left: 0;
+}
+
+.crono-grupo-linea::after {
+  right: 0;
+}
+
+.crono-grupo.plegado .crono-grupo-linea {
+  top: 12px;
+  height: 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--cg) 80%, transparent);
+}
+
+:root[data-contraste='alto'] .crono-grupo,
+:root[data-contraste='alto'] .crono-grupo-ficha {
+  border-color: var(--tinta);
+}
+
+:root[data-contraste='alto'] .crono-grupo-linea {
+  background: var(--cg);
+}
+
+@media (forced-colors: active) {
+  .crono-grupo-linea,
+  .crono-grupo-linea::before,
+  .crono-grupo-linea::after {
+    background: CanvasText;
+  }
+
+  /* Colores forzados (alto contraste de Windows): el sistema quita el fondo en degradado y el box-shadow de la forma,
+     y la barra quedaba en blanco sobre blanco. Se dibuja con los colores del sistema: borde de tinta, lo hecho como
+     una franja Highlight abajo (el texto sigue sobre Canvas) y el corte en diagonal con su filo. */
+  .crono-barra::before {
+    forced-color-adjust: none;
+    background: linear-gradient(Highlight, Highlight) 0 100% / var(--p, 0%) 5px no-repeat, Canvas;
+    box-shadow: inset 0 0 0 2px CanvasText;
+  }
+
+  .crono-barra.modo-tiempo::before,
+  .crono-barra.modo-hecha::before {
+    background: Canvas;
+  }
+
+  .crono-barra::after {
+    forced-color-adjust: none;
+    width: 2px;
+    background: CanvasText;
+  }
+
+  .crono-barra:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  .crono-hoy-linea {
+    forced-color-adjust: none;
+    background: Highlight;
+    box-shadow: none;
+  }
+
+  .crono-hoy-rotulo {
+    forced-color-adjust: none;
+    background: Highlight;
+    color: HighlightText;
+  }
 }
 
 /* estado mostrado como casilla */
@@ -3377,4 +4791,190 @@
 }
 .grafico-dona-3d .grafico-dona-cara .grafico-porcion {
   stroke-width: 1.5;
+}
+
+/* ---------- grupos: la Tabla y la Lista agrupadas por una propiedad (bd/agrupar.tsx) ----------
+   Cada grupo lleva una cabecera plegable: la raya dorada fina a −18° de la firma, el chevron que gira, la etiqueta
+   de la opción (o el nombre del grupo) y la cifra en mono. En la tabla la cabecera es una fila de todo el ancho y
+   el botón queda pegado a la izquierda al desplazar en horizontal; en la lista, cada grupo es su propia lista. */
+:root {
+  --grupo-fondo: color-mix(in srgb, var(--papel-2) 55%, transparent);
+  --grupo-raya: var(--oro-m);
+  --grupo-cifra: var(--tinta-3);
+}
+
+:root[data-contraste='alto'] {
+  --grupo-fondo: transparent;
+  --grupo-raya: var(--tinta);
+  --grupo-cifra: var(--tinta-2);
+}
+
+.grupo-cabeza {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 4px 12px 4px 16px;
+  border-radius: var(--r-boton, 8px);
+  color: var(--tinta);
+  font-size: var(--t-m);
+  text-align: left;
+}
+
+.grupo-cabeza:hover {
+  background: var(--papel-2);
+}
+
+.grupo-raya {
+  position: absolute;
+  left: 5px;
+  top: 8px;
+  bottom: 8px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--grupo-raya);
+  transform: skewX(var(--ang));
+}
+
+.grupo-chevron {
+  flex: none;
+  color: var(--tinta-3);
+  transition: transform var(--dur-media, 260ms) var(--ease-salida, ease);
+}
+
+.grupo-cabeza[aria-expanded='true'] .grupo-chevron {
+  transform: rotate(90deg);
+}
+
+.grupo-nombre {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.grupo-cabeza.sin-valor .grupo-nombre {
+  color: var(--tinta-2);
+  font-weight: 500;
+}
+
+.grupo-cabeza .etiqueta {
+  min-width: 0;
+}
+
+.grupo-cifra {
+  flex: none;
+  font-family: var(--f-mono);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--grupo-cifra);
+  white-space: nowrap;
+}
+
+.grupo-cabeza.plegado .grupo-cifra {
+  color: var(--tinta-2);
+}
+
+/* Tabla: la fila de cabecera ocupa todo el ancho; sus filas van dentro de un rowgroup que no cuenta para la rejilla. */
+.tabla-bd .grupo-filas {
+  display: contents;
+}
+
+.tabla-bd .tabla-fila.grupo-fila,
+.tabla-bd .tabla-fila.grupo-fila:not(.cabeza):not(.pie):hover {
+  background: var(--grupo-fondo);
+}
+
+.tabla-celda.grupo-celda {
+  grid-column: 1 / -1;
+  min-height: 42px;
+  padding: 6px 0 2px;
+  align-items: center;
+  border-right: 0;
+  cursor: default;
+}
+
+.tabla-celda.grupo-celda .grupo-cabeza {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+}
+
+.tabla-fila.grupo-fila.sobre,
+.grupo-lista.sobre .grupo-lista-cabeza {
+  box-shadow: inset 0 0 0 2px var(--acento);
+  border-radius: var(--r-boton, 8px);
+}
+
+.tabla-nueva.grupo-nueva {
+  min-height: 32px;
+  font-size: var(--t-s);
+}
+
+/* El pie de cada grupo (una fila de una celda para el lector de pantalla) no cuenta para la rejilla. */
+.tabla-bd .grupo-pie-fila,
+.tabla-bd .grupo-pie-celda {
+  display: contents;
+}
+
+/* «Cargar más» de un grupo con filas sin cargar: pegado a la izquierda al desplazar la tabla en horizontal. */
+.tabla-bd .grupo-cargar {
+  grid-column: 1 / -1;
+  justify-self: start;
+  position: sticky;
+  left: 0;
+  margin: 4px 8px;
+}
+
+.grupo-lista .grupo-cargar {
+  align-self: flex-start;
+  margin: 4px 0;
+}
+
+/* Lista: una lista por grupo; la vista angosta de la ronda 1 (consulta de contenedor en .lista-bd) sigue igual. */
+.lista-bd.agrupada {
+  gap: 6px;
+}
+
+.grupo-lista {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.grupo-lista-cabeza {
+  display: flex;
+  min-width: 0;
+  padding: 6px 0 4px;
+  border-bottom: 1px solid var(--linea);
+}
+
+.grupo-lista-filas {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+:root[data-contraste='alto'] :is(.tabla-fila.grupo-fila, .grupo-lista-cabeza) {
+  border-bottom-color: var(--tinta);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .grupo-chevron {
+    transition: none;
+  }
+}
+
+:root[data-movimiento='reducido'] .grupo-chevron {
+  transition: none !important;
+}
+
+@media (forced-colors: active) {
+  .grupo-raya {
+    background: CanvasText;
+  }
 }

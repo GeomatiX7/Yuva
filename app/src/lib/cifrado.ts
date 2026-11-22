@@ -72,8 +72,22 @@ export async function cifrarTexto(texto: string, contrasena: string): Promise<Ci
   return { cifrado: 'AES-GCM', kdf: 'PBKDF2-SHA-256', iteraciones: ITERACIONES, sal: aB64(sal), iv: aB64(iv), datos: aB64(datos) };
 }
 
+// Vueltas de PBKDF2 que se aceptan al descifrar una copia. Las de Yuva llevan ITERACIONES (310.000, desde la primera
+// versión): una copia trucada con miles de millones dejaba el descifrado colgado minutos u horas, y con muy pocas (o
+// con 0, un texto o un número negativo) no es una copia de Yuva.
+const VUELTAS_MIN = 100_000;
+const VUELTAS_MAX = 10_000_000;
+
+/** Lanza un error si las vueltas de la copia están fuera de rango. Se llama antes de pedir la contraseña, para no
+ *  pedirla en balde, y otra vez al descifrar. */
+export function comprobarCifrado(c: Cifrado): void {
+  if (!Number.isSafeInteger(c.iteraciones) || c.iteraciones < VUELTAS_MIN || c.iteraciones > VUELTAS_MAX)
+    throw new Error(trad('Esta copia cifrada no es válida: sus datos de cifrado están fuera de lo normal. Puede estar dañada o manipulada.'));
+}
+
 /** Lanza un error con un mensaje claro si la contraseña no es la correcta (AES-GCM detecta cualquier cambio). */
 export async function descifrarTexto(c: Cifrado, contrasena: string): Promise<string> {
+  comprobarCifrado(c);
   const clave = await claveAes(contrasena, deB64(c.sal), c.iteraciones);
   try {
     const claro = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: deB64(c.iv) as BufferSource }, clave, deB64(c.datos) as BufferSource);

@@ -11,12 +11,15 @@ export type EfectoPortada = 'pixelado' | 'tramado' | 'puntos' | 'contorno' | 'du
 export type Portada =
   | { tipo: 'patron'; valor: string; semilla: number; posicion: number }
   | { tipo: 'color'; valor: string; posicion: number }
-  | { tipo: 'imagen'; valor: string; posicion: number; efecto?: EfectoPortada };
+  // color: el color medio saturado de la imagen («Pulso», lib/portadas.ts › colorDeImagen), medido una vez al elegirla
+  // o la primera vez que se pinta; '' si se midió y es neutra; sin él, todavía no se ha medido.
+  | { tipo: 'imagen'; valor: string; posicion: number; efecto?: EfectoPortada; color?: string }
+  | { tipo: 'estudio'; valor: string; posicion: number }; // «Estudio 3D»: portada de Yuva hecha en Blender (public/portadas/)
 
 export type Fuente = 'sans' | 'serif' | 'mono';
 
 /** Fondo de toda la página (detrás del contenido). */
-export type FondoPagina = 'ninguno' | 'degradado' | 'aurora' | 'puntos' | 'cuadricula' | 'portada';
+export type FondoPagina = 'ninguno' | 'degradado' | 'aurora' | 'puntos' | 'cuadricula' | 'portada' | 'rayas';
 /** Cómo se ven las cajas de la página: paneles, avisos, bandas, accesos, indicadores y bases de datos en línea. */
 export type Superficie = 'plana' | 'vidrio' | 'relieve' | 'contorno' | 'pixel';
 
@@ -157,6 +160,7 @@ export interface Propiedad {
   fijada?: boolean; // en la página de la fila: se ve como etiqueta bajo el título (hasta 4)
   enPagina?: 'siempre' | 'vacia' | 'nunca'; // en la página de la fila: mostrar siempre, ocultar si está vacía u ocultar siempre
   mostrar?: MostrarNumero; // números: dibujarlos como barra o anillo
+  decimales?: number; // números (y fórmulas o resúmenes que dan número): cifras decimales, de 0 a 4; sin él, las del formato
   res?: ResultadoCalculado; // solo en memoria, nunca se guarda: lo añade calcularEsquema()
 }
 
@@ -239,6 +243,7 @@ export interface Vista {
   propFechaFin?: string; // cronograma: fecha de fin (sin ella, cada barra dura un día)
   escala?: EscalaCronograma; // cronograma
   sinTitulos?: boolean; // cronograma: ocultar la columna de títulos
+  avanceDe?: string; // cronograma: propiedad del avance de cada barra ('' ninguna, '@paginas' las casillas de cada fila; sin valor: la primera de porcentaje)
   portadaTarjeta?: 'portada' | 'nada'; // galería
   colorPor?: string; // tablero, galería, lista y calendario: tarjetas del color de esta selección o estado
   modoCalendario?: 'mes' | 'semana'; // calendario
@@ -262,6 +267,17 @@ export interface Vista {
   ocultarVacios?: boolean; // tablero: no dibujar las columnas sin tarjetas
   sinIconos?: boolean; // no mostrar el icono de la página junto al título
   abrirEn?: 'lado' | 'centro' | 'completa'; // dónde se abre una fila (sin valor: vista lateral)
+  agrupar?: AgruparVista; // tabla, lista y cronograma: filas por grupos (el tablero sigue con agruparPor)
+}
+
+/** Agrupar las filas de una tabla, una lista o un cronograma por una propiedad (bd/agrupar.tsx). */
+export interface AgruparVista {
+  prop: string; // id de la propiedad
+  fecha?: 'dia' | 'semana' | 'mes' | 'anio'; // fechas: el tramo (sin valor: 'mes')
+  orden?: 'manual' | 'alfa' | 'inverso'; // opciones: el de las opciones / A-Z / Z-A; fechas: antigua→reciente / reciente→antigua
+  sinValor?: 'inicio' | 'final' | 'oculto'; // dónde va «Sin …» (sin valor: 'final')
+  ocultarVacios?: boolean; // no dibujar los grupos sin filas
+  plegados?: string[]; // claves de grupo plegadas
 }
 
 /** Automatización sencilla de una base de datos: «cuando pasa esto, pon este valor». */
@@ -294,6 +310,7 @@ export interface NotaPagina {
   en: number;
   resuelta?: boolean;
   autor?: string; // el nombre del perfil al escribirla
+  ancla?: { cita: string }; // «Anotar»: nota pegada a un trozo del texto (estilo `anotacion` con su id); la cita, hasta 140 letras
 }
 
 export interface Pagina {
@@ -325,6 +342,58 @@ export interface Pagina {
   esDiario?: string; // fecha AAAA-MM-DD si es la página del diario de ese día
   esquema?: EsquemaBD; // solo si tipo === 'bd'
   props?: Record<string, ValorProp>; // valores si el padre es una base de datos
+  resumen?: ResumenPagina; // cifras de su contenido («Pulso»); sin él todavía no se ha contado (se muestra «—»)
+  desdePlantilla?: string; // fila creada con una plantilla de su base: el id de la plantilla (el «4×» del menú «Nueva»)
+  plantillaPagina?: boolean; // plantilla propia («Tus plantillas»): va con esPlantilla y padreId null (lib/plantillasPropias.ts)
+  pegatinas?: Pegatina[]; // decoración sobre la hoja, como mucho 40 (componentes/Pegatinas.tsx); no va al Markdown ni al sitio
+  repetir?: Repeticion; // fila de una base con fecha: se repite al marcarla hecha (bd/repetir.ts)
+}
+
+/** Cómo se repite una fila al marcarla hecha (bd/repetir.ts). Todo es opcional salvo `cada`. */
+export interface Repeticion {
+  cada: 'dia' | 'semana' | 'mes' | 'anio';
+  n?: number; // cada N (sin valor: 1)
+  dias?: number[]; // semana: 0-6 (domingo 0); sin valor: el día de la semana de la fecha
+  dia?: number; // mes y año: el día del mes de la serie (31 → el último en los meses cortos); sin valor: el de la fecha
+  modo?: 'avanzar' | 'crear'; // sin valor: 'avanzar' (la misma fila pasa a la fecha siguiente)
+  prop?: string; // la propiedad de fecha; sin valor: la de propsDeTarea(base).fecha
+  hasta?: string; // AAAA-MM-DD: no se repite después
+  hechas?: string[]; // días AAAA-MM-DD en que se completó (los 20 últimos), para «hechas hoy»
+  ultima?: { de: string; en: number }; // la ocurrencia completada por última vez y cuándo (guarda contra dobles)
+  siguiente?: string; // modo 'crear': id de la fila ya creada para la ocurrencia siguiente (esta ya no se repite)
+}
+
+/** Pegatina decorativa sobre la hoja de una página (componentes/Pegatinas.tsx). */
+export interface Pegatina {
+  id: string;
+  tipo: 'emoji' | 'imagen';
+  valor: string; // el emoji, o 'archivo://…' (nunca una URL externa)
+  x: number; // 0-1: fracción del ancho de la hoja (el centro de la pegatina)
+  y: number; // px desde arriba de la hoja, a un ancho de referencia de 900 px
+  giro?: number; // grados, −180…180 (sin valor: 0)
+  escala?: number; // 0,4…3 (sin valor: 1); el tamaño base es 72 px
+  z?: number; // orden entre pegatinas
+}
+
+/** Cifras del contenido de una página: casillas («[ ]» con texto) y cuántas están marcadas, y palabras.
+ *  Es un dato derivado: se recalcula al guardar el contenido (estado.ts › guardarContenido) y nunca se edita a mano.
+ *  Desde la versión 2 (fase 2 de «Pulso») lleva también el extracto, las fechas de lo pendiente y cuántas imágenes y
+ *  enlaces hay; los campos opcionales se omiten cuando están vacíos (o en 0). */
+export interface ResumenPagina {
+  tareas: number;
+  hechas: number;
+  palabras: number;
+  /** Versión del cálculo (data/contenido.ts › VERSION_RESUMEN). Sin ella es la 1: el relleno la vuelve a contar. */
+  v?: number;
+  /** Las primeras ~110 letras del texto que no es título ni casilla, en un renglón (con «…» si se cortó). */
+  extracto?: string;
+  /** Fechas AAAA-MM-DD de las casillas sin marcar que tienen fecha «@» (la primera de su renglón), ordenadas y como
+   *  mucho 30 (las más tempranas). Una por casilla: dos casillas del mismo día dan la fecha dos veces. */
+  fechas?: string[];
+  /** Bloques de imagen. */
+  imagenes?: number;
+  /** Enlaces del texto: a la web y menciones de páginas. */
+  enlaces?: number;
 }
 
 /** Cuánto antes avisar de una fecha escrita en el texto ('' = sin recordatorio). */
@@ -394,6 +463,7 @@ export interface Ajustes {
   contraste?: boolean; // alto contraste; sin valor: lo que pida el sistema (prefers-contrast)
   indiceFlotante?: boolean; // rayitas con los títulos en el margen derecho (sin valor: encendido)
   diarioId?: string; // página contenedora del diario
+  plantillaDiario?: string; // id de la plantilla propia con la que nace cada página del Diario (sin valor: la de siempre)
   respaldoAuto: boolean;
   movimiento?: 'completo' | 'reducido'; // animaciones de la interfaz
   paleta?: Paleta; // sin ella: «yuva»
@@ -402,15 +472,22 @@ export interface Ajustes {
   formatoFecha?: FormatoFecha; // fechas en el texto y en las celdas (sin valor: «corto»)
   semanaEmpieza?: 0 | 1; // 0 domingo, 1 lunes (sin valor: lunes)
   sonidoAviso?: SonidoAviso; // sonido al saltar un recordatorio (sin valor: ninguno)
+  sonidoArranque?: boolean; // «plin» y «boom» de la pantalla de arranque (sin valor: sí)
   emojisPropios?: EmojiPropio[];
   internet?: boolean; // «Funciones con internet» (clima, mapas, lugares, Insertar, marcador, ICS); sin valor: encendido
+  capturaDestino?: string; // nota rápida: 'diario' (sin valor), 'bandeja' o 'bd:<id>' de una base de datos
+  bandejaEntradaId?: string; // nota rápida: la página «Bandeja de entrada», creada la primera vez que se usa
 }
 
 export type FormatoFecha = 'relativo' | 'corto' | 'largo' | 'iso';
 export type SonidoAviso = 'ninguno' | 'blip' | 'campana' | 'suave';
 
+export type AvatarAnimado = 'vino' | 'dorado' | 'crema';
+
 export interface Perfil {
   nombre: string;
+  animado?: AvatarAnimado; // pajarito en su nido hecho en Blender (public/avatar/); si está, manda sobre la inicial y el emoji
+  // Más adelante: foto (por ejemplo «foto?: string», un archivo://…). La dibujaría Avatar.tsx.
   emoji?: string; // si falta, el avatar es la inicial sobre un color
   color?: string;
 }

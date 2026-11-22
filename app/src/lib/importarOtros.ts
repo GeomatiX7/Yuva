@@ -5,7 +5,7 @@ import { crearPagina } from '../data/estado';
 import type { ColorEtiqueta, Opcion, Propiedad, ValorProp } from '../data/tipos';
 import { crearBaseDatos, crearFila, nuevaOpcion } from '../bd/operaciones';
 import { guardarContenido } from '../data/estado';
-import { bloquesDesdeHTML, bloquesDesdeMarkdown } from './importar';
+import { bloquesDesdeHTMLImportado, bloquesDesdeMarkdown } from './importar';
 import { segunIdioma, trad } from '../i18n';
 
 function leerXML(texto: string): Document {
@@ -24,14 +24,24 @@ function fechaEvernote(t: string | null | undefined): number | undefined {
   return m ? Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]) : undefined;
 }
 
-/** HTML de una nota de Evernote (ENML) → HTML normal: casillas como «☐/☑» y adjuntos como un aviso. */
-function enmlAHtml(enml: string): string {
-  const cuerpo = enml.match(/<en-note[^>]*>([\s\S]*)<\/en-note>/i)?.[1] ?? enml;
-  return cuerpo
-    .replace(/<en-todo[^>]*checked="true"[^>]*\/?>(<\/en-todo>)?/gi, '☑ ')
-    .replace(/<en-todo[^>]*\/?>(<\/en-todo>)?/gi, '☐ ')
-    .replace(/<en-media[^>]*\/?>(<\/en-media>)?/gi, `<p><em>[${trad('Adjunto de Evernote no importado')}]</em></p>`)
-    .replace(/<en-crypt[\s\S]*?<\/en-crypt>/gi, `<p><em>[${trad('Texto cifrado de Evernote')}]</em></p>`);
+/**
+ * Nota de Evernote (ENML) ya analizada → HTML normal: solo lo de dentro de <en-note>, casillas como «☐/☑» y adjuntos
+ * como un aviso. Va sobre el análisis de limpiarHTMLImportado, no con expresiones: /<en-note[^>]*>([\s\S]*)<\/en-note>/
+ * y las de en-todo y en-crypt recorrían el resto de la nota por cada etiqueta sin cerrar (unos 140 KB así tardaban
+ * segundos). El analizador HTML no entiende «<en-todo/>» y mete dentro lo que sigue: por eso se saca ese contenido.
+ */
+function prepararENML(raiz: DocumentFragment) {
+  const doc = raiz.ownerDocument;
+  const aviso = (texto: string) => {
+    const p = doc.createElement('p');
+    p.appendChild(doc.createElement('em')).textContent = `[${texto}]`;
+    return p;
+  };
+  const nota = raiz.querySelector('en-note');
+  if (nota) raiz.replaceChildren(...nota.childNodes);
+  raiz.querySelectorAll('en-todo').forEach((t) => t.replaceWith(/^true$/i.test(t.getAttribute('checked') ?? '') ? '☑ ' : '☐ ', ...t.childNodes));
+  raiz.querySelectorAll('en-media').forEach((m) => m.replaceWith(aviso(trad('Adjunto de Evernote no importado')), ...m.childNodes));
+  raiz.querySelectorAll('en-crypt').forEach((c) => c.replaceWith(aviso(trad('Texto cifrado de Evernote')))); // su texto es lo cifrado
 }
 
 /** Crea una página por nota; si hay varias, quedan dentro de una página con el nombre del archivo. */
@@ -42,9 +52,9 @@ export function importarEvernote(nombre: string, texto: string, padreId: string 
   let ultima = '';
   for (const n of notas) {
     const titulo = n.getElementsByTagName('title')[0]?.textContent?.trim() || trad('Nota sin título');
-    const html = enmlAHtml(n.getElementsByTagName('content')[0]?.textContent ?? '');
+    const enml = n.getElementsByTagName('content')[0]?.textContent ?? '';
     const etiquetas = [...n.getElementsByTagName('tag')].map((t) => t.textContent?.trim()).filter(Boolean);
-    const bloques = bloquesDesdeHTML(html);
+    const bloques = bloquesDesdeHTMLImportado(enml, prepararENML); // sin data-*, scripts ni direcciones javascript:
     if (etiquetas.length) bloques.push({ type: 'paragraph', content: [{ type: 'text', text: trad('Etiquetas: {lista}', { lista: etiquetas.join(', ') }), styles: { italic: true } }] });
     const creada = fechaEvernote(n.getElementsByTagName('created')[0]?.textContent);
     const p = crearPagina({ padreId: contenedor?.id ?? padreId, titulo, ...(creada ? { creadoEn: creada } : {}) }, bloques);

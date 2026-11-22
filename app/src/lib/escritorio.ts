@@ -12,6 +12,11 @@ export interface AjustesEscritorio {
   busquedaRapida?: boolean;
   atajoBusqueda?: string; // formato de Electron: «CommandOrControl+Shift+K»
   atajoOcupado?: boolean; // otro programa usa ese atajo y no se pudo registrar
+  // Nota rápida global (Ctrl+Shift+Espacio); faltan en programas anteriores.
+  capturaRapida?: boolean;
+  atajoCaptura?: string;
+  atajoCapturaOcupado?: boolean; // otro programa usa ese atajo
+  atajoCapturaChoca?: boolean; // es el mismo que el de la búsqueda rápida, que gana
 }
 
 export interface CambiosEscritorio {
@@ -20,6 +25,8 @@ export interface CambiosEscritorio {
   busquedaRapida?: boolean;
   atajoBusqueda?: string | null; // null vuelve a Ctrl+Shift+K
   grabandoAtajo?: boolean; // suelta el atajo mientras se graba uno nuevo
+  capturaRapida?: boolean;
+  atajoCaptura?: string | null; // null vuelve a Ctrl+Shift+Espacio
 }
 
 export interface EstadoActualizacion {
@@ -105,8 +112,15 @@ interface PuenteEscritorio {
   guardarCopia(nombre: string, texto: string): Promise<string>;
   abrirCarpeta(cual: 'datos' | 'copias'): Promise<string>;
   mostrar(): void;
+  // Tras la nota rápida, la ventana vuelve a como estaba antes (bandeja, minimizada o detrás); falta en programas anteriores.
+  volverTrasCaptura?(): Promise<boolean>;
   alAbrir(fn: (destino: string) => void): () => void;
   alCambiarAjustes(fn: (ajustes: AjustesEscritorio) => void): () => void;
+  // Avisa cuando cerrar la ventana la esconde en la bandeja (para bloquear si hay PIN); falta en programas anteriores.
+  alOcultarEnBandeja?(fn: () => void): () => void;
+  // Estado de «Funciones con internet»: apagado, el programa corta lo que la ventana pida a internet (lib/internet.ts);
+  // falta en programas anteriores.
+  fijarInternet?: (activo: boolean) => void;
 }
 
 export const escritorio = (window as unknown as { escritorio?: PuenteEscritorio }).escritorio;

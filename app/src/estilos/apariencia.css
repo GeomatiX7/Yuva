@@ -70,6 +70,31 @@
 .tema-ocaso.modo-oscuro { --papel: #1a1115; --papel-2: #251820; --papel-3: #32202b; --linea: #3d2733; --linea-fuerte: #553645; --flota: #271a21; }
 .tema-crema.modo-claro { --papel: #ece6db; --papel-2: #f3eee6; --papel-3: #e2dbcd; --linea: #d8cfbf; --linea-fuerte: #c4b9a5; --flota: #f6f2eb; --tinta: #1d2a29; --tinta-2: #475452; }
 .tema-cuaderno.modo-claro { --papel: #fbfaf5; --papel-2: #f3f1e8; --papel-3: #e8e5d8; --linea: #dedbcd; }
+/* Los dos de la marca. Vino y oro: tinta crema 15,4:1, tinta-2 11,7:1, tinta-3 7,3:1 sobre el papel; oro 11,5:1.
+   Pergamino: tinta vino 10,2:1, tinta-2 7,5:1, tinta-3 5,7:1 sobre el crema. */
+.tema-vino.modo-oscuro { --papel: #1e080e; --papel-2: #2a0d16; --papel-3: #37121e; --linea: #4a1a28; --linea-fuerte: #66283a; --flota: #2a0e17; --tinta: #f3e4d6; --tinta-2: #dcc6b4; --tinta-3: #b89a8a; --oro-m: #eac46f; }
+.tema-pergamino.modo-claro { --papel: #f3e4d6; --papel-2: #f8eee4; --papel-3: #e9d5c2; --linea: #e0c9b4; --linea-fuerte: #c9aa91; --flota: #fbf5ef; --tinta: #5e1a2d; --tinta-2: #6f3442; --tinta-3: #7a4a55; --oro-m: #8a5f2a; }
+
+/* Vino y oro: el filo de las cajas y los títulos en el oro de la firma. */
+.tema-vino.sup-contorno {
+  --caja-borde: 1px solid color-mix(in srgb, #eac46f 46%, transparent);
+}
+
+/* Solo sobre el papel vino: con el tema puesto en claro (posible desde Claude), el oro claro daría 1,6:1. */
+.tema-vino.modo-oscuro .bn-block-content h1,
+.tema-vino.modo-oscuro .bn-block-content h2,
+.tema-vino.modo-oscuro .bn-block-content h3 {
+  color: #eac46f;
+}
+
+/* Pergamino: el relieve con sombra vino y luz crema, no la gris de «Crema en relieve». */
+.tema-pergamino.sup-relieve {
+  --caja-sombra: 7px 7px 16px rgba(94, 26, 45, 0.14), -7px -7px 16px rgba(255, 250, 244, 0.8);
+}
+
+.tema-muestra.tema-pergamino .tema-muestra-nombre {
+  font-family: var(--f-serif);
+}
 
 .tema-taberna .bn-block-content h1,
 .tema-taberna .bn-block-content h2,
@@ -129,6 +154,39 @@
     linear-gradient(color-mix(in srgb, var(--papel) 48%, transparent), color-mix(in srgb, var(--papel) 78%, transparent)),
     var(--imagen-fondo, none) center / cover,
     var(--papel);
+}
+
+/* Rayas: trazos finos dorados a −18° (el ángulo de la firma, --ang) que se desvanecen hacia abajo y derivan
+   despacio de lado. Van en un ::before con máscara para no apagar el contenido; la imagen es más ancha que la caja
+   y se corre justo 8 periodos (14 px / cos 18°), así que el ciclo empieza donde acaba, sin saltos. */
+.fondo-rayas {
+  --raya-trazo: color-mix(in srgb, #be8d47 28%, transparent);
+  position: relative;
+  isolation: isolate;
+  background: var(--papel);
+}
+
+:root[data-tema='oscuro'] .fondo-rayas:not(.modo-claro),
+.fondo-rayas.modo-oscuro {
+  --raya-trazo: color-mix(in srgb, #eac46f 20%, transparent);
+}
+
+.fondo-rayas::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: repeating-linear-gradient(calc(90deg - var(--ang)), transparent 0 13px, var(--raya-trazo) 13px 14px) 0 0 / calc(100% + 120px) 100% no-repeat;
+  -webkit-mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, 0.55) 40%, transparent 88%);
+  mask-image: linear-gradient(to bottom, #000, rgba(0, 0, 0, 0.55) 40%, transparent 88%);
+  animation: rayas-deriva 48s linear infinite;
+}
+
+@keyframes rayas-deriva {
+  to {
+    background-position: calc(-112px / 0.9510565) 0;
+  }
 }
 
 /* La portada de la página flota sobre el fondo: bordes redondeados y un margen. */
@@ -332,15 +390,13 @@
   margin: 0 0 6px;
 }
 
-.segmentado button.activo {
-  background: var(--papel);
-  color: var(--tinta);
-  font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--linea);
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .fondo-aurora {
+  .fondo-aurora,
+  .fondo-rayas::before {
     animation: none;
   }
+}
+
+:root[data-movimiento='reducido'] .fondo-rayas::before {
+  animation: none;
 }

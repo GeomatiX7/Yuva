@@ -58,15 +58,17 @@ const INDICE: [string, string, string][] = [
   ['apariencia', trad('Colores de la app'), 'paleta barra lateral app colors palette sidebar'],
   ['apariencia', trad('Color de acento'), 'acento color accent'],
   ['apariencia', trad('Animaciones'), 'movimiento reducido animations motion reduced'],
+  ['apariencia', trad('Sonido al abrir'), 'sonido arranque inicio plin boom startup sound splash'],
   ['apariencia', trad('Alto contraste'), 'accesibilidad bordes high contrast accessibility borders'],
   ['apariencia', trad('Corrector ortográfico'), 'ortografia faltas spell checker spelling'],
   ['apariencia', trad('Índice flotante'), 'titulos margen tabla de contenidos floating outline headings margin table of contents'],
   ['espacio', trad('Al abrir la app'), 'inicio ultima pagina principal predeterminada continuar donde lo deje restaurar startup open app home last page default continue where i left off restore'],
-  ['espacio', trad('Estadísticas'), 'paginas palabras filas bases archivos espacio statistics stats pages words rows databases files workspace'],
+  ['espacio', trad('Estadísticas'), 'paginas palabras filas bases archivos espacio pulso rachas mapa del ano actividad statistics stats pages words rows databases files workspace pulse streaks year map activity'],
   ['espacio', trad('Estadísticas de visitas'), 'vistas veces mas visitadas contador historial privacidad visits views most visited counter history privacy'],
   ['pestanas', trad('Al abrir una pestaña nueva'), 'pestana nueva buscar pagina predeterminada ctrl t new tab search page default'],
   ['pestanas', trad('Ocultar sola la barra de pestañas'), 'esconder escribir fila pestanas hide auto tab bar typing tabs'],
   ['pestanas', trad('Búsqueda rápida desde cualquier programa'), 'atajo global ctrl shift k teclado escritorio grabar quick search shortcut keyboard desktop record hotkey'],
+  ['pestanas', trad('Nota rápida desde cualquier programa'), 'nota rapida captura apuntar atajo global ctrl shift espacio bandeja quick note capture jot shortcut space hotkey tray'],
   ['recordatorios', trad('Resumen del día'), 'manana aviso tareas hoy notificacion diaria daily summary morning tasks today notification'],
   ['espacio', trad('Sin conexión'), 'offline internet clima mapas weather maps'],
   ['datos', trad('Descargar copia de seguridad'), 'respaldo exportar json download backup export'],
@@ -84,7 +86,7 @@ const INDICE: [string, string, string][] = [
   ['recordatorios', trad('Notificación de prueba'), 'probar aviso test notification try alert'],
   ['recordatorios', trad('Sonido de los avisos'), 'blip campana suave sonido alert sound bell soft'],
   ['emojis', trad('Emojis propios'), 'imagen subir personalizado custom emojis image upload'],
-  ['mcp', trad('Permitir que Claude use Yuva'), 'mcp claude ia inteligencia artificial asistente conector notion api desktop code ai artificial intelligence assistant connector allow'],
+  ['mcp', trad('Permitir que Claude use Yuva'), 'mcp claude ia inteligencia artificial asistente conector api desktop code ai artificial intelligence assistant connector allow'],
   ['mcp', trad('Solo leer o leer y escribir'), 'mcp claude permisos escritura lectura modo read only write permissions mode'],
   ['mcp', trad('Conectar Claude Desktop y Claude Code'), 'mcp configuracion claude_desktop_config json copiar orden terminal connect configuration copy command'],
   ['mcp', trad('Lo que hizo Claude'), 'mcp registro historial acciones revisar log history actions review activity'],
@@ -134,7 +136,7 @@ function Apariencia() {
           const activa = ((ajustes.paleta ?? 'yuva') === 'yuva' ? 'yuva' : 'laguna') === p;
           return (
             <button key={p} role="radio" aria-checked={activa} className={`opcion-tema${activa ? ' activa' : ''}`} title={d} onClick={() => cambiarAjustes({ paleta: p })}>
-              <span className="muestra-tema muestra-paleta" aria-hidden="true">
+              <span className={`muestra-tema muestra-paleta muestra-paleta-${p}`} aria-hidden="true">
                 <span style={{ background: barra }} />
                 <span>
                   <i style={{ background: acento }} />
@@ -164,6 +166,13 @@ function Apariencia() {
           <p className="ayuda">{trad('Botones que rebotan, barras que se llenan, cajas que entran una tras otra. Apágalas si te distraen o marean.')}</p>
         </div>
         <Interruptor etiqueta={trad('Animaciones')} activo={(ajustes.movimiento ?? 'completo') === 'completo'} alCambiar={(v) => cambiarAjustes({ movimiento: v ? 'completo' : 'reducido' })} />
+      </div>
+      <div className="ajuste-fila">
+        <div>
+          <strong>{trad('Sonido al abrir')}</strong>
+          <p className="ayuda">{trad('Un «plin» y un «boom» suaves cuando aparece el logo. En el navegador puede no sonar: no deja reproducir sonido antes de que toques la página.')}</p>
+        </div>
+        <Interruptor etiqueta={trad('Sonido al abrir')} activo={ajustes.sonidoArranque !== false} alCambiar={(v) => cambiarAjustes({ sonidoArranque: v })} />
       </div>
       <div className="ajuste-fila">
         <div>
@@ -284,6 +293,9 @@ function Datos() {
                   ? trad('Guarda una copia al día (se conservan 14) mientras el programa está abierto, también desde la bandeja.')
                   : trad('Guarda una copia al día (se conservan 14) mientras la app está abierta.')}
                 {ultimo ? ' ' + trad('Última: {fecha}.', { fecha: fechaHora(ultimo) }) : ''}
+              </p>
+              <p className="ayuda">
+                {trad('Se guardan sin cifrar, aunque uses PIN: cualquiera con acceso a la carpeta, o a su nube si se sincroniza (OneDrive, Google Drive…), puede leerlas. Para algo a salvo, usa «Descargar copia cifrada».')}
               </p>
             </div>
             <Interruptor

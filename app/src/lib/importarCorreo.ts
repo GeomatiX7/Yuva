@@ -1,4 +1,4 @@
-// Importar correos .eml (S3), la alternativa local a Notion Mail: cada correo, arrastrado desde Outlook o
+// Importar correos .eml (S3): cada correo, arrastrado desde Outlook o
 // Thunderbird o elegido en el diálogo, pasa a ser una fila de la base de datos «Correos», con De, Para, Fecha y
 // Asunto como propiedades, el cuerpo (texto o HTML limpiado) como contenido y los adjuntos guardados en el equipo.
 // Lector MIME propio, sin paquetes: cabeceras plegadas, palabras codificadas (RFC 2047), multipart anidado,
@@ -171,17 +171,56 @@ export function leerEml(bytes: Uint8Array): Correo {
 /** Quita del HTML del correo todo lo que no sea contenido: scripts, estilos, eventos, formularios e imágenes remotas. */
 export function limpiarHTML(html: string): string {
   const doc = new DOMParser().parseFromString(html, 'text/html');
-  doc.querySelectorAll('script, style, link, meta, iframe, object, embed, form, input, button, noscript, svg, base, title, head').forEach((n) => n.remove());
+  // Los videos y audios remotos también avisan al remitente de que se abrió el correo: quedan como un enlace que
+  // solo se abre con un clic (como texto si no son de internet).
+  doc.querySelectorAll('video, audio').forEach((m) => {
+    const src = (m.getAttribute('src') || m.querySelector('source[src]')?.getAttribute('src') || '').trim();
+    const tipo = m.tagName === 'AUDIO' ? 'audio' : 'video';
+    if (/^https?:\/\//i.test(src)) {
+      const a = doc.createElement('a');
+      a.setAttribute('href', src);
+      a.textContent = `[${tipo}: ${src}]`;
+      m.replaceWith(a);
+    } else m.remove();
+  });
+  doc.querySelectorAll('script, style, link, meta, iframe, frame, frameset, object, embed, form, input, button, noscript, svg, base, title, head, source, track').forEach((n) => n.remove());
+  // MathML, solo con su texto, como en limpiarHTMLImportado (lib/importar.ts). Lo limpio se vuelve a analizar al pasarlo
+  // a bloques, y dentro de <math> el analizador cambia de reglas: con <math><mtext><table><mglyph><xmp>…, el texto de un
+  // <xmp> salía en el segundo análisis como etiquetas, con sus data-* (una mención a cualquier página: mXSS).
+  doc.querySelectorAll('math').forEach((m) => m.replaceWith(m.textContent ?? ''));
   for (const el of doc.body.querySelectorAll('*')) {
     for (const a of [...el.attributes]) {
       const n = a.name.toLowerCase();
-      if (n.startsWith('on') || n === 'style' || n === 'class' || n === 'id' || n === 'srcset') el.removeAttribute(a.name);
+      // data-*: el editor crea bloques a partir de data-content-type, data-url… (una imagen remota, un «Insertar»
+      // de 1 px): un correo no los usa, así que se quitan todos.
+      if (n.startsWith('on') || n.startsWith('data-') || n === 'style' || n === 'class' || n === 'id' || n === 'srcset' || n === 'poster' || n === 'background' || n === 'ping') el.removeAttribute(a.name);
       else if ((n === 'href' || n === 'src') && /^\s*(javascript|data|vbscript):/i.test(a.value)) el.removeAttribute(a.name);
     }
     // Las imágenes remotas de los correos suelen ser píxeles de seguimiento: no se cargan.
     if (el.tagName === 'IMG') el.replaceWith(doc.createTextNode(el.getAttribute('alt') ? `[${el.getAttribute('alt')}]` : ''));
   }
   return doc.body.innerHTML;
+}
+
+/** Bloques que solo llevan texto: del cuerpo de un correo no puede salir nada que se cargue solo al abrir la nota. */
+const BLOQUES_DE_TEXTO = new Set(['paragraph', 'heading', 'bulletListItem', 'numberedListItem', 'checkListItem', 'toggleListItem', 'quote', 'codeBlock', 'table', 'divider']);
+
+/**
+ * Defensa extra tras convertir el HTML: si alguna regla del editor (de hoy o de una versión futura) creara un bloque
+ * de imagen, video, «Insertar» u otro, pasa a un párrafo con su texto o su enlace, que solo se abre con un clic.
+ */
+export function soloBloquesDeTexto(bloques: unknown[]): unknown[] {
+  return bloques.flatMap((b): unknown[] => {
+    if (!b || typeof b !== 'object') return [];
+    const bloque = b as { type?: string; props?: Record<string, unknown>; content?: unknown; children?: unknown[] };
+    const hijos = Array.isArray(bloque.children) ? soloBloquesDeTexto(bloque.children) : [];
+    if (bloque.type && BLOQUES_DE_TEXTO.has(bloque.type)) return [{ ...bloque, children: hijos }];
+    const fuera: unknown[] = [];
+    const url = typeof bloque.props?.url === 'string' ? bloque.props.url.trim() : '';
+    if (/^https?:\/\//i.test(url)) fuera.push({ type: 'paragraph', content: [{ type: 'link', href: url, content: `[${bloque.type ?? ''}: ${url}]` }] });
+    else if (Array.isArray(bloque.content) && bloque.content.length) fuera.push({ type: 'paragraph', content: bloque.content });
+    return [...fuera, ...hijos];
+  });
 }
 
 function bloquesDeTexto(t: string): unknown[] {
@@ -244,7 +283,7 @@ export async function importarCorreos(archivos: File[], padreId: string | null):
       if (c.fecha) valores[ids.fecha] = c.fecha;
       if (refs.length) valores[ids.adjuntos] = refs;
       const fila = crearFila(ids.bdId, valores, c.asunto || archivo.name.replace(/\.eml$/i, '') || trad('(Sin asunto)'));
-      const bloques: unknown[] = c.html ? bloquesDesdeHTML(limpiarHTML(c.html)) : bloquesDeTexto(c.texto);
+      const bloques: unknown[] = c.html ? soloBloquesDeTexto(bloquesDesdeHTML(limpiarHTML(c.html))) : bloquesDeTexto(c.texto);
       if (!bloques.length) bloques.push({ type: 'paragraph', content: trad('(Correo sin texto)') });
       if (refs.length) {
         bloques.push({ type: 'heading', props: { level: 3 }, content: trad('Adjuntos') });

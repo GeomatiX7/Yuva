@@ -18,6 +18,10 @@
   flex: none;
   margin-left: auto;
   color: var(--barra-texto-2);
+  transition: transform var(--dur-media) var(--ease-salida);
+}
+.espacio[aria-expanded='true'] .espacio-flecha {
+  transform: rotate(180deg);
 }
 .icono-espacio {
   display: inline-grid;
@@ -46,10 +50,122 @@
   margin: 0;
 }
 
+/* ---------- menú de espacios («Pulso»): cada espacio es una baldosa ----------
+   La baldosa lleva su emoji o su inicial sobre el vino de la barra y la diagonal dorada del logo. Solo el espacio
+   abierto dice «18 páginas · 7 tareas» (MenuEspacios.tsx). El menú sigue compacto: tapa solo los accesos. */
+.menu-espacios .titulo-espacios {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px 3px;
+}
+.titulo-espacios-n {
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.menu-espacios .item-menu {
+  min-height: 28px;
+}
+.menu-espacios .separador-menu {
+  margin: 3px 4px;
+}
+.baldosa-espacio {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  padding: 3px 8px 3px 4px;
+  border-radius: 9px;
+  text-align: left;
+  color: var(--tinta);
+  transition: background var(--dur-rapida, 160ms), box-shadow var(--dur-rapida, 160ms);
+}
+.baldosa-espacio:hover,
+.baldosa-espacio:focus-visible {
+  background: var(--papel-2);
+  outline: none;
+}
+/* El espacio abierto va teñido del color de la app (--c, la reserva: el vino con Yuva). */
+.baldosa-espacio.abierto {
+  background: color-mix(in srgb, var(--c) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 30%, transparent);
+}
+/* Con el teclado, además de la cápsula del menú, un anillo que se distingue del teñido del espacio abierto. */
+.menu-espacios .baldosa-espacio:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--acento-fuerte);
+}
+/* Con alto contraste ya lo marca el contorno de tinta de toda la app (tokens.css): sin anillo doble. */
+:root[data-contraste='alto'] .menu-espacios .baldosa-espacio:focus-visible {
+  box-shadow: none;
+}
+.baldosa-espacio-cara {
+  position: relative;
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  overflow: hidden;
+  border-radius: 9px;
+  background: linear-gradient(140deg, var(--barra-3), var(--barra));
+  color: var(--barra-texto);
+  font: 700 15px/1 var(--f-titulo);
+}
+.baldosa-espacio-cara::after {
+  content: '';
+  position: absolute;
+  right: 6px;
+  bottom: -4px;
+  width: 2.5px;
+  height: 19px;
+  background: var(--oro-c);
+  transform: skewX(var(--ang));
+}
+.baldosa-espacio.nueva .baldosa-espacio-cara {
+  background: transparent;
+  color: var(--tinta-2);
+  box-shadow: inset 0 0 0 1.5px var(--linea-fuerte);
+}
+.baldosa-espacio.nueva .baldosa-espacio-cara::after {
+  display: none;
+}
+.baldosa-espacio-textos {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  line-height: 1.2;
+}
+.baldosa-espacio-nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+}
+.baldosa-espacio-cifras {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--tinta-3);
+}
+.baldosa-espacio-cifras em {
+  font: 600 11.5px var(--f-mono);
+  font-style: normal;
+  color: var(--tinta);
+}
+.baldosa-espacio-ok {
+  flex: none;
+  color: var(--acento-fuerte);
+}
+
 /* ---------- pantalla de bloqueo ---------- */
-/* Mientras se comprueba si hay bloqueo, o mientras está bloqueada, la app no se ve. */
-html.yuva-comprobando body > *:not(#yuva-seguridad),
-html.yuva-bloqueada body > *:not(#yuva-seguridad) {
+/* Mientras se comprueba si hay bloqueo, o mientras está bloqueada, la app no se ve. La pantalla de arranque
+   (#arranque, solo el logo) sí: va encima del bloqueo y se aparta al terminar. */
+html.yuva-comprobando body > *:not(#yuva-seguridad):not(#arranque),
+html.yuva-bloqueada body > *:not(#yuva-seguridad):not(#arranque) {
   visibility: hidden !important;
 }
 .pantalla-bloqueo {
@@ -87,6 +203,14 @@ html.yuva-bloqueada body > *:not(#yuva-seguridad) {
   gap: 6px;
   color: var(--barra-texto-2);
   font-size: 14px;
+}
+/* «Yuva está abierta en otra pestaña» (lib/unaPestana.ts): el mismo cuadro que el bloqueo, con una explicación. */
+.bloqueo-ayuda {
+  margin: 0 0 4px;
+  color: var(--barra-texto-2);
+  font-size: 14px;
+  line-height: 1.5;
+  text-wrap: pretty;
 }
 .bloqueo-campo {
   position: relative;

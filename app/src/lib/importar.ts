@@ -3,7 +3,7 @@ import { nuevoId } from '../data/bd';
 import { avisar, crearPagina, usar } from '../data/estado';
 import type { Propiedad, ValorProp } from '../data/tipos';
 import { agregarOpcion, crearBaseDatos, crearFila, nuevaOpcion, cambiarPropiedad } from '../bd/operaciones';
-import { editorSinVista } from './exportar';
+import { editorSinVista, quitarMarcaFormulaCSV, urlSegura } from './exportar';
 import { importarEvernote, importarOPML, importarTrello } from './importarOtros';
 import { importarDocx, importarPDF } from './importarDocx';
 import { importarCorreos } from './importarCorreo';
@@ -34,6 +34,48 @@ export function bloquesDesdeHTML(html: string): unknown[] {
     return [{ type: 'paragraph', content: html.replace(/<[^>]+>/g, ' ') }];
   }
 }
+
+// ---------- HTML que llega de fuera (.html y .enex) ----------
+// Lo peligroso son los data-*: con data-content-type el editor crea cualquier bloque (un «Insertar» de 1 px, una
+// imagen o un video de otro sitio, bloques propios con valores a mano) y con data-inline-content-type, menciones o
+// emojis propios. Un .html o una nota de Evernote no los necesitan: se quitan todos, como en los correos
+// (lib/importarCorreo.ts › limpiarHTML). Fuera también lo que no es contenido (scripts, estilos, marcos, objetos…), los
+// atributos de evento y, con urlSegura (la del HTML exportado), las direcciones javascript:, vbscript:, data: que no
+// sea imagen, audio o video, file: y demás.
+// No se usa limpiarHTML tal cual: además quita las imágenes, el atributo style (de ahí lee el editor negritas,
+// cursivas, subrayados, colores y alineación), las casillas (<input type="checkbox"> en una lista) y los <form> con todo
+// lo que llevan dentro. En un correo es a propósito; en un archivo que la persona importa, eso es su contenido.
+const NO_ES_CONTENIDO = 'script, style, link, meta, base, title, iframe, frame, frameset, object, embed, applet, noscript, svg, template';
+/** Atributos con una dirección: los mismos que mira neutralizarUrls (lib/exportar.ts), menos data-url (va con data-*). */
+const ATRIBUTOS_URL = new Set(['href', 'src', 'action', 'formaction', 'poster', 'data', 'background', 'xlink:href']);
+
+/**
+ * Limpia el HTML de un archivo importado (.html, .enex) antes de pasarlo a bloques. Se analiza una sola vez, en una
+ * plantilla inerte (al hacerlo no se ejecuta ni se descarga nada): con miles de etiquetas sin cerrar, cada análisis
+ * del navegador tarda segundos. `preparar` recibe el contenido ya analizado, antes de limpiarlo, para leer el
+ * <title> o convertir etiquetas propias (las de Evernote).
+ */
+export function limpiarHTMLImportado(html: string, preparar?: (raiz: DocumentFragment) => void): string {
+  const plantilla = document.createElement('template');
+  plantilla.innerHTML = html;
+  preparar?.(plantilla.content);
+  plantilla.content.querySelectorAll(NO_ES_CONTENIDO).forEach((n) => n.remove());
+  // MathML, solo con su texto (el editor no tiene fórmulas MathML; antes también entraba solo el texto). Lo limpio se
+  // vuelve a analizar al pasarlo a bloques, y dentro de <math> el analizador cambia de reglas: con
+  // <math><mtext><table><mglyph><xmp>…, lo que aquí era el texto de un <xmp> salía en el segundo análisis como
+  // etiquetas, con sus data-* y sus on… (mXSS). Sin <math> ni <svg> no queda ese cambio de reglas.
+  plantilla.content.querySelectorAll('math').forEach((m) => m.replaceWith(m.textContent ?? ''));
+  plantilla.content.querySelectorAll('*').forEach((el) => {
+    for (const a of [...el.attributes]) {
+      const n = a.name.toLowerCase();
+      if (n.startsWith('on') || n.startsWith('data-') || n === 'srcset' || n === 'ping' || (ATRIBUTOS_URL.has(n) && !urlSegura(a.value))) el.removeAttribute(a.name);
+    }
+  });
+  return plantilla.innerHTML;
+}
+
+/** Bloques de un HTML ajeno (un .html, una nota de Evernote), ya limpio. */
+export const bloquesDesdeHTMLImportado = (html: string, preparar?: (raiz: DocumentFragment) => void) => bloquesDesdeHTML(limpiarHTMLImportado(html, preparar));
 
 /** Separa un CSV respetando comillas. */
 export function leerCSV(texto: string): string[][] {
@@ -107,7 +149,7 @@ export function fechaDeTexto(t: string): string | null {
  */
 export function fusionarCSV(bdId: string, texto: string): { filas: number; ignoradas: string[] } {
   const base = usar.getState().paginas[bdId];
-  const filas = leerCSV(texto.replace(/^\uFEFF/, ''));
+  const filas = leerCSV(texto.replace(/^\uFEFF/, '')).map((f) => f.map(quitarMarcaFormulaCSV)); // la ' que pone celdaCSV
   if (!base?.esquema || filas.length < 2) return { filas: 0, ignoradas: [] };
   const llano = (t: string) => t.trim().normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
   const [cabeza, ...datos] = filas;
@@ -143,7 +185,9 @@ export function fusionarCSV(bdId: string, texto: string): { filas: number; ignor
 }
 
 function importarCSV(nombre: string, texto: string, padreId: string | null) {
-  const filas = leerCSV(texto.replace(/^﻿/, ''));
+  // Sin la comilla simple que pone celdaCSV (lib/exportar.ts) delante de lo que parece una fórmula: un CSV exportado
+  // por Yuva, o por una hoja de cálculo que hace lo mismo, vuelve con sus textos tal cual. Antes de adivinar los tipos.
+  const filas = leerCSV(texto.replace(/^﻿/, '')).map((f) => f.map(quitarMarcaFormulaCSV));
   if (!filas.length) return null;
   const [cabeza, ...datos] = filas;
   // Adivina el tipo de cada columna a partir de sus valores.
@@ -232,9 +276,12 @@ export async function importarArchivos(archivos: File[], padreId: string | null)
         cuenta++;
       }
     } else if (/\.html?$/i.test(nombre)) {
-      const titulo = texto.match(/<title>([^<]*)<\/title>/i)?.[1]?.trim() || nombre.replace(/\.html?$/i, '');
-      const cuerpo = texto.match(/<body[^>]*>([\s\S]*)<\/body>/i)?.[1] ?? texto;
-      ultima = crearPagina({ padreId, titulo }, bloquesDesdeHTML(cuerpo)).id;
+      // Título y cuerpo con el analizador del navegador, en la misma pasada que la limpieza (en una plantilla, <html>,
+      // <head> y <body> no cuentan y lo de <head> se quita). Con /<body[^>]*>([\s\S]*)<\/body>/, un archivo con muchos
+      // «<body» y ningún cierre se recorría entero una vez por cada uno.
+      let titulo = '';
+      const bloques = bloquesDesdeHTMLImportado(texto, (raiz) => (titulo = raiz.querySelector('title')?.textContent?.trim() ?? ''));
+      ultima = crearPagina({ padreId, titulo: titulo || nombre.replace(/\.html?$/i, '') }, bloques).id;
       cuenta++;
     } else {
       const { titulo, cuerpo } = tituloYCuerpoMarkdown(nombre, texto);

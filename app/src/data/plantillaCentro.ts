@@ -260,7 +260,8 @@ export function crearCentroDeMando(padreId: string | null): Pagina {
   // Vistas propias de cada base de datos.
   const pendientesV = vista(tareas, 'lista', { nombre: trad('Pendientes'), filtros: [filtro(hecha, 'sin_marcar')] }, [fecha, prio]);
   const atrasadasV = vista(tareas, 'lista', { nombre: trad('Atrasadas'), filtros: [filtro(hecha, 'sin_marcar'), filtro(fecha, 'pasada')] }, [fecha, vence]);
-  vista(tareas, 'tablero', { nombre: trad('Por estado'), agruparPor: estTarea, sumaGrupo: horas }, [idTarea, prio, fecha, vence, terminar]);
+  // Los tableros no muestran «Vence»: la ficha ya dice cuánto falta junto a la fecha (VistaTablero › MetaFecha).
+  vista(tareas, 'tablero', { nombre: trad('Por estado'), agruparPor: estTarea, sumaGrupo: horas }, [idTarea, prio, fecha, terminar]);
   vista(tareas, 'tablero', { nombre: trad('Eisenhower'), agruparPor: prio, filtros: [filtro(hecha, 'sin_marcar')] }, [cuadrante, fecha]);
   vista(tareas, 'calendario', { nombre: trad('Calendario'), propFecha: fecha }, [prio]);
   vista(tareas, 'grafico', { nombre: trad('Por prioridad'), ...grafico({ tipo: 'dona', eje: prio, medida: 'contar' }), filtros: [filtro(hecha, 'sin_marcar')] });
@@ -527,7 +528,7 @@ export function crearCentroDeMando(padreId: string | null): Pagina {
             [1, [h(3, trad('Planéalo · importante, no urgente')), cuadro(trad('Planéalo'), 'sin_marcar', 'marcada'), h(3, trad('Suéltalo · ni una ni otra')), cuadro(trad('Suéltalo'), 'sin_marcar', 'sin_marcar')]],
           ),
           h(2, trad('Por estado')),
-          enlazada(tareas, 'tablero', { nombre: trad('Por estado'), agruparPor: estTarea, sumaGrupo: horas, colorPor: prio }, [idTarea, fecha, vence, terminar]),
+          enlazada(tareas, 'tablero', { nombre: trad('Por estado'), agruparPor: estTarea, sumaGrupo: horas, colorPor: prio }, [idTarea, fecha, terminar]),
           columnas(
             [1, [enlazada(tareas, 'grafico', { nombre: trad('Pendientes por prioridad'), ...grafico({ tipo: 'dona', eje: prio, medida: 'contar' }), filtros: [sinHecha] })]],
             [1, [enlazada(tareas, 'grafico', { nombre: trad('Horas por etiqueta'), ...grafico({ tipo: 'barras', eje: etiq, medida: 'suma', valorProp: horas, orden: 'mayor' }) })]],

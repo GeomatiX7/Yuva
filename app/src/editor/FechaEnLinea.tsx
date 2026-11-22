@@ -6,6 +6,7 @@ import type { AvisoTexto } from '../data/tipos';
 import { Flotante } from '../componentes/ui';
 import { fechaSegunAjustes, hoyISO, useFormatoFecha } from '../lib/fechas';
 import { describirMomento, HORA_BASE, NOMBRE_AVISO_TEXTO, pedirPermiso, permisoNotificaciones } from '../lib/recordatorios';
+import { useHoyISO } from '../lib/tareasDelDia';
 import { trad } from '../i18n';
 
 export interface ValorFecha {
@@ -97,9 +98,20 @@ function EditorFecha({ ancla, valor, alCerrar }: { ancla: HTMLElement; valor: Va
   );
 }
 
+/** Dónde cae la fecha respecto de hoy. Con data-fecha y data-cuando en el elemento, estilos/editor.css pinta la
+ *  casilla vencida (sin marcar y con su primera fecha antes de hoy) solo con CSS, al momento de escribir o cambiar la
+ *  fecha y sin leer el contenido guardado. A medianoche se vuelve a pintar (useHoyISO). */
+function cuandoCae(dia: string, hoy: string): 'pasada' | 'hoy' | 'futura' | undefined {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dia)) return undefined;
+  return dia < hoy ? 'pasada' : dia === hoy ? 'hoy' : 'futura';
+}
+
 export function FechaEnLinea({ valor, editable, alCambiar }: { valor: ValorFecha; editable: boolean; alCambiar: (v: ValorFecha) => void }) {
   const [ancla, setAncla] = useState<HTMLElement | null>(null);
   useFormatoFecha();
+  const hoy = useHoyISO();
+  const dia = (valor.fecha ?? '').slice(0, 10);
+  const cuando = cuandoCae(dia, hoy);
   const texto = valor.fecha ? `${fechaSegunAjustes(valor.fecha)}${valor.hora ? `, ${valor.hora}` : ''}` : trad('Sin fecha');
   const etiqueta = valor.recordar && valor.fecha
     ? trad('Recordatorio: {cuando}', { cuando: NOMBRE_AVISO_TEXTO[valor.recordar].toLowerCase() })
@@ -108,6 +120,8 @@ export function FechaEnLinea({ valor, editable, alCambiar }: { valor: ValorFecha
     <>
       <span
         className={`fecha-en-linea${valor.recordar ? ' con-aviso' : ''}`}
+        data-fecha={cuando ? dia : undefined}
+        data-cuando={cuando}
         title={editable ? trad('{etiqueta} · clic para cambiar', { etiqueta }) : etiqueta}
         onClick={(e) => editable && setAncla(e.currentTarget)}
       >

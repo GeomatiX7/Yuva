@@ -1,0 +1,520 @@
+/* Vista «Pulso del espacio» (#/pulso, componentes/PulsoEspacio.tsx), en el lenguaje «Pulso» (DESIGN.md):
+   antetítulo mono con la raya dorada, casillas sesgadas a −18° (--ang) con el oro en 5 tramos, rayas de avance de 3 px
+   para las rachas y barras sesgadas para las semanas. Todo con tokens: claro, oscuro y alto contraste. El llenado
+   escalonado de las casillas y el crecer de las barras se apagan con el movimiento reducido. */
+
+.pulso-espacio {
+  /* Los 5 tramos del mapa: de papel a oro pleno. En claro el último es el oro oscuro; en oscuro, el oro claro. */
+  --pe-t0: var(--papel-3);
+  --pe-t1: color-mix(in srgb, var(--oro-c) 32%, var(--papel-2));
+  --pe-t2: color-mix(in srgb, var(--oro-c) 64%, var(--papel-2));
+  --pe-t3: var(--oro-c);
+  --pe-t4: var(--oro-m);
+  --pe-marca: var(--principal, var(--tinta));
+  /* Barras de las semanas: oro y, la de esta semana, vino (en oscuro, oro apagado y oro claro). */
+  --pe-barra: var(--oro-m);
+  --pe-barra-actual: var(--principal, var(--tinta));
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 5vh var(--margen-pagina, 32px) 100px;
+  container-type: inline-size;
+}
+
+:root[data-tema='oscuro'] .pulso-espacio {
+  --pe-t0: var(--papel-3);
+  --pe-t1: color-mix(in srgb, var(--oro-c) 34%, var(--papel-2));
+  --pe-t2: color-mix(in srgb, var(--oro-c) 56%, var(--papel-2));
+  --pe-t3: color-mix(in srgb, var(--oro-c) 78%, var(--papel-2));
+  --pe-t4: var(--oro-c);
+  --pe-marca: var(--tinta);
+  --pe-barra: color-mix(in srgb, var(--oro-c) 62%, var(--papel-2));
+  --pe-barra-actual: var(--oro-c);
+}
+
+/* ---------- cabecera ---------- */
+.pulso-cabeza {
+  margin-bottom: 22px;
+}
+
+.pulso-antetitulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  font: 500 11px var(--f-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--acento-fuerte);
+}
+
+.pulso-antetitulo::after {
+  content: '';
+  flex: none;
+  width: 40px;
+  height: 1px;
+  background: var(--oro-m);
+  transform-origin: left;
+  animation: pulso-espacio-crece 900ms 200ms var(--ease-salida) both;
+}
+
+@keyframes pulso-espacio-crece {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.pulso-antetitulo-cifra {
+  white-space: nowrap;
+}
+
+.pulso-cabeza h1 {
+  margin: 0;
+  font-family: var(--f-titulo);
+  font-size: clamp(28px, 3.4vw, 36px);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- secciones ---------- */
+.pulso-seccion {
+  margin: 0 0 30px;
+  min-width: 0;
+}
+
+.pulso-seccion-cabeza {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  padding-top: 10px;
+  margin-bottom: 12px;
+  border-top: 1px solid var(--tinta);
+}
+
+.pulso-seccion-cabeza h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font: 600 15px var(--f-titulo);
+  letter-spacing: -0.01em;
+}
+
+.pulso-seccion-cabeza h2 svg {
+  color: var(--acento-fuerte);
+}
+
+.pulso-dato {
+  font: 500 11.5px var(--f-mono);
+  color: var(--tinta-3);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.pulso-nota {
+  margin: 10px 0 0;
+  font-size: var(--t-s);
+  line-height: 1.5;
+  color: var(--tinta-3);
+}
+
+.pulso-resumen {
+  margin: 12px 0 0;
+  font-size: var(--t-m);
+  color: var(--tinta-2);
+}
+
+/* ---------- mapa del año ---------- */
+.pulso-mapa-caja {
+  /* Las casillas crecen con el ancho hasta 15 px; nunca desbordan (minmax(0, 1fr)). */
+  --pe-gap: 3px;
+  --pe-col-dias: 2.6em;
+  max-width: calc(var(--pe-col-dias) + 53 * 18px);
+  min-width: 0;
+}
+
+.pulso-meses,
+.pulso-mapa {
+  display: grid;
+  grid-template-columns: var(--pe-col-dias) repeat(53, minmax(0, 1fr));
+  column-gap: var(--pe-gap);
+}
+
+.pulso-meses {
+  margin-bottom: 4px;
+  font: 500 10px var(--f-mono);
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  color: var(--tinta-3);
+  white-space: nowrap;
+}
+
+.pulso-mapa {
+  row-gap: var(--pe-gap);
+  /* Un poco de aire para el sesgo de la primera y la última columna. */
+  padding: 1px 3px;
+}
+
+.pulso-fila {
+  display: contents;
+}
+
+.pulso-dia-semana {
+  align-self: center;
+  font: 500 9.5px var(--f-mono);
+  color: var(--tinta-3);
+  text-transform: lowercase;
+  line-height: 1;
+  overflow: hidden;
+}
+
+.pulso-casilla {
+  display: block;
+  aspect-ratio: 1;
+  min-width: 0;
+  border-radius: 2px;
+  background: var(--pe-t0);
+  transform: skewX(var(--ang));
+  animation: pulso-espacio-casilla 260ms calc(var(--c, 0) * 7ms) var(--ease-salida) both;
+}
+
+.pulso-casilla.t1 {
+  background: var(--pe-t1);
+}
+.pulso-casilla.t2 {
+  background: var(--pe-t2);
+}
+.pulso-casilla.t3 {
+  background: var(--pe-t3);
+}
+.pulso-casilla.t4 {
+  background: var(--pe-t4);
+}
+
+.pulso-casilla.futuro {
+  background: transparent;
+  animation: none;
+}
+
+.pulso-mapa .pulso-casilla:not(.futuro) {
+  cursor: pointer;
+}
+
+.pulso-mapa .pulso-casilla:not(.futuro):hover {
+  box-shadow: 0 0 0 1.5px var(--tinta-2);
+}
+
+.pulso-casilla.hoy {
+  box-shadow: 0 0 0 1.5px var(--pe-marca);
+}
+
+.pulso-casilla.elegida,
+.pulso-casilla.elegida:hover {
+  box-shadow: 0 0 0 2px var(--tinta);
+}
+
+.pulso-casilla:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--papel), 0 0 0 4px var(--acento);
+}
+
+@keyframes pulso-espacio-casilla {
+  from {
+    opacity: 0;
+    transform: skewX(var(--ang)) scale(0.4);
+  }
+}
+
+/* Leyenda: Menos ▱▱▱▱▱ Más */
+.pulso-leyenda {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: 500 10.5px var(--f-mono);
+  color: var(--tinta-3);
+}
+
+.pulso-leyenda .pulso-casilla {
+  width: 11px;
+  animation: none;
+}
+
+.pulso-leyenda > span:first-child {
+  margin-right: 3px;
+}
+.pulso-leyenda > span:nth-last-child(2) {
+  margin-left: 3px;
+}
+
+/* El día elegido */
+.pulso-dia {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--linea);
+  border-left: 3px solid var(--oro-m);
+  border-radius: var(--r-2);
+  background: var(--papel-2);
+}
+
+.pulso-dia-titulo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0 0 6px;
+}
+
+.pulso-dia-titulo strong {
+  font-family: var(--f-titulo);
+  font-weight: 600;
+}
+
+.pulso-dia-titulo strong::first-letter {
+  text-transform: uppercase;
+}
+
+.pulso-dia-titulo span {
+  font: 500 11.5px var(--f-mono);
+  color: var(--tinta-3);
+}
+
+/* ---------- rachas ---------- */
+.pulso-rachas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 12px;
+}
+
+.pulso-racha {
+  padding: 14px 16px;
+  border: 1px solid var(--linea);
+  border-radius: var(--r-3);
+  background: var(--flota);
+  min-width: 0;
+}
+
+.pulso-racha-titulo {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 10px;
+  font-weight: 600;
+  font-size: var(--t-m);
+}
+
+.pulso-racha-titulo svg {
+  color: var(--acento-fuerte);
+}
+
+.pulso-racha-cifras {
+  display: flex;
+  gap: 28px;
+  margin-bottom: 10px;
+}
+
+.pulso-racha-cifras > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pulso-cifra {
+  font: 600 30px/1 var(--f-titulo);
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.pulso-cifra-nombre {
+  font: 500 10.5px var(--f-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-3);
+}
+
+/* Las rayas de los últimos 14 días: el módulo de la firma (3 px, hueco de 2 px, −18°). */
+.pulso-rayas {
+  display: inline-flex;
+  gap: var(--raya-hueco);
+  height: var(--raya-alto);
+  padding: 0 2px;
+}
+
+.pulso-rayas i {
+  width: var(--raya-ancho);
+  height: 100%;
+  border-radius: 1px;
+  background: var(--raya-vacia, var(--linea-fuerte));
+  transform: skewX(var(--ang));
+}
+
+.pulso-rayas i.h {
+  background: var(--oro-m);
+}
+
+.pulso-racha .pulso-nota {
+  margin-top: 8px;
+}
+
+/* ---------- semanas ---------- */
+.pulso-barras-par {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+  gap: 12px 28px;
+}
+
+.pulso-barras-caja {
+  min-width: 0;
+}
+
+.pulso-barras-titulo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: var(--t-s);
+  font-weight: 600;
+}
+
+.pulso-barras {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  align-items: end;
+  gap: 6px;
+  height: 96px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--linea-fuerte);
+}
+
+.pulso-barra {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  height: 100%;
+  min-width: 0;
+}
+
+.pulso-barra b {
+  font: 500 9.5px var(--f-mono);
+  color: var(--tinta-3);
+  margin-bottom: 2px;
+}
+
+/* El sesgo va sobre el centro para que la barra más alta no se salga de su columna; crece desde abajo con clip-path. */
+.pulso-barra i {
+  display: block;
+  width: min(60%, 10px);
+  height: max(calc(var(--h) - 14px), 3px);
+  border-radius: 1.5px;
+  background: var(--pe-barra);
+  transform: skewX(var(--ang));
+  animation: pulso-espacio-barra 420ms calc(var(--i, 0) * 30ms + 120ms) var(--ease-salida) both;
+}
+
+.pulso-barra i.cero {
+  height: 2px;
+  background: var(--linea-fuerte);
+}
+
+.pulso-barra:last-child i:not(.cero) {
+  background: var(--pe-barra-actual);
+}
+
+@keyframes pulso-espacio-barra {
+  from {
+    clip-path: inset(100% 0 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+.pulso-barras-eje {
+  display: flex;
+  justify-content: space-between;
+  margin: 4px 0 0;
+  font: 500 10px var(--f-mono);
+  color: var(--tinta-3);
+}
+
+/* ---------- visitadas y dormidas ---------- */
+.pulso-columnas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: 0 28px;
+}
+
+.pulso-lista {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pulso-lista li + li {
+  border-top: 1px solid var(--linea);
+}
+
+.pulso-enlace {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 4px 6px;
+  border-radius: var(--r-1);
+  color: inherit;
+  text-decoration: none;
+}
+
+.pulso-enlace:hover {
+  background: var(--papel-2);
+}
+
+.pulso-enlace:focus-visible {
+  outline: none;
+  box-shadow: var(--anillo);
+}
+
+.pulso-enlace-titulo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- ventana estrecha ---------- */
+@container (max-width: 560px) {
+  .pulso-mapa-caja {
+    --pe-gap: 2px;
+    --pe-col-dias: 2.2em;
+  }
+  .pulso-meses {
+    font-size: 9px;
+  }
+}
+
+/* ---------- alto contraste ---------- */
+:root[data-contraste='alto'] .pulso-casilla.t0 {
+  box-shadow: inset 0 0 0 1px var(--linea-fuerte);
+}
+
+:root[data-contraste='alto'] .pulso-espacio {
+  --pe-t4: var(--tinta);
+}
+
+/* ---------- movimiento reducido ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .pulso-antetitulo::after,
+  .pulso-casilla,
+  .pulso-barra i {
+    animation: none;
+  }
+}
+
+:root[data-movimiento='reducido'] :is(.pulso-casilla, .pulso-barra i),
+:root[data-movimiento='reducido'] .pulso-antetitulo::after {
+  animation: none;
+}

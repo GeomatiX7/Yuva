@@ -56,6 +56,8 @@ export const en: Record<string, string> = {
   'Descargar copia de seguridad': 'Download backup',
   'Restaurar una copia': 'Restore a backup',
   'Copia automática en una carpeta': 'Automatic backup to a folder',
+  'Se guardan sin cifrar, aunque uses PIN: cualquiera con acceso a la carpeta, o a su nube si se sincroniza (OneDrive, Google Drive…), puede leerlas. Para algo a salvo, usa «Descargar copia cifrada».':
+    'They’re saved unencrypted, even if you use a PIN: anyone with access to the folder, or to its cloud if it syncs (OneDrive, Google Drive…), can read them. To keep something safe, use “Download encrypted backup”.',
   'Almacenamiento': 'Storage',
   'Importar archivos': 'Import files',
   'Exportar todo el espacio': 'Export the whole workspace',
@@ -207,6 +209,21 @@ export const en: Record<string, string> = {
     'Shown in the Home greeting, in the “Greeting” block and as the author of your comments.',
   'Color de la inicial': 'Initial color',
   'Inicial sobre {color}': 'Initial on {color}',
+  'granate@avatar': 'garnet',
+  'ámbar@avatar': 'amber',
+  'verde@avatar': 'green',
+  'azul@avatar': 'blue',
+  'morado@avatar': 'purple',
+  'gris@avatar': 'gray',
+  'color {n}@avatar': 'color {n}',
+  'Cara sonriente@avatar': 'Smiling face',
+  'Zorro@avatar': 'Fox',
+  'Gato@avatar': 'Cat',
+  'Girasol@avatar': 'Sunflower',
+  'Cohete@avatar': 'Rocket',
+  'Libros@avatar': 'Books',
+  'Audífonos@avatar': 'Headphones',
+  'Luna@avatar': 'Moon',
   'Emoji del avatar': 'Avatar emoji',
   'Otro emoji': 'Other emoji',
   'Otro@emoji': 'Other',
@@ -302,8 +319,15 @@ export const en: Record<string, string> = {
     'Everything is in this browser, on this computer (IndexedDB). Another browser or a private window can’t see it.',
   'Una base por espacio:': 'One database per workspace:',
   'La lista de espacios y el bloqueo van en': 'The workspace list and the lock are stored in',
-  'No hay cuentas, sesiones ni servidor: nada sale del equipo salvo las funciones con internet (clima, mapas, insertar) y las copias que tú guardes.':
-    'There are no accounts, sessions or servers: nothing leaves the computer except online features (weather, maps, embeds) and the backups you save.',
+  // Ronda 2 de seguridad (2026-11-20): qué sale del equipo (la primera, en el programa; la segunda, en la web)
+  'No hay cuentas, sesiones ni servidor: nada sale del equipo salvo las funciones con internet (clima, mapas, «Insertar», imágenes por enlace…), la búsqueda de actualizaciones, lo que Claude lea si conectas Yuva MCP y lo que tú exportes, copies o publiques.':
+    'There are no accounts, sessions or servers: nothing leaves the computer except online features (weather, maps, “Embed”, images by link…), the update check, what Claude reads if you connect Yuva MCP, and whatever you export, copy or publish.',
+  'No hay cuentas, sesiones ni servidor: nada sale del equipo salvo las funciones con internet (clima, mapas, «Insertar», imágenes por enlace…) y lo que tú exportes, copies o publiques.':
+    'There are no accounts, sessions or servers: nothing leaves the computer except online features (weather, maps, “Embed”, images by link…) and whatever you export, copy or publish.',
+  // Ronda 2: solo con la copia automática encendida (la segunda frase, solo en el programa)
+  'La copia automática está encendida y se guarda sin cifrar en la carpeta de «Datos y copias»: si esa carpeta se sincroniza con una nube (OneDrive, Google Drive…), las copias salen del equipo.':
+    'Automatic backup is on and is saved unencrypted in the folder set in “Data and backups”: if that folder syncs with a cloud (OneDrive, Google Drive…), the backups leave the computer.',
+  'De fábrica va en Documentos, que en Windows suele sincronizarse con OneDrive.': 'By default it goes in Documents, which Windows often syncs with OneDrive.',
   'Bloqueo activado. {atajo} bloquea al momento': 'Lock turned on. {atajo} locks right away',
   'Escribe {clave} actual.': 'Enter your current {clave}.',
   'Seguir': 'Continue',
@@ -312,6 +336,8 @@ export const en: Record<string, string> = {
   'Es un bloqueo de pantalla, no un cifrado.': 'This is a screen lock, not encryption.',
   'Impide que alguien abra Yuva en tu equipo sin {clave}, pero la base de datos sigue sin cifrar: quien pueda leer los archivos del equipo podría leer tus páginas. Para guardar algo a salvo fuera del equipo, usa las copias cifradas.':
     'It stops anyone from opening Yuva on your computer without your {clave}, but the database stays unencrypted: anyone who can read the computer’s files could read your pages. To keep something safe off the computer, use encrypted backups.',
+  'Las copias automáticas en una carpeta (Datos y copias) tampoco van cifradas: quien abra esa carpeta puede leerlas sin {clave}.':
+    'Automatic backups to a folder (Data and backups) aren’t encrypted either: anyone who opens that folder can read them without your {clave}.',
   'Bloqueo de Yuva': 'Yuva lock',
   'Pedir un PIN o una contraseña al abrir': 'Ask for a PIN or password when opening',
   'Vale para todos los espacios. Se guarda solo una huella (PBKDF2 con sal), nunca {clave}.':
@@ -324,6 +350,10 @@ export const en: Record<string, string> = {
   'Yuva lo pide al abrirse y al desbloquear. También puedes bloquear al momento con': 'Yuva asks for it when it opens and when unlocking. You can also lock right away with',
   'o desde el menú del espacio.': 'or from the workspace menu.',
   'Sin mover el ratón ni escribir en Yuva.': 'Without moving the mouse or typing in Yuva.',
+  // Ronda 2: casilla del programa para bloquear al cerrar la ventana a la bandeja
+  'Bloquear al cerrar la ventana': 'Lock when closing the window',
+  'Si al cerrar la ventana Yuva sigue en la bandeja, con esto encendido queda bloqueada y pide {clave} al volver. Mientras está bloqueada, los asistentes conectados por Yuva MCP (como Claude) no pueden leer ni escribir en ella hasta que la desbloquees.':
+    'If Yuva stays in the tray when you close the window, with this on it locks and asks for your {clave} when you come back. While it’s locked, assistants connected through Yuva MCP (like Claude) can’t read or write in it until you unlock it.',
   'Cambiar {clave}': 'Change {clave}',
   'PIN cambiado': 'PIN changed',
   'Contraseña cambiada': 'Password changed',
@@ -397,6 +427,22 @@ export const en: Record<string, string> = {
   'Pulsa el botón y después la combinación que quieras.': 'Click the button, then press the combination you want.',
   'Otro programa ya usa {atajo}, así que la búsqueda rápida no funciona. Elige otra combinación.':
     'Another app already uses {atajo}, so quick search doesn’t work. Choose another combination.',
+  'Búsqueda rápida: {atajo}. La nota rápida usaba ese atajo y se queda sin él.': 'Quick search: {atajo}. Quick note was using that shortcut and no longer has one.',
+  // ---------- AjustesCaptura.tsx ----------
+  '{atajo} es el atajo de la búsqueda rápida: elige otro': '{atajo} is the quick search shortcut: choose another',
+  'Nota rápida: {atajo}': 'Quick note: {atajo}',
+  'Nota rápida desde cualquier programa': 'Quick note from any app',
+  'Atajo global de la nota rápida': 'Quick note global shortcut',
+  'Abre un cuadro para apuntar algo sin dejar lo que haces; al guardar vuelves a tu programa. Mientras está activo, los demás programas no reciben esa combinación.':
+    'Opens a small box to jot something down without leaving what you’re doing; when you save, you’re back in your app. While it’s on, other apps don’t receive that combination.',
+  'Nota rápida global': 'Global quick note',
+  'Volver a {atajo}': 'Reset to {atajo}',
+  'La búsqueda rápida ya usa {atajo}, así que la nota rápida no funciona. Elige otra combinación para una de las dos.':
+    'Quick search already uses {atajo}, so quick note doesn’t work. Choose another combination for one of them.',
+  'Otro programa ya usa {atajo}, así que la nota rápida no funciona. Elige otra combinación.':
+    'Another app already uses {atajo}, so quick note doesn’t work. Choose another combination.',
+  'Sin atajo también se abre desde el icono de la bandeja y con clic derecho en el icono de la barra de tareas.':
+    'Without a shortcut, it also opens from the tray icon and by right-clicking the taskbar icon.',
   'Inicio': 'Home',
   'La búsqueda, para ir directo a una página': 'Search, to go straight to a page',
   'La última página visitada': 'The last visited page',
@@ -441,6 +487,11 @@ export const en: Record<string, string> = {
   'Crear una vista en': 'Create a view in',
   'Añadir bloques a': 'Add blocks to',
   'Cambiar la apariencia de': 'Change the appearance of',
+  'Cambiar una vista de': 'Change a view of',
+  'Ver tus plantillas': 'List your templates',
+  'Guardar como plantilla': 'Save as template',
+  'Elegir la plantilla del Diario': 'Choose the Journal template',
+  'Abrir el Diario de': 'Open the Journal for',
   '¿Borrar el registro de lo que hizo Claude?': 'Clear the log of what Claude did?',
   'Borrar registro': 'Clear log',
   'Todavía nada. Aquí verás cada herramienta que use Claude (las últimas 100), con la hora y la página.':
@@ -463,13 +514,16 @@ export const en: Record<string, string> = {
   'No está escuchando.': 'Not listening.',
   'Qué puede hacer Claude': 'What Claude can do',
   'Solo leer': 'Read only',
-  'Buscar, leer páginas y bases, ver tareas y agenda.': 'Search, read pages and databases, see tasks and the agenda.',
+  'Buscar, leer páginas y bases, ver tareas, agenda y tus plantillas.': 'Search, read pages and databases, see tasks, the agenda and your templates.',
   'Leer y escribir': 'Read and write',
-  'Además crear páginas y filas, añadir contenido, cambiar propiedades y mover a la papelera.':
-    'Also create pages and rows, add content, change properties and move to trash.',
+  'Además crear páginas (también desde tus plantillas) y filas, añadir contenido, guardar plantillas, escribir en el Diario, cambiar propiedades y mover a la papelera.':
+    'Also create pages (from your templates too) and rows, add content, save templates, write in the Journal, change properties and move to trash.',
   'Token de acceso': 'Access token',
   'Se guarda en mcp.json, en la carpeta de datos. Si crees que otro programa lo conoce, regenéralo.':
     'Stored in mcp.json, in the data folder. If you think another app knows it, regenerate it.',
+  // Ronda 2 de seguridad (2026-11-20): el token cambia en cada arranque (protocolo yuva-mcp/2)
+  'Cambia cada vez que Yuva arranca y el puente lo lee solo: no hace falta copiarlo a mano.':
+    'It changes every time Yuva starts, and the bridge picks it up on its own: you don’t need to copy it by hand.',
   'Conectar Claude': 'Connect Claude',
   'En Claude Desktop: Ajustes › Desarrollador › Editar configuración. Pega «yuva» dentro de «mcpServers» de claude_desktop_config.json (o el bloque entero si el archivo está vacío) y reinicia Claude.':
     'In Claude Desktop: Settings › Developer › Edit Config. Paste “yuva” inside “mcpServers” in claude_desktop_config.json (or the whole block if the file is empty) and restart Claude.',
@@ -553,8 +607,12 @@ export const en: Record<string, string> = {
     'Your data lives in the app’s data folder and only leaves if you export, copy or publish something.',
   'Tus datos viven en este navegador y solo salen si tú exportas, copias o publicas algo.': 'Your data lives in this browser and only leaves if you export, copy or publish something.',
   'Encendidas: clima, mapas, búsqueda de lugares, «Insertar» y calendarios en línea pueden conectarse.': 'On: weather, maps, place search, “Embed” and online calendars can connect.',
-  'Apagadas: Yuva no hace ninguna petición a internet. Esas funciones muestran un aviso y lo demás sigue igual.':
-    'Off: Yuva makes no internet requests. Those features show a notice and everything else works the same.',
+  // Ronda 2 de seguridad (2026-11-20). En el programa: la ventana no pide nada a internet y la búsqueda de
+  // actualizaciones no depende de este interruptor. En la web: lo que el navegador no deja cortar.
+  'Apagadas: clima, mapas, búsqueda de lugares, «Insertar» y calendarios en línea no se conectan y muestran un aviso, y la ventana de Yuva no pide nada a internet (tampoco imágenes, vídeos ni audios por enlace). La búsqueda de actualizaciones va aparte: se apaga con «Buscar actualizaciones solo».':
+    'Off: weather, maps, place search, “Embed” and online calendars do not connect and show a notice, and the Yuva window requests nothing from the internet (not even images, videos or audio by link). Checking for updates is separate: turn it off with “Check for updates automatically”.',
+  'Apagadas: clima, mapas, búsqueda de lugares, «Insertar» y calendarios en línea no se conectan y muestran un aviso, y las imágenes, vídeos, audios y portadas por enlace no se cargan. En la web el navegador no deja cortarlo todo: copiar o exportar una nota con imágenes por enlace, o un estilo con url() dentro de un diagrama, aún puede pedir algo a internet. El programa de escritorio sí lo corta todo.':
+    'Off: weather, maps, place search, “Embed” and online calendars do not connect and show a notice, and images, videos, audio and covers by link are not loaded. On the web, the browser does not let everything be blocked: copying or exporting a note with images by link, or a style with url() inside a diagram, can still request something from the internet. The desktop app does block everything.',
   '(ahora bloqueado)': '(blocked now)',
   'Imágenes por enlace:': 'Images by link:',
   'si pegas la dirección web de una imagen (en vez de subirla), el editor la pide a esa web al mostrarla. Las imágenes subidas se guardan en el equipo.':
@@ -631,6 +689,9 @@ export const en: Record<string, string> = {
     'Clock, pomodoro, countdown, month calendar, time progress, gauge, quote of the day, weather and ambient sounds.',
   'Contenido': 'Content',
   'Imagen, archivo, marcador de un enlace, insertar (vídeos y mapas), ecuación, diagrama y ruta.': 'Image, file, link bookmark, embed (videos and maps), equation, diagram and breadcrumb.',
+  // Ayuda › Guía de bloques: el tablero de visión (noche 2026-11-21)
+  '«/visión»: un collage de tus imágenes con una frase en cada una, en mosaico, polaroid o cuadrícula. Arrastra para reordenar; con el teclado, Alt + flechas mueve y Supr quita.':
+    '“/vision”: a collage of your images with a phrase on each, as mosaic, polaroid or grid. Drag to reorder; with the keyboard, Alt + arrows moves and Delete removes.',
   'El asa a la izquierda de cada bloque: arrastrar, convertir, color, duplicar y borrar.': 'The handle to the left of each block: drag, turn into, color, duplicate and delete.',
   // Título de la página que crea la plantilla «Guía de bloques» (data/plantillaGuia.ts): debe coincidir con su traducción.
   'Guía de bloques': 'Block guide',
@@ -681,4 +742,16 @@ export const en: Record<string, string> = {
     'Yuva has no server, so it doesn’t publish for you: it generates the files and you upload them to GitHub Pages, Netlify or any hosting. Inside is “COMO-PUBLICAR.md” with the steps. Everything you upload will be public: check that there’s no private data.',
   'Descargar ZIP': 'Download ZIP',
   'Guardar en una carpeta': 'Save to a folder',
+  // Bienvenida y pantalla de arranque (0.7.3)
+  'Sonido al abrir': 'Sound on startup',
+  'Un «plin» y un «boom» suaves cuando aparece el logo. En el navegador puede no sonar: no deja reproducir sonido antes de que toques la página.': 'A soft “ping” and “boom” when the logo appears. In the browser it may stay silent: browsers don’t allow sound before you touch the page.',
+  // Avatar animado (0.7.3)
+  'Avatar animado': 'Animated avatar',
+  'Un pajarito en su nido que respira, parpadea y ladea la cabeza. Con las animaciones apagadas se queda quieto.': 'A little bird in its nest that breathes, blinks and tilts its head. With animations off, it stays still.',
+  // Bloqueo.tsx › PantallaOtraPestana (2026-11-20): una sola pestaña por espacio (lib/unaPestana.ts).
+  '{nombre} está abierta en otra pestaña': '{nombre} is open in another tab',
+  'Lo abriste en otra pestaña o ventana. Para no perder cambios, solo una puede usarlo a la vez.': 'You opened it in another tab or window. To avoid losing changes, only one can use it at a time.',
+  'Para no perder cambios, solo una pestaña puede usar este espacio a la vez. Sigue en la otra o pásalo a esta.': 'To avoid losing changes, only one tab can use this workspace at a time. Keep using the other one or switch it to this one.',
+  'Abriendo…': 'Opening…',
+  'Usar aquí': 'Use here',
 };

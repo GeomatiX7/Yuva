@@ -1,4 +1,4 @@
-// Secciones de Ajustes tomadas de la configuración de Notion que tienen sentido para una sola persona en su equipo:
+// Secciones de Ajustes pensadas para una sola persona en su equipo:
 // perfil, preferencias, prueba y sonido de los avisos, importar, emojis propios, estadísticas y «Sin conexión».
 import { useEffect, useState } from 'react';
 import { BellRing, FileArchive, FileCode2, FileSpreadsheet, FileText, ListTree, Trash2, Upload, Volume2, WifiOff } from 'lucide-react';
@@ -8,17 +8,36 @@ import { ImagenEmoji } from './EmojiPropio';
 import { bd, nuevoId } from '../data/bd';
 import type { FormatoFecha } from '../data/tipos';
 import { fechaConFormato, hoyISO } from '../lib/fechas';
-import { EXTENSIONES_IMPORTAR, ES_IMPORTABLE, importarArchivos } from '../lib/importar';
-import { importarNotion } from '../lib/importarNotion';
 import { notificar, pedirPermiso } from '../lib/recordatorios';
-import { ir } from '../lib/ruta';
+import { ir, irPulso } from '../lib/ruta';
 import { SONIDOS, sonar } from '../lib/sonidos';
-import { Avatar, COLORES_AVATAR } from './Avatar';
+import { AVATARES_ANIMADOS, Avatar, COLORES_AVATAR } from './Avatar';
 import { LOCALE, cambiarIdioma, enIngles, idioma, idiomaElegido, trad, type Idioma } from '../i18n';
 
 // ---------- Perfil ----------
 
-const EMOJIS_AVATAR = ['😀', '🦊', '🐱', '🌻', '🚀', '📚', '🎧', '🌙'];
+/** Los emojis de la fila, con el nombre que se lee en voz alta (el lector de pantalla no siempre los nombra). */
+const EMOJIS_CON_NOMBRE: [string, string][] = [
+  ['😀', trad('Cara sonriente@avatar')],
+  ['🦊', trad('Zorro@avatar')],
+  ['🐱', trad('Gato@avatar')],
+  ['🌻', trad('Girasol@avatar')],
+  ['🚀', trad('Cohete@avatar')],
+  ['📚', trad('Libros@avatar')],
+  ['🎧', trad('Audífonos@avatar')],
+  ['🌙', trad('Luna@avatar')],
+];
+const EMOJIS_AVATAR = EMOJIS_CON_NOMBRE.map(([e]) => e);
+/** El nombre de cada color de la inicial, en vez del código hex (que no le dice nada a quien escucha). */
+const NOMBRES_COLOR: Record<string, string> = {
+  '#a8324a': trad('granate@avatar'),
+  '#c9862b': trad('ámbar@avatar'),
+  '#2f7a5b': trad('verde@avatar'),
+  '#3b5bdb': trad('azul@avatar'),
+  '#7048b8': trad('morado@avatar'),
+  '#56626b': trad('gris@avatar'),
+};
+const nombreColor = (c: string, i: number) => NOMBRES_COLOR[c.toLowerCase()] ?? trad('color {n}@avatar', { n: i + 1 });
 
 export function SeccionPerfil() {
   const perfil = usar((s) => s.ajustes.perfil) ?? { nombre: '' };
@@ -35,19 +54,35 @@ export function SeccionPerfil() {
       </div>
       <p className="ayuda">{trad('Aparece en el saludo de Inicio, en el bloque «Saludo» y como autor de tus comentarios.')}</p>
       <h3>{trad('Avatar')}</h3>
-      <div className="opciones-avatar" role="radiogroup" aria-label={trad('Color de la inicial')}>
-        {COLORES_AVATAR.map((c) => (
-          <button key={c} role="radio" aria-checked={!perfil.emoji && perfil.color === c} aria-label={trad('Inicial sobre {color}', { color: c })} className={`opcion-avatar${!perfil.emoji && (perfil.color ?? COLORES_AVATAR[0]) === c ? ' activa' : ''}`} onClick={() => cambiar({ color: c, emoji: undefined })}>
-            <Avatar tamano={30} nombre={perfil.nombre || '?'} color={c} />
+      <p className="ayuda">{trad('Un pajarito en su nido que respira, parpadea y ladea la cabeza. Con las animaciones apagadas se queda quieto.')}</p>
+      <div className="opciones-avatar animados" role="radiogroup" aria-label={trad('Avatar animado')}>
+        {AVATARES_ANIMADOS.map(([a, nombre]) => (
+          <button key={a} role="radio" aria-checked={perfil.animado === a} aria-label={nombre} title={nombre} className={`opcion-avatar${perfil.animado === a ? ' activa' : ''}`} onClick={() => cambiar({ animado: a, emoji: undefined })}>
+            <Avatar tamano={48} animado={a} />
           </button>
         ))}
       </div>
+      <div className="opciones-avatar" role="radiogroup" aria-label={trad('Color de la inicial')}>
+        {COLORES_AVATAR.map((c, i) => {
+          // El mismo respaldo que Avatar: sin color elegido, el primero.
+          const activo = !perfil.animado && !perfil.emoji && (perfil.color ?? COLORES_AVATAR[0]) === c;
+          const nombre = trad('Inicial sobre {color}', { color: nombreColor(c, i) });
+          return (
+            <button key={c} type="button" role="radio" aria-checked={activo} aria-label={nombre} title={nombre} className={`opcion-avatar${activo ? ' activa' : ''}`} onClick={() => cambiar({ color: c, emoji: undefined, animado: undefined })}>
+              <Avatar tamano={30} nombre={perfil.nombre || '?'} color={c} />
+            </button>
+          );
+        })}
+      </div>
       <div className="opciones-avatar" role="radiogroup" aria-label={trad('Emoji del avatar')}>
-        {EMOJIS_AVATAR.map((e) => (
-          <button key={e} role="radio" aria-checked={perfil.emoji === e} className={`opcion-avatar${perfil.emoji === e ? ' activa' : ''}`} onClick={() => cambiar({ emoji: e })}>
-            <Avatar tamano={30} nombre="" emoji={e} />
-          </button>
-        ))}
+        {EMOJIS_CON_NOMBRE.map(([e, nombre]) => {
+          const activo = !perfil.animado && perfil.emoji === e;
+          return (
+            <button key={e} type="button" role="radio" aria-checked={activo} aria-label={nombre} title={nombre} className={`opcion-avatar${activo ? ' activa' : ''}`} onClick={() => cambiar({ emoji: e, animado: undefined })}>
+              <Avatar tamano={30} nombre="" emoji={e} />
+            </button>
+          );
+        })}
         <input
           className="campo campo-emoji"
           aria-label={trad('Otro emoji')}
@@ -55,7 +90,7 @@ export function SeccionPerfil() {
           value={perfil.emoji && !EMOJIS_AVATAR.includes(perfil.emoji) ? perfil.emoji : ''}
           onChange={(e) => {
             const v = [...e.target.value.trim()].slice(-2).join('');
-            cambiar({ emoji: v || undefined });
+            cambiar({ emoji: v || undefined, ...(v ? { animado: undefined } : {}) });
           }}
         />
       </div>
@@ -184,20 +219,36 @@ export function PruebaYSonido() {
 
 // ---------- Importar ----------
 
+// Los importadores (con el editor, Word, PDF, correo…) pesan: llegan al abrir esta sección, no con Ajustes.
+// Se guardan al llegar para que «Elegir archivos» abra el selector en el mismo clic (si espera, el navegador puede
+// no dejarlo abrir).
+let importadores: typeof import('../lib/importar') | undefined;
+/** Si su código no llega, el error que se ve es este, traducido (el del navegador es técnico y en inglés). */
+const faltaCodigo = (err: unknown): never => {
+  console.error('[Yuva] No se pudo cargar una parte de la app:', err);
+  throw new Error(trad('No se pudo cargar esta parte de la app. Si se acaba de actualizar, recarga la página.'));
+};
+const cargarImportadores = () => import('../lib/importar').then((m) => (importadores = m), faltaCodigo);
+
 export function SeccionImportar() {
   const [sobre, setSobre] = useState(false);
   const [avance, setAvance] = useState('');
   const [error, setError] = useState('');
+  useEffect(() => {
+    cargarImportadores().catch(() => undefined);
+  }, []);
   const procesar = async (archivos: File[]) => {
     setError('');
     const zip = archivos.find((f) => /\.zip$/i.test(f.name));
     let ultima: string | null = null;
     try {
       if (zip) {
+        const { importarNotion } = await import('../lib/importarNotion').catch(faltaCodigo);
         const informe = await importarNotion(zip, null, setAvance);
         ultima = informe.raiz ?? null;
         avisar(trad('Importado de Notion: {paginas} páginas, {bases} bases de datos', { paginas: informe.paginas, bases: informe.bases }));
       } else {
+        const { ES_IMPORTABLE, importarArchivos } = importadores ?? (await cargarImportadores());
         const validos = archivos.filter((f) => ES_IMPORTABLE.test(f.name));
         if (!validos.length) {
           setError(trad('Ese formato no se puede importar. Mira la lista de abajo.'));
@@ -237,7 +288,23 @@ export function SeccionImportar() {
         ) : (
           <>
             <p>{trad('Arrastra archivos aquí o')}</p>
-            <button className="boton boton-primario" onClick={async () => procesar(await elegirArchivos('.zip,' + EXTENSIONES_IMPORTAR))}>
+            <button
+              className="boton boton-primario"
+              onClick={async () => {
+                // Con los importadores ya cargados, el selector se abre en el mismo clic.
+                let m = importadores;
+                if (!m) {
+                  setError('');
+                  try {
+                    m = await cargarImportadores();
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : trad('No se pudo leer el archivo.'));
+                    return;
+                  }
+                }
+                procesar(await elegirArchivos('.zip,' + m.EXTENSIONES_IMPORTAR));
+              }}
+            >
               {trad('Elegir archivos')}
             </button>
           </>
@@ -374,14 +441,28 @@ export function Estadisticas() {
     [trad('Espacio usado'), c.usado === null ? '—' : mb(c.usado)],
   ];
   return (
-    <dl className="estadisticas-espacio">
-      {datos.map(([k, v]) => (
-        <div key={k}>
-          <dt>{k}</dt>
-          <dd>{v}</dd>
-        </div>
-      ))}
-    </dl>
+    <>
+      <dl className="estadisticas-espacio">
+        {datos.map(([k, v]) => (
+          <div key={k}>
+            <dt>{k}</dt>
+            <dd>{v}</dd>
+          </div>
+        ))}
+      </dl>
+      {/* La vista «Pulso del espacio» (#/pulso): mapa del año, rachas y semanas. */}
+      <div className="botones-fila">
+        <button
+          className="boton"
+          onClick={() => {
+            cambiarUi({ modal: null });
+            irPulso();
+          }}
+        >
+          {trad('Ver el pulso del espacio')}
+        </button>
+      </div>
+    </>
   );
 }
 

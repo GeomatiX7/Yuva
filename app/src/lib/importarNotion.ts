@@ -93,7 +93,9 @@ const dos = (n: number) => String(n).padStart(2, '0');
 /** Fecha como la escribe Notion («November 5, 2026», «2026/11/05», «5 de noviembre de 2026») → AAAA-MM-DD. */
 export function fechaNotion(texto: string): string | null {
   const t = texto.replace(/^@/, '').split('→')[0].trim().toLowerCase();
-  if (!t) return null;
+  // Una fecha de Notion ocupa unas decenas de caracteres. Un texto largo no lo es, y con él la
+  // expresión «mes día, año» tardaría un tiempo cuadrático (una celda de 1 MB congelaría la importación).
+  if (!t || t.length > 200) return null;
   let m = t.match(/(\d{4})[-/](\d{1,2})[-/](\d{1,2})/);
   if (m) return `${m[1]}-${dos(+m[2])}-${dos(+m[3])}`;
   m = t.match(/([a-z]+)\.? (\d{1,2}),? (\d{4})/);
@@ -129,7 +131,9 @@ export function numeroNotion(texto: string): number | null {
 // ---------- widgets incrustados: equivalentes propios ----------
 
 function widgetPara(url: string): Bloque | null {
-  const u = url.toLowerCase();
+  // El nombre del servicio va al principio de la dirección; con mirar los primeros 2000 caracteres
+  // basta y se evita que un enlace enorme haga tardar demasiado a las expresiones con «.*».
+  const u = url.slice(0, 2000).toLowerCase();
   if (/pomofocus|pomodoro|tomato-timer|focus-?timer/.test(u)) return { type: 'pomodoro' };
   if (/life-?progress|year-?progress|progress-?bar|lifeprogress/.test(u)) return { type: 'progresoTiempo' };
   if (/(indify|widgetbox|widgetstack|notion-?widgets?|apption).*(clock|reloj|time)|\/clock/.test(u)) return { type: 'reloj' };
@@ -713,12 +717,17 @@ async function importarMarkdown(entradas: EntradaZip[], padreId: string | null, 
       continue;
     }
     const md = await texto(e);
-    const titulo = md.match(/^\s*#\s+(.+)\n/)?.[1]?.trim() || tituloDeRuta(e.ruta);
-    let cuerpo = md.replace(/^\s*#\s+.+\n/, '');
+    // El título empieza en el primer carácter que no es espacio (\S): con «.+» suelto, una línea
+    // «#» seguida de miles de espacios hacía retroceder a \s+ uno a uno, en tiempo cuadrático.
+    const titulo = md.match(/^\s*#\s+(\S.*)\n/)?.[1]?.trim() || tituloDeRuta(e.ruta);
+    let cuerpo = md.replace(/^\s*#\s+\S.*\n/, '');
     const padrePag = padre ? usar.getState().paginas[padre] : null;
     if (padrePag?.tipo === 'bd') {
       // Fila: su página trae «Propiedad: valor» arriba (ya están en el CSV). Se une con la fila del mismo título.
-      cuerpo = cuerpo.replace(/^(\s*\n)*((?:[^\n:]{1,60}: [^\n]*\n)+)\n?/, '');
+      // Las líneas en blanco del principio se saltan con [^\S\n]*\n («espacios que no son salto de
+      // línea» y luego el salto): así cada salto solo puede caer en un sitio. Con (\s*\n)*, \s
+      // también tomaba los \n y unos 40 saltos seguidos de texto bastaban para congelar la app.
+      cuerpo = cuerpo.replace(/^(?:[^\S\n]*\n)*((?:[^\n:]{1,60}: [^\n]*\n)+)\n?/, '');
       const fila = Object.values(usar.getState().paginas).find((p) => p.padreId === padre && p.titulo === titulo && !pendientes.some((x) => x.id === p.id));
       if (fila) {
         registrar(ctx, e.ruta, fila.id);

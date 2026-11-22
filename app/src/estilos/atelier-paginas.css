@@ -1,5 +1,5 @@
 /* «Atelier» (S-F): páginas y bases de datos.
-   Cabecera de página (portada dentro de la hoja, icono en un sello, título apretado), propiedades de las filas
+   Cabecera de página (portada dentro de la hoja, icono en baldosa junto al título y línea de datos «Pulso», título apretado), propiedades de las filas
    como ficha, bases de datos (cápsula de vistas que se desliza, herramientas solo con icono, cabeceras en mono,
    etiquetas como punto de color + texto, fichas del tablero que se levantan, «hoy» en vino) y los avisos y
    bloques del editor. Solo apariencia: ninguna regla toca datos ni comportamiento.
@@ -41,71 +41,177 @@
   transition: opacity var(--dur-media) var(--ease-salida);
 }
 
-/* El icono es un sello: caja con borde fino y sombra suave; el símbolo lleva además la esquina dorada. */
-.icono-grande.sello {
-  width: 76px;
-  height: 76px;
-  padding: 0;
-  margin: 0 0 14px;
-  border-radius: 14px;
-  background: var(--flota);
-  border: 1px solid var(--linea);
-  box-shadow: var(--sombra-suave);
+/* «Pulso»: el avance de las tareas en el borde inferior de la banda (4 px, del color de la página). La pista es
+   oscura en los dos modos, como en la maqueta, y el relleno usa la variante clara del color. */
+.portada-avance {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(18, 7, 11, 0.5);
+  pointer-events: none;
+}
+
+.portada-avance i {
+  display: block;
+  height: 100%;
+  width: var(--p);
+  background: var(--c);
+  /* la variante clara del color, en los dos modos (en claro --c es oscura y no se vería sobre la pista): el mismo
+     tono y la misma intensidad, con la luminosidad subida hasta 0,76 si hace falta */
+  background: oklch(from var(--c) max(l, 0.76) c h);
+  /* termina con el sesgo de la firma */
+  clip-path: polygon(0 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+  transition: width 420ms var(--ease-salida);
+}
+
+/* El icono va en una baldosa de 54 px del color de la página, en línea con el título (no muerde la banda). */
+.icono-grande.baldosa-icono {
+  width: 54px;
+  height: 54px;
+  border-radius: 17px;
   overflow: hidden;
-  transition: transform var(--dur-media) var(--ease-rebote), border-color var(--dur-rapida), box-shadow var(--dur-media);
+  background: color-mix(in srgb, var(--c) 16%, var(--papel-2));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 38%, transparent);
+  color: var(--c);
+  transition: transform var(--dur-media) var(--rebote-corto), box-shadow var(--dur-rapida);
 }
 
-.icono-grande.sello:hover:not(:disabled),
-.con-portada .icono-grande.sello:hover:not(:disabled) {
-  background: var(--flota);
-  border-color: var(--linea-fuerte);
-  transform: rotate(-4deg) scale(1.05);
+.icono-grande.baldosa-icono:hover:not(:disabled) {
+  transform: rotate(-6deg) scale(1.05);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 60%, transparent);
 }
 
-.icono-grande.sello:disabled {
+.icono-grande.baldosa-icono:disabled {
   cursor: default;
 }
 
-.con-portada .icono-grande.sello {
-  margin-top: -38px;
+.icono-grande.baldosa-icono .icono-pagina.defecto {
+  color: var(--c);
 }
 
-.sello-simbolo::after {
-  content: '';
-  position: absolute;
-  right: -8px;
-  top: -8px;
-  width: 16px;
-  height: 16px;
-  background: var(--acento);
-  transform: rotate(45deg);
-}
-
-.sello-imagen .icono-pagina img {
-  border-radius: 8px;
+/* La imagen subida llena la baldosa. */
+.baldosa-imagen .icono-pagina img {
   object-fit: cover;
 }
 
-.compacta .icono-grande.sello {
-  width: 56px;
-  height: 56px;
-  border-radius: 12px;
+.compacta .icono-grande.baldosa-icono {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+}
+
+/* ---------- línea de datos (en lugar de «Añadir comentario») ----------
+   «14 de 22 tareas / Próxima mié 25 nov · … / Editada hace 2 min / Comentar», separados por la diagonal dorada.
+   Las cifras en Bricolage; lo que dice qué es, en Literata cursiva. */
+.linea-datos {
+  /* las rayas conservan el módulo de la firma (3 × 11 px, hueco de 2 px) que dan los cimientos */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 0;
+  margin: 8px 0 14px -8px;
+  color: var(--tinta-2);
+  font: 400 13px/1.2 var(--f-ui);
+}
+
+/* cada dato con su separador detrás: si la línea se parte, el del final del renglón se esconde */
+.dato-grupo {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.dato-grupo.al-final > .sep-diagonal {
+  visibility: hidden;
+}
+
+/* «Próxima» encoge (su texto ya se corta con «…») antes de que la línea salte de renglón: para partir la línea
+   cuenta con 11rem, y luego crece hasta su ancho natural con el espacio que sobre. */
+.dato-grupo:has(> .dato-proxima) {
+  flex: 1 1 0;
+  min-width: min(11rem, 100%);
+  max-width: max-content;
+}
+
+.dato {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  max-width: 100%;
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 8px;
+  color: inherit;
+  font: inherit;
+  white-space: nowrap;
+}
+
+button.dato {
+  cursor: pointer;
+  transition: background var(--dur-rapida), color var(--dur-rapida);
+}
+
+button.dato:hover {
+  background: var(--papel-3);
+  color: var(--tinta);
+}
+
+.dato > svg {
+  flex: none;
+  color: var(--tinta-3);
+}
+
+.dato b {
+  color: var(--tinta);
+  font: 600 14.5px/1 var(--f-titulo);
+  font-variant-numeric: tabular-nums;
+}
+
+.dato .dato-que {
+  min-width: 0;
+  max-width: 26ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--tinta-3);
+  font: italic 400 12.5px/1.3 var(--f-serif);
+}
+
+.dato.mal .dato-et,
+.dato.mal b,
+.dato.mal > svg {
+  color: var(--peligro);
+}
+
+.dato.hoy > svg {
+  color: var(--oro-m);
+}
+
+.dato .rayas-pulso {
+  gap: 0;
+}
+
+.linea-datos .sep-diagonal {
+  height: 14px;
+}
+
+.compacta .linea-datos {
   margin-bottom: 10px;
+  font-size: 12.5px;
 }
 
-.compacta.con-portada .icono-grande.sello {
-  margin-top: -28px;
+.modo-enfoque .linea-datos {
+  display: none;
 }
 
-.compacta .sello-simbolo::after {
-  right: -7px;
-  top: -7px;
-  width: 13px;
-  height: 13px;
-}
-
-.modo-enfoque .con-portada .icono-grande.sello {
-  margin-top: 0;
+@media print {
+  .linea-datos,
+  .portada-avance {
+    display: none;
+  }
 }
 
 .acciones-cabecera .boton-suave svg {
@@ -350,23 +456,6 @@
   }
 }
 
-/* «Nueva»: el botón principal (vino); la flechita de plantillas lleva su separación con el color del botón. */
-.bd-acciones .nueva-con-plantillas .boton {
-  height: 30px;
-}
-
-.nueva-con-plantillas .flecha-plantillas {
-  border-left-color: color-mix(in srgb, var(--principal-sobre) 30%, transparent);
-}
-
-.bd-acciones .nueva-con-plantillas .boton:first-child svg {
-  transition: transform var(--dur-media) var(--ease-rebote);
-}
-
-.bd-acciones .nueva-con-plantillas .boton:first-child:hover svg {
-  transform: rotate(90deg);
-}
-
 /* ---------- tabla ---------- */
 .cabeza-boton {
   font-family: var(--f-mono);
@@ -488,15 +577,9 @@
   padding: 0 7px;
 }
 
-/* ---------- tablero ---------- */
-.columna-tablero {
-  border-radius: 12px;
-}
-
-.columna-cabeza {
-  gap: 10px;
-}
-
+/* ---------- tablero ----------
+   «Pulso», fase 2: la forma de las columnas, su encabezado y la ficha levantada al tomarla están en bd.css (reglas
+   .tablero …). Aquí quedan el contador de «Grupos ocultos», el borde y el paso del ratón de la ficha. */
 .contador-col {
   font-family: var(--f-mono);
   font-size: 11px;
@@ -517,10 +600,6 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--texto-tarjeta) 22%, transparent), var(--sombra-suave) !important;
 }
 
-.tarjeta[draggable='true']:active {
-  transform: rotate(1.5deg);
-}
-
 .tarjeta-menu {
   border-radius: 7px;
   transition: opacity var(--dur-rapida);
@@ -532,7 +611,7 @@
 }
 
 .tarjeta-galeria {
-  border-radius: 12px;
+  border-radius: 5px 12px 12px 5px;
 }
 
 .tarjeta-galeria:hover {
@@ -591,15 +670,6 @@
 
 .evento:hover {
   transform: translateY(-1px);
-}
-
-/* Cronograma: la línea de hoy también es vino (salvo en una página con color propio). */
-.crono-hoy {
-  background: var(--principal);
-}
-
-[style*='--acento'] .crono-hoy {
-  background: var(--acento);
 }
 
 /* =================================================================== */
@@ -686,7 +756,9 @@
 @media (prefers-reduced-motion: reduce) {
   .bd-pestanas::after,
   .tarjeta,
-  .icono-grande.sello {
+  .icono-grande.baldosa-icono,
+  .portada-avance i,
+  button.dato {
     transition: none !important;
   }
   .calendario-dia.hoy .calendario-num span {
@@ -696,4 +768,8 @@
 
 :root[data-movimiento='reducido'] .calendario-dia.hoy .calendario-num span {
   animation: none;
+}
+
+:root[data-movimiento='reducido'] :is(.icono-grande.baldosa-icono, .portada-avance i, button.dato) {
+  transition: none !important;
 }

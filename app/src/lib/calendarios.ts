@@ -65,6 +65,8 @@ function colorLibre(): ColorEtiqueta {
 
 /** Importa un archivo .ics como calendario nuevo (una copia fija: no se refresca). */
 export async function importarArchivoICS(archivo: File): Promise<Calendario> {
+  // El mismo tope que las suscripciones, antes de leerlo: un .ics enorme congelaba la agenda (C31).
+  if (archivo.size > 5 * 1024 * 1024) throw new Error(trad('El calendario pasa de 5 MB.'));
   await cargarCalendarios();
   const leido = leerICS(await archivo.text());
   const cal: Calendario = {

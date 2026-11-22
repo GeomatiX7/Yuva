@@ -9,6 +9,9 @@ export interface PeticionClave {
   repetir?: boolean;
   /** Largo mínimo; por defecto 4. */
   minimo?: number;
+  /** Valor de autocomplete de los campos; por defecto «new-password». La clave del bloqueo usa «one-time-code» para
+   *  que el navegador no la guarde ni la ofrezca en una lista a quien pase por delante. */
+  autocompletar?: string;
   responder: (clave: string | null) => void;
 }
 

@@ -1,4 +1,4 @@
-// Bloque «Grabación» (/grabacion, S3), la alternativa local a las Notas de reunión de Notion: graba el micrófono
+// Bloque «Grabación» (/grabacion, S3), para notas de reunión sin internet: graba el micrófono
 // en el equipo (MediaRecorder), guarda el audio con guardarArchivo y lo reproduce. «Marcar momento» escribe
 // debajo el minuto transcurrido (de la grabación en curso o del audio que suena) para tomar notas con marcas.
 // La transcripción automática no se hace: pide un modelo de voz (Whisper local o un servicio con clave).

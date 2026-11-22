@@ -240,7 +240,8 @@ export function crearReuniones(padreId: string | null): Pagina {
     calculos: { titulo: 'contar', [hecha]: 'pct_marcadas' },
     colores: [colorSi(vence, 'es', ATRASADA, 'rojo'), colorSi(vence, 'es', HOY, 'amarillo')],
   }, [nroA, hecha, resp, limite, vence, prio, relAcc]);
-  const abiertas = vista(acciones, 'tablero', { nombre: trad('Por responsable'), agruparPor: resp, filtros: [sinHecha], colorPor: prio, ocultarVacios: true }, [limite, vence, marcar]);
+  // Los tableros no muestran «Vence»: la ficha ya dice cuánto falta junto a la fecha límite (VistaTablero › MetaFecha).
+  const abiertas = vista(acciones, 'tablero', { nombre: trad('Por responsable'), agruparPor: resp, filtros: [sinHecha], colorPor: prio, ocultarVacios: true }, [limite, marcar]);
   const atrasadas = vista(acciones, 'lista', { nombre: trad('Atrasadas'), filtros: [sinHecha, filtro(limite, 'pasada')] }, [resp, limite, marcar]);
   const hechas = vista(acciones, 'tabla', { nombre: trad('Hechas'), filtros: [filtro(hecha, 'marcada')] }, [resp, limite]);
   vista(acciones, 'calendario', { nombre: trad('Calendario'), propFecha: limite, colorPor: resp }, [hecha]);
@@ -293,7 +294,7 @@ export function crearReuniones(padreId: string | null): Pagina {
     banda(trad('Calendario'), 'subrayado'),
     enlazada(reuniones, 'calendario', { nombre: trad('Mes'), propFecha: fecha, colorPor: tipo }, [hora]),
     banda(trad('Acciones abiertas'), 'cinta', 'naranja'),
-    enlazada(acciones, 'tablero', { nombre: trad('Por responsable'), agruparPor: resp, filtros: [sinHecha], colorPor: prio, ocultarVacios: true, colores: [colorSi(vence, 'es', ATRASADA, 'rojo')] }, [limite, vence, marcar]),
+    enlazada(acciones, 'tablero', { nombre: trad('Por responsable'), agruparPor: resp, filtros: [sinHecha], colorPor: prio, ocultarVacios: true, colores: [colorSi(vence, 'es', ATRASADA, 'rojo')] }, [limite, marcar]),
     columnas(
       [1, [h(3, trad('Carga por persona')), enlazada(acciones, 'grafico', { nombre: trad('Carga por persona'), filtros: [sinHecha], ...grafico({ tipo: 'barras', eje: resp, medida: 'contar', orden: 'mayor' }) })]],
       [1, [h(3, trad('Minutos por tipo de reunión')), enlazada(reuniones, 'grafico', { nombre: trad('Minutos por tipo'), ...grafico({ tipo: 'dona', eje: tipo, medida: 'suma', valorProp: duracion }) })]],

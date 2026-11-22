@@ -155,12 +155,418 @@
   color: var(--shiki-dark) !important;
 }
 
-.editor-pagina .bn-block-content[data-content-type='checkListItem'][data-checked='true'] .bn-inline-content {
-  color: var(--tinta-3);
-}
-
 .editor-pagina .bn-block-content input[type='checkbox'] {
   accent-color: var(--acento);
+}
+
+/* ---------- casillas «Pulso» ----------
+   Un paralelogramo de 17 px con el sesgo de la firma (--ang) dentro de un área de toque de 24 px. Se llena con el
+   color de la página (--c) y la palomita, que sigue el mismo ángulo, va en la tinta que más contrasta con él (--cs).
+   Al marcar solo pasan dos cosas: un anillo corto y un tachado que corre (y la palomita se traza).
+   La misma pieza la usa Mis tareas (.casilla-pulso).
+   La vencida conserva su aviso: rayado rojo y fecha en rojo, con --casilla-borde, --casilla-relleno y --fecha-tinta
+   (en el editor los pone la regla de la casilla vencida, con :has() y el data-cuando de la fecha «@»; en Mis
+   tareas, el grupo «Atrasadas»).
+   El editor vuelve a crear el contenido del bloque al marcarlo, así que no hay transición «de antes a después»: el
+   anillo, la palomita y el tachado son animaciones que corren mientras el bloque lleva .recien-marcada. La pone
+   EditorPagina al marcar a mano (ratón, Ctrl+Intro o Espacio) y la quita al acabar el anillo; al abrir una página
+   con casillas hechas, al deshacer o con movimiento reducido no se anima nada. */
+@property --tachado-ancho {
+  syntax: '<length-percentage>';
+  inherits: false;
+  initial-value: 100%;
+}
+
+@property --tachado-tinta {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: transparent;
+}
+
+:root {
+  --casilla-palomita: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='3.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+}
+
+.editor-pagina .bn-block-content[data-content-type='checkListItem'] > div:has(> input) {
+  flex: none;
+  height: 24px;
+}
+
+.editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox'],
+.casilla-pulso {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  margin: 0 4px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  /* sin el «marcar» de movimiento.css: al marcar solo hay anillo y tachado */
+  animation: none;
+}
+
+/* la caja */
+.editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']::before,
+.casilla-pulso::before {
+  content: '';
+  position: absolute;
+  left: 3.5px;
+  top: 3.5px;
+  width: 17px;
+  height: 17px;
+  box-sizing: border-box;
+  border: 1.6px solid var(--casilla-borde, var(--tinta-3));
+  border-radius: 3px;
+  background-color: transparent;
+  background-image: var(--casilla-relleno, none);
+  transform: skewX(var(--ang));
+  /* --casilla-transicion-borde: 0ms en la vencida, que sale ya roja al abrir la página (la fecha se pinta después
+     que la casilla y, con transición, pasaría del gris al rojo) */
+  transition:
+    background-color 180ms ease,
+    border-color var(--casilla-transicion-borde, 180ms) ease,
+    transform 120ms ease;
+}
+
+/* la palomita: un trazo que sigue el ángulo y se dibuja de izquierda a derecha */
+.editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']::after,
+.casilla-pulso::after {
+  content: '';
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  width: 12px;
+  height: 12px;
+  background: var(--cs);
+  -webkit-mask: var(--casilla-palomita) center / 12px 12px no-repeat;
+  mask: var(--casilla-palomita) center / 12px 12px no-repeat;
+  transform: skewX(var(--ang));
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 220ms ease-out 50ms;
+  pointer-events: none;
+}
+
+.editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']:hover:not(:disabled, :checked)::before,
+.casilla-pulso:hover:not(:disabled, [aria-checked='true'])::before {
+  border-color: var(--c);
+  background-color: color-mix(in srgb, var(--c) 16%, transparent);
+}
+
+.editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']:active:not(:disabled)::before,
+.casilla-pulso:active:not(:disabled)::before {
+  transform: skewX(var(--ang)) scale(0.86);
+}
+
+.editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']:checked::before,
+.casilla-pulso[aria-checked='true']::before {
+  border-color: var(--c);
+  background-color: var(--c);
+  background-image: none;
+}
+
+.editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']:checked::after,
+.casilla-pulso[aria-checked='true']::after {
+  clip-path: inset(0 0 0 0);
+}
+
+.editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']:disabled,
+.casilla-pulso:disabled {
+  cursor: default;
+}
+
+.casilla-pulso:disabled::before {
+  opacity: 0.5;
+}
+
+/* foco de doble contorno: el papel y luego el oro (en alto contraste, la tinta) */
+.editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']:focus-visible,
+.casilla-pulso:focus-visible {
+  outline: none;
+}
+
+.editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']:focus-visible::before,
+.casilla-pulso:focus-visible::before {
+  box-shadow:
+    0 0 0 2px var(--casilla-fondo, var(--papel)),
+    0 0 0 4px var(--oro-m);
+  /* el foco aparece al instante (sin la transición del anillo) */
+  transition-property: background-color, border-color, transform;
+}
+
+:root[data-contraste='alto'] .editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']::before,
+:root[data-contraste='alto'] .casilla-pulso::before {
+  border-color: var(--casilla-borde, var(--tinta));
+}
+
+:root[data-contraste='alto'] .editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']:focus-visible,
+:root[data-contraste='alto'] .casilla-pulso:focus-visible {
+  outline: none;
+}
+
+:root[data-contraste='alto'] .editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']:focus-visible::before,
+:root[data-contraste='alto'] .casilla-pulso:focus-visible::before {
+  box-shadow:
+    0 0 0 2px var(--casilla-fondo, var(--papel)),
+    0 0 0 4px var(--tinta);
+}
+
+/* el texto de la hecha: tachado en tinta-3. Mientras corre, una raya (--tachado-tinta) que crece de izquierda a
+   derecha en cada renglón; al terminar se apaga y queda el tachado normal (bien partido en varias líneas). */
+.editor-pagina .bn-block-content[data-content-type='checkListItem'][data-checked='true'] > .bn-inline-content {
+  width: fit-content;
+  max-width: 100%;
+  color: var(--tinta-3);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: var(--tinta-3);
+  background-image: linear-gradient(
+    transparent calc(58% - 0.75px),
+    var(--tachado-tinta) calc(58% - 0.75px) calc(58% + 0.75px),
+    transparent calc(58% + 0.75px)
+  );
+  background-size: var(--tachado-ancho) 1lh;
+  background-repeat: repeat-y;
+  --tachado-ancho: 100%;
+  --tachado-tinta: transparent;
+  transition:
+    --tachado-ancho 300ms ease-out,
+    --tachado-tinta 120ms linear 300ms,
+    text-decoration-color 120ms linear 260ms;
+}
+
+/* recién marcada: el anillo (un contorno, así no tapa el foco de doble contorno, que es una sombra), la palomita que
+   se traza y la raya que corre por cada renglón antes de quedar el tachado normal */
+.editor-pagina .bn-block.recien-marcada > .bn-block-content[data-content-type='checkListItem'][data-checked='true'] > div > input[type='checkbox']::before {
+  animation: casilla-anillo 500ms ease-out;
+}
+
+.editor-pagina .bn-block.recien-marcada > .bn-block-content[data-content-type='checkListItem'][data-checked='true'] > div > input[type='checkbox']::after {
+  animation: casilla-palomita 220ms ease-out 50ms backwards;
+}
+
+.editor-pagina .bn-block.recien-marcada > .bn-block-content[data-content-type='checkListItem'][data-checked='true'] > .bn-inline-content {
+  animation:
+    tachado-corre 300ms ease-out,
+    tachado-apaga 120ms linear 300ms backwards,
+    tachado-asienta 120ms linear 260ms backwards;
+  /* con varios renglones, cada uno se ve solo hasta donde llega su texto: la raya no cruza el hueco del final de cada
+     renglón. EditorPagina (mascaraRenglones) mide los renglones y pone la variable en el bloque mientras dura la clase;
+     con un renglón vale none. */
+  -webkit-mask: var(--mascara-renglones, none);
+  mask: var(--mascara-renglones, none);
+}
+
+@keyframes casilla-anillo {
+  from {
+    outline: 0 solid color-mix(in srgb, var(--c) 65%, transparent);
+  }
+  to {
+    outline: 9px solid transparent;
+  }
+}
+
+@keyframes casilla-palomita {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes tachado-corre {
+  from {
+    --tachado-ancho: 0%;
+  }
+  to {
+    --tachado-ancho: 100%;
+  }
+}
+
+@keyframes tachado-apaga {
+  from {
+    --tachado-tinta: var(--tinta-3);
+  }
+  to {
+    --tachado-tinta: transparent;
+  }
+}
+
+@keyframes tachado-asienta {
+  from {
+    text-decoration-color: transparent;
+  }
+  to {
+    text-decoration-color: var(--tinta-3);
+  }
+}
+
+/* la casilla vencida: sin marcar y con su primera fecha «@» (la de Mis tareas) antes de hoy. FechaEnLinea pone
+   data-fecha y data-cuando; cambia al escribir o cambiar la fecha, sin esperar al guardado, y vale igual en el panel
+   lateral y en una copia abierta al lado.
+   - Primera rama: la fecha suelta en el renglón (hija directa del texto). La primera fecha es la primera entre sus
+     hermanas.
+   - Las otras dos, para la fecha dentro de un estilo (negrita, cursiva, subrayado, color, resaltado…), que la envuelve
+     en <strong>, <em>, <span>… y ya no es hija directa. Valen para los renglones sin ninguna fecha suelta:
+     · todas sus fechas son pasadas;
+     · o todas están sueltas dentro del primer estilo del renglón (por ejemplo, el renglón entero en negrita) y la
+       primera de ellas es pasada.
+     :has() no se puede anidar, así que con fechas repartidas en estilos distintos no hay forma de saber cuál es la
+     primera: esos renglones solo se pintan si todas son pasadas. Con una fecha (lo normal) da lo mismo que Mis tareas. */
+.editor-pagina
+  .bn-block-content[data-content-type='checkListItem']:not([data-checked='true']):has(
+    > .bn-inline-content > .node-fechaEnLinea:not(.node-fechaEnLinea ~ .node-fechaEnLinea) .fecha-en-linea[data-cuando='pasada']
+  ),
+.editor-pagina
+  .bn-block-content[data-content-type='checkListItem']:not([data-checked='true']):not(:has(> .bn-inline-content > .node-fechaEnLinea)):has(
+    > .bn-inline-content .fecha-en-linea[data-cuando='pasada']
+  ):not(:has(> .bn-inline-content .fecha-en-linea:not([data-cuando='pasada']))),
+.editor-pagina
+  .bn-block-content[data-content-type='checkListItem']:not([data-checked='true']):not(:has(> .bn-inline-content > .node-fechaEnLinea)):not(
+    :has(> .bn-inline-content > :not(:first-child) .node-fechaEnLinea, > .bn-inline-content > :first-child * .node-fechaEnLinea)
+  ):has(
+    > .bn-inline-content > :first-child > .node-fechaEnLinea:not(.node-fechaEnLinea ~ .node-fechaEnLinea) .fecha-en-linea[data-cuando='pasada']
+  ) {
+  --casilla-borde: var(--peligro);
+  --casilla-relleno: repeating-linear-gradient(-60deg, color-mix(in srgb, var(--peligro) 45%, transparent) 0 1.5px, transparent 1.5px 4.5px);
+  --casilla-transicion-borde: 0ms;
+  --fecha-tinta: var(--peligro);
+}
+
+/* una casilla hecha nunca lleva el aviso de vencida, venga de donde venga: una regla que se lea del contenido guardado
+   llega tarde y, sin esto, la fecha de una vencida recién marcada seguiría en rojo hasta el guardado */
+.editor-pagina .bn-block-content[data-content-type='checkListItem'][data-checked='true'] > div,
+.editor-pagina .bn-block-content[data-content-type='checkListItem'][data-checked='true'] > .bn-inline-content {
+  --casilla-borde: initial;
+  --casilla-relleno: initial;
+  --casilla-transicion-borde: initial;
+  --fecha-tinta: initial;
+}
+
+/* Mis tareas: el foco se recorta contra el fondo del diálogo; las atrasadas llevan el rayado de vencida. */
+.panel-tareas .casilla-pulso {
+  --casilla-fondo: var(--flota);
+}
+
+.grupo-atrasadas .casilla-pulso {
+  --casilla-borde: var(--peligro);
+  --casilla-relleno: repeating-linear-gradient(-60deg, color-mix(in srgb, var(--peligro) 45%, transparent) 0 1.5px, transparent 1.5px 4.5px);
+}
+
+/* Mis tareas abierta desde la cabecera de una página: la pastilla «Solo de «…» ✕» quita el filtro. Al lado, el avance
+   de esa página o base con sus rayas («3/5 · faltan 2»), el mismo de su cabecera. */
+.filtro-tareas {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 0 0 10px;
+}
+
+.filtro-tareas-quitar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  height: 28px;
+  padding: 0 8px 0 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--c) 14%, var(--papel-2));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 40%, transparent);
+  color: var(--tinta);
+  font: 500 12.5px/1 var(--f-ui);
+  cursor: pointer;
+  transition: background var(--dur-rapida, 120ms);
+}
+
+.filtro-tareas-quitar > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filtro-tareas-quitar > svg {
+  flex: none;
+  color: var(--tinta-2);
+}
+
+.filtro-tareas-quitar:hover {
+  background: color-mix(in srgb, var(--c) 22%, var(--papel-2));
+}
+
+.filtro-tareas-quitar:focus-visible {
+  outline: 2px solid var(--oro-m);
+  outline-offset: 2px;
+  border-radius: 999px;
+}
+
+:root[data-contraste='alto'] .filtro-tareas-quitar {
+  box-shadow: inset 0 0 0 1.5px var(--tinta);
+}
+
+:root[data-contraste='alto'] .filtro-tareas-quitar:focus-visible {
+  outline-color: var(--tinta);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']::before,
+  .editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']::after,
+  .editor-pagina .bn-block-content[data-content-type='checkListItem'][data-checked='true'] > .bn-inline-content,
+  .casilla-pulso::before,
+  .casilla-pulso::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+:root[data-movimiento='reducido'] .editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']::before,
+:root[data-movimiento='reducido'] .editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']::after,
+:root[data-movimiento='reducido'] .editor-pagina .bn-block-content[data-content-type='checkListItem'][data-checked='true'] > .bn-inline-content,
+:root[data-movimiento='reducido'] .casilla-pulso::before,
+:root[data-movimiento='reducido'] .casilla-pulso::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Colores forzados (los temas de contraste de Windows): el navegador pinta los fondos con el color del papel (Canvas)
+   y quita las sombras, así que la casilla hecha se vería igual que la vacía y el foco, que es una sombra, no se vería.
+   Aquí la hecha se llena de Highlight con la palomita en HighlightText (sin el foco de sombra, que con
+   forced-color-adjust: none volvería en papel y oro), y el foco es un contorno de Highlight alrededor del área de
+   toque. Cada regla lleva su pareja de alto contraste, que si no ganaría por especificidad. Fuera de este modo no
+   cambia nada. */
+@media (forced-colors: active) {
+  .editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']:checked::before,
+  .casilla-pulso[aria-checked='true']::before,
+  :root[data-contraste='alto'] .editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']:checked::before,
+  :root[data-contraste='alto'] .casilla-pulso[aria-checked='true']::before {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background-color: Highlight;
+    background-image: none;
+    box-shadow: none;
+  }
+
+  .editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']:checked::after,
+  .casilla-pulso[aria-checked='true']::after {
+    forced-color-adjust: none;
+    background: HighlightText;
+  }
+
+  .editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']:focus-visible,
+  .casilla-pulso:focus-visible,
+  :root[data-contraste='alto'] .editor-pagina .bn-block-content[data-content-type='checkListItem'] > div > input[type='checkbox']:focus-visible,
+  :root[data-contraste='alto'] .casilla-pulso:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
 }
 
 .editor-pagina .bn-block-content[data-content-type='divider'] hr {
@@ -389,7 +795,8 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  color: var(--acento-fuerte);
+  /* --fecha-tinta: rojo en la casilla vencida (la regla de la casilla vencida, más arriba) */
+  color: var(--fecha-tinta, var(--acento-fuerte));
   font-weight: 560;
   cursor: pointer;
   border-radius: 4px;
@@ -587,6 +994,31 @@
   opacity: 1;
 }
 
+/* «Pulso»: el rótulo de cada ficha, en mono arriba a la izquierda («Reloj», «Avance del tiempo», «Frase»). El
+   nombre accesible ya lo da la caja (role="group"), así que el rótulo va oculto para los lectores de pantalla. */
+.panel-rotulo {
+  display: block;
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-bottom: 10px;
+  color: var(--tinta-3);
+  font: 600 11px/1.2 var(--f-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.panel-reloj > .panel-rotulo {
+  margin-bottom: 2px; /* la rejilla del reloj ya separa 8 px */
+  /* la caja también lleva la clase del estilo («reloj-digital span» agranda los segundos) */
+  color: var(--tinta-3);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.panel-progreso > .panel-rotulo {
+  margin-bottom: 2px; /* cada fila ya tiene 44 px de alto */
+}
+
 /* reloj */
 .panel-reloj {
   display: grid;
@@ -662,22 +1094,92 @@
 }
 
 /* progreso del tiempo */
+/* «Pulso»: cada fila es nombre · tramos · cifra, con columnas fijas para que las cuatro barras midan lo mismo y
+   queden alineadas. Los tramos se llenan con el color de la página. */
 .panel-progreso {
   display: grid;
-  gap: 10px;
+  gap: 0;
+  padding-block: 16px 8px; /* arriba, el rótulo a 16 px como en las demás fichas */
+}
+
+/* las filas van en su propia rejilla: en la caja angosta comparten columnas (la caja no puede consultarse a sí
+   misma con @container, su envoltorio sí) */
+.progreso-filas {
+  display: grid;
+  min-width: 0;
 }
 
 .progreso-fila {
   display: grid;
-  grid-template-columns: 4.4em 1fr 3.4em;
+  grid-template-columns: 58px minmax(0, 1fr) 76px;
   align-items: center;
-  gap: 10px;
-  font-size: var(--t-s);
+  gap: 12px;
+  min-height: 44px;
+  border-bottom: 1px dashed var(--linea);
+}
+
+.progreso-fila:last-of-type {
+  border-bottom: 0;
 }
 
 .progreso-nombre {
-  color: var(--tinta-2);
-  font-weight: 600;
+  color: var(--tinta-3);
+  font: 600 11px/1.2 var(--f-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.progreso-tramos {
+  display: flex;
+  gap: 2px;
+  width: 100%;
+  height: 8px;
+}
+
+.progreso-tramos i {
+  flex: 1;
+  min-width: 0;
+  border-radius: 1.5px;
+  background: linear-gradient(90deg, var(--c) var(--f, 0%), var(--linea-fuerte) var(--f, 0%));
+}
+
+.progreso-tramos i.fin-grupo {
+  margin-right: 3px;
+}
+
+.progreso-tramos.denso {
+  gap: 1px;
+}
+
+.progreso-tramos.denso i.fin-grupo {
+  margin-right: 4px;
+}
+
+.progreso-cifra {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+  min-width: 0;
+  line-height: 1.1;
+}
+
+.progreso-cifra b {
+  color: var(--tinta);
+  font: 600 21px/1 var(--f-titulo);
+  font-variant-numeric: tabular-nums;
+}
+
+.progreso-cifra b small {
+  margin-left: 2px;
+  color: var(--tinta-3);
+  font: 500 12px var(--f-mono);
+}
+
+.progreso-cifra i {
+  color: var(--tinta-3);
+  font: italic 400 11.5px/1.2 var(--f-serif);
+  white-space: nowrap;
 }
 
 .progreso-pista,
@@ -697,21 +1199,51 @@
   background: var(--acento);
 }
 
-.progreso-pct {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  color: var(--tinta);
-  font-weight: 600;
-}
-
-@container (max-width: 210px) {
-  .progreso-fila {
-    grid-template-columns: 1fr auto;
-    row-gap: 4px;
+/* Caja angosta: nombre y cifra arriba, los tramos debajo a todo el ancho. Las filas comparten columnas (subgrid):
+   el nombre entero y el % se miden primero, y «quedan…» toma lo que sobra (se corta con «…»). Así el nombre nunca
+   se parte letra por letra y los % quedan en columna aunque cambie el ancho de «quedan N d». */
+@container (max-width: 250px) {
+  .progreso-filas {
+    grid-template-columns: auto minmax(auto, 1fr) auto;
   }
-  .progreso-pista {
+  .progreso-fila {
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    align-items: baseline;
+    column-gap: 8px;
+    row-gap: 6px;
+    padding-block: 8px;
+  }
+  .progreso-nombre {
+    white-space: nowrap;
+  }
+  .progreso-tramos {
     grid-column: 1 / -1;
     grid-row: 2;
+    align-self: center;
+  }
+  .progreso-cifra {
+    display: contents;
+  }
+  .progreso-cifra b {
+    grid-column: 2;
+    justify-self: end;
+  }
+  .progreso-cifra i {
+    grid-column: 3;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* Muy angosta: solo el nombre y el % (el «quedan…» ya va en el nombre accesible de cada barra). */
+@container (max-width: 180px) {
+  .progreso-filas {
+    grid-template-columns: auto minmax(auto, 1fr);
+  }
+  .progreso-cifra i {
+    display: none;
   }
 }
 
@@ -729,13 +1261,6 @@
   /* Caja angosta: las pestañas bajan de renglón (centradas) en vez de esconderse tras una barra de desplazamiento. */
   flex-wrap: wrap;
   justify-content: center;
-}
-
-.segmentado button[aria-selected='true'] {
-  background: var(--papel);
-  color: var(--tinta);
-  font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08), 0 0 0 1px var(--linea);
 }
 
 .pomodoro-tiempo {
@@ -1375,8 +1900,31 @@
 .diagrama-svg svg { max-width: 100%; height: auto; }
 .diagrama-vacio { color: var(--tinta-3); font-size: 13px; }
 .diagrama-error { color: var(--peligro); font-size: 12.5px; font-family: var(--f-mono); justify-content: flex-start; }
-.segmentado.chico button { padding: 2px 8px; font-size: 12px; }
 @media (max-width: 640px) {
   .diagrama.modo-ambos .diagrama-cuerpo { grid-template-columns: 1fr; }
   .diagrama-codigo { border-right: 0; border-bottom: 1px solid var(--linea); }
+}
+
+/* Bloque seleccionado entero (clic en el borde de un tablero de visión, una imagen, una base…) y bloque sobre el que
+   se suelta al arrastrar: un filo dorado y un velo apenas tibio en lugar del azul de BlockNote, que no es de la paleta. */
+.bn-editor .bn-block-content.ProseMirror-selectednode > ::after,
+.bn-editor .ProseMirror-selectednode > .bn-block-content > ::after,
+.bn-editor .bn-block-content .ProseMirror-selectednode::after,
+.bn-editor .bn-block-outer[data-drop-target='true']::after {
+  border-radius: 6px;
+  background-color: color-mix(in srgb, var(--oro-m) 7%, transparent);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--oro-m) 80%, transparent);
+}
+.bn-editor .bn-inline-content .ProseMirror-selectednode::after {
+  box-shadow: none;
+  background-color: color-mix(in srgb, var(--oro-m) 24%, transparent);
+}
+@media (forced-colors: active) {
+  .bn-editor .bn-block-content.ProseMirror-selectednode > ::after,
+  .bn-editor .ProseMirror-selectednode > .bn-block-content > ::after,
+  .bn-editor .bn-block-content .ProseMirror-selectednode::after,
+  .bn-editor .bn-block-outer[data-drop-target='true']::after {
+    background-color: transparent;
+    box-shadow: inset 0 0 0 2px Highlight;
+  }
 }

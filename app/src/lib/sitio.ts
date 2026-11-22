@@ -5,7 +5,9 @@ import { descargar, nombreArchivoSeguro } from '../data/archivos';
 import { avisar, usar } from '../data/estado';
 import type { Pagina } from '../data/tipos';
 import { MARCA } from '../marca';
-import { aplanar, arbolDe, cuerpoHTML, esc, propiedadesDeFila, reescribirRutas, rutasArchivos, tablaBaseHTML, type NodoExport } from './exportarTodo';
+import { editoresAbiertos } from '../editor/EditorPagina';
+import { bloquesDe, editorSinVista, neutralizarUrls } from './exportar';
+import { aplanar, arbolDe, esc, propiedadesDeFila, reescribirRutas, rutasArchivos, tablaBaseHTML, type NodoExport } from './exportarTodo';
 import { hoyISO } from './fechas';
 import { CreadorZip } from './zip';
 import { idioma, segunIdioma, trad } from '../i18n';
@@ -95,6 +97,99 @@ Para actualizar el sitio, vuelve a publicarlo desde Yuva y reemplaza los archivo
 Ojo: todo lo que subas será público. Revisa que no haya datos privados.
 `, { titulo });
 
+// ---------- lo que el sitio no debe publicar ----------
+
+// Portada de color: solo un #hex o un degradado (linear, radial o conic, también repeating-) cuyas funciones internas
+// sean de color o de cálculo. Sin ; { } < > comillas ni barra invertida no se puede cerrar la declaración ni escapar
+// caracteres, y sin url(), image-set() y compañía no se cargan imágenes de fuera. Una portada que no pase (de una copia
+// o un importado manipulados) se publica sin portada. Las que da la app (COLORES_PORTADA y el MCP, apiLocal.ts ›
+// esColorDePortada) pasan todas si son CSS válido.
+const COLOR_HEX = /^#[0-9a-f]{3,8}$/i;
+const DEGRADADO = /^(?:repeating-)?(?:linear|radial|conic)-gradient\(.*\)$/is;
+const FUNCIONES_DEGRADADO = new Set([
+  'linear-gradient', 'radial-gradient', 'conic-gradient', 'repeating-linear-gradient', 'repeating-radial-gradient', 'repeating-conic-gradient',
+  'rgb', 'rgba', 'hsl', 'hsla', 'hwb', 'lab', 'lch', 'oklab', 'oklch', 'color', 'color-mix', 'light-dark', 'calc', 'min', 'max', 'clamp',
+]);
+
+export function colorPortadaSegura(valor: unknown): string | null {
+  if (typeof valor !== 'string') return null; // una copia manipulada puede traer cualquier cosa: sin portada, sin error
+  const v = valor.trim();
+  if (COLOR_HEX.test(v)) return v;
+  if (!DEGRADADO.test(v) || /[;{}<>'"\\]/.test(v)) return null;
+  return (v.match(/[a-z-]+(?=\()/gi) ?? []).every((f) => FUNCIONES_DEGRADADO.has(f.toLowerCase())) ? v : null;
+}
+
+// Portada de imagen: solo una ruta del sitio (archivos/…), una dirección http(s) o una imagen en data:. Antes de meterla
+// en url('…') se codifican las comillas, los paréntesis, la barra invertida y los espacios (%27, %28…): así no puede
+// cerrar la cadena CSS ni añadir declaraciones (position:fixed sobre todo el sitio), y los servidores decodifican el %
+// y encuentran el mismo archivo. De paso se ve la portada de una imagen llamada «Mom's photo.png».
+const URL_PORTADA = /^(?:archivos\/|https?:\/\/|data:image\/)/i;
+
+export function urlPortadaSegura(ruta: unknown): string | null {
+  if (typeof ruta !== 'string') return null;
+  const r = ruta.trim();
+  if (!URL_PORTADA.test(r)) return null;
+  return r.replace(/['"()\\ \t\n\r\f]/g, (c) => '%' + c.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0'));
+}
+
+/** Títulos de páginas que no se publican. Una mención, un bloque «página», unos «Accesos», una «Vista enlazada» o una
+ *  «Base de datos» que apuntan a una página fuera del sitio (privada, archivada o en la papelera) escribirían su título
+ *  en el HTML y en el buscador (indice.js), aunque el enlace se quede sin destino; los accesos y las bases, incluso
+ *  cuando en la app ya no se ven porque están en la papelera. Antes de convertir, las menciones y esos bloques se
+ *  cambian por un texto neutro y de los accesos se quitan esas páginas. Los enlaces escritos a mano conservan su texto
+ *  (es de la persona) y pierden el destino más abajo. Devuelve una copia: los bloques de un editor abierto no se tocan. */
+export function sinTitulosAjenos(bloques: any[], enSitio: (id: string) => boolean): any[] {
+  const parrafo = (b: any, texto: string) => ({ id: b.id, type: 'paragraph', content: texto, children: limpiar(b.children ?? []) });
+  const limpiar = (v: any): any => {
+    if (Array.isArray(v)) return v.map(limpiar);
+    if (!v || typeof v !== 'object') return v;
+    const props = v.props ?? {};
+    switch (v.type) {
+      case 'mencion':
+        if (!enSitio(props.paginaId)) return { type: 'text', text: trad('Página no publicada'), styles: {} };
+        break;
+      case 'pagina':
+        if (!enSitio(props.paginaId)) return parrafo(v, trad('Página no publicada'));
+        break;
+      case 'baseDatos':
+        if (!enSitio(props.paginaId)) return parrafo(v, trad('[Base de datos no publicada]'));
+        break;
+      case 'vistaEnlazada':
+        if (!enSitio(props.bdId)) return parrafo(v, trad('[Vista de una base de datos no publicada]'));
+        break;
+      case 'accesos':
+        v = { ...v, props: { ...props, paginas: String(props.paginas ?? '').split(',').filter((id) => id && enSitio(id)).join(',') } };
+        break;
+    }
+    const copia: any = {};
+    for (const [k, x] of Object.entries(v)) copia[k] = k === 'props' ? x : limpiar(x);
+    return copia;
+  };
+  return limpiar(bloques);
+}
+
+/** HTML de los bloques de una página del sitio: como cuerpoHTML (lib/exportarTodo.ts), pero sin títulos de páginas
+ *  que no se publican y sin direcciones peligrosas (javascript:…). Si un bloque propio falla, se sigue con los demás. */
+async function cuerpoSitio(id: string, enSitio: (id: string) => boolean): Promise<string> {
+  const bloques = sinTitulosAjenos(await bloquesDe(id), enSitio);
+  const editor: any = editoresAbiertos.get(id) ?? editorSinVista();
+  let html: string;
+  try {
+    html = editor.blocksToHTMLLossy(bloques);
+  } catch {
+    html = bloques
+      .map((b) => {
+        try {
+          return editor.blocksToHTMLLossy([b]);
+        } catch {
+          return `<p><em>[${trad('Bloque «{tipo}» sin versión en HTML', { tipo: esc(String(b?.type ?? '')) })}]</em></p>`;
+        }
+      })
+      .join('\n');
+  }
+  return neutralizarUrls(html);
+}
+
 interface SitioArmado {
   archivos: [string, string | Blob][];
   paginas: number;
@@ -142,16 +237,21 @@ async function armarSitio(raizId: string): Promise<SitioArmado> {
     const props = n.padre?.pagina.tipo === 'bd' ? propiedadesDeFila(p) : [];
     if (props.length) cuerpo += `<table class="props">${props.map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table>`;
     if (p.tipo === 'bd') cuerpo += tablaBaseHTML(p.id, aPagina);
-    else cuerpo += reescribirRutas(await cuerpoHTML(p.id), aArchivo, aPagina);
+    else cuerpo += reescribirRutas(await cuerpoSitio(p.id, (id) => porId.has(id)), aArchivo, aPagina);
     if (n.hijos.length && p.tipo !== 'bd')
       cuerpo += `<div class="hijas"><ul>${n.hijos.map((h) => `<li><a href="${url(h)}">${esc(iconoTexto(h.pagina) + h.titulo)}</a></li>`).join('')}</ul></div>`;
-    // Los enlaces a páginas que no están en el sitio se quedan sin destino.
-    cuerpo = cuerpo.replace(/href="#\/p\/[a-z0-9]+"/g, `href="#" title="${esc(trad('Esta página no forma parte del sitio'))}"`);
+    // Los enlaces a páginas que no están en el sitio se quedan sin destino (también los que van a un bloque: …?b=…).
+    cuerpo = cuerpo.replace(/href="#\/p\/[a-z0-9]+(?:\?[^"]*)?"/g, `href="#" title="${esc(trad('Esta página no forma parte del sitio'))}"`);
+    // Portada: el valor va dentro de style="…", así que solo se publica si pasa la validación (ver arriba).
     let portada = '';
     if (p.portada?.tipo === 'imagen') {
-      const ruta = reescribirRutas(p.portada.valor, aArchivo, () => null);
-      if (!ruta.startsWith('archivo:')) portada = `<div class="portada" style="background-image:url('${esc(ruta)}')"></div>`;
-    } else if (p.portada?.tipo === 'color') portada = `<div class="portada" style="background:${esc(p.portada.valor)}"></div>`;
+      const valor: unknown = p.portada.valor; // reescribirRutas fallaría (y con ella todo el sitio) si no es texto
+      const ruta = typeof valor === 'string' ? urlPortadaSegura(reescribirRutas(valor, aArchivo, () => null)) : null;
+      if (ruta) portada = `<div class="portada" style="background-image:url('${esc(ruta)}')"></div>`;
+    } else if (p.portada?.tipo === 'color') {
+      const color = colorPortadaSegura(p.portada.valor);
+      if (color) portada = `<div class="portada" style="background:${esc(color)}"></div>`;
+    }
     const migas: NodoExport[] = [];
     for (let a = n.padre; a; a = a.padre) migas.unshift(a);
     const textoPlano = cuerpo.replace(/<[^>]+>/g, ' ').replace(/&[a-z#0-9]+;/g, ' ').replace(/\s+/g, ' ').trim();

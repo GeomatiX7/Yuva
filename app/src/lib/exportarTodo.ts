@@ -8,7 +8,7 @@ import type { Pagina } from '../data/tipos';
 import { editoresAbiertos } from '../editor/EditorPagina';
 import { calcularEsquema } from '../bd/derivadas';
 import { filasDe, textoValor, valorDe } from '../bd/operaciones';
-import { bloquesDe, csvDe, editorSinVista } from './exportar';
+import { bloquesDe, csvDe, editorSinVista, neutralizarUrls } from './exportar';
 import { CreadorZip } from './zip';
 import { hoyISO } from './fechas';
 import { idioma, segunIdioma, trad } from '../i18n';
@@ -29,7 +29,9 @@ export interface NodoExport {
 function nombresUnicos(paginas: Pagina[], minusculas = false): string[] {
   const vistos = new Map<string, number>();
   return paginas.map((p) => {
-    let base = nombreArchivoSeguro(tituloDe(p)).replace(/\.+$/, '').trim() || trad('sin-titulo');
+    // Sin puntos ni espacios al final: un título como «. .» daría una carpeta «.» que el ZIP no admite
+    // (rutaSegura la quita) y los enlaces relativos de esa rama quedarían rotos.
+    let base = nombreArchivoSeguro(tituloDe(p)).replace(/[.\s]+$/, '').trim() || trad('sin-titulo');
     if (minusculas) base = base.toLowerCase();
     const clave = base.toLowerCase();
     const n = (vistos.get(clave) ?? 0) + 1;
@@ -67,12 +69,18 @@ export function aplanar(nodos: NodoExport[]): NodoExport[] {
   return res;
 }
 
-/** HTML de los bloques. Si un bloque propio falla al convertirse, se sigue con los demás. */
+/**
+ * HTML de los bloques. Si un bloque propio falla al convertirse, se sigue con los demás.
+ * Sale por neutralizarUrls, como «Exportar HTML» y el sitio: los bloques imagen, video, audio y archivo escriben su
+ * url tal cual, y un .html, un .enex o una copia manipulados podían dejar un <a href="javascript:…"> en el ZIP (C34).
+ * Va antes de reescribirRutas, que sigue encontrando los archivo://.
+ */
 export async function cuerpoHTML(id: string): Promise<string> {
   const bloques = await bloquesDe(id);
   const editor: any = editoresAbiertos.get(id) ?? editorSinVista();
+  let html: string;
   try {
-    return editor.blocksToHTMLLossy(bloques);
+    html = editor.blocksToHTMLLossy(bloques);
   } catch {
     const partes: string[] = [];
     for (const b of bloques) {
@@ -82,8 +90,9 @@ export async function cuerpoHTML(id: string): Promise<string> {
         partes.push(`<p><em>[${trad('Bloque «{tipo}» sin versión en HTML', { tipo: esc(String(b?.type ?? '')) })}]</em></p>`);
       }
     }
-    return partes.join('\n');
+    html = partes.join('\n');
   }
+  return neutralizarUrls(html);
 }
 
 export async function cuerpoMarkdown(id: string): Promise<string> {
@@ -143,12 +152,19 @@ export function reescribirRutas(texto: string, archivo: (id: string) => string |
     .replace(/#\/p\/([a-z0-9]+)/g, (m, id) => pagina(id) ?? m);
 }
 
+/**
+ * Id de un archivo apto para una ruta del ZIP. Los de Yuva solo llevan letras y números, pero una copia
+ * restaurada puede traer cualquier cosa (p. ej. «../../Inicio/x»): fuera todo lo que no sea letra, número, - o _.
+ */
+export const idEnRuta = (id: unknown) => String(id ?? '').replace(/[^a-z0-9_-]/gi, '_').slice(0, 64) || 'x';
+
 /** Archivos subidos: id → ruta dentro del ZIP (`archivos/<id>-<nombre>`). */
 export async function rutasArchivos(): Promise<Map<string, { ruta: string; datos: Blob }>> {
   const mapa = new Map<string, { ruta: string; datos: Blob }>();
   for (const a of await bd.archivos.toArray()) {
-    const nombre = nombreArchivoSeguro(a.nombre || trad('archivo')).replace(/\s+/g, '-');
-    mapa.set(a.id, { ruta: `archivos/${a.id}-${nombre}`, datos: a.datos });
+    const nombre = nombreArchivoSeguro(String(a.nombre || trad('archivo'))).replace(/\s+/g, '-');
+    // La clave sigue siendo el id real (así lo buscan reescribirRutas y aArchivo); solo la ruta va saneada.
+    mapa.set(a.id, { ruta: `archivos/${idEnRuta(a.id)}-${nombre}`, datos: a.datos });
   }
   return mapa;
 }

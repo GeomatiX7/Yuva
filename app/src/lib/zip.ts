@@ -1,6 +1,6 @@
 // Lector de archivos ZIP sin librerías: índice central (también ZIP64) y descompresión «deflate» con la
 // que trae el navegador. Los ZIP dentro del ZIP (Notion parte las exportaciones grandes) se abren también.
-import { trad } from '../i18n';
+import { LOCALE, trad } from '../i18n';
 
 export interface EntradaZip {
   ruta: string;
@@ -14,12 +14,78 @@ const FIRMA_LOCALIZADOR64 = 0x07064b50;
 const FIRMA_CENTRAL = 0x02014b50;
 const FIRMA_LOCAL = 0x04034b50;
 
-async function inflar(datos: Uint8Array): Promise<Uint8Array> {
-  const flujo = new Blob([datos as BlobPart]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-  return new Uint8Array(await new Response(flujo).arrayBuffer());
+// Límites contra las «bombas zip» (unos KB que al descomprimirse ocupan gigas) y los ZIP que se
+// contienen a sí mismos. Una exportación de verdad nunca llega a ellos.
+/** Archivos en total, sumando los de los ZIP de dentro. */
+const MAX_ENTRADAS = 200_000;
+/**
+ * ZIP dentro de ZIP: Notion usa un nivel (las partes); se admite uno más por un .zip adjunto. Los que
+ * quedan más hondo no se abren: se devuelven como un archivo más (así un ZIP que se contiene a sí mismo
+ * o uno tipo 42.zip para enseguida, sin tumbar la importación de una exportación real).
+ */
+const MAX_ANIDADOS = 2;
+/** Lo que puede ocupar todo lo descomprimido: 20 veces el ZIP, y al menos 512 MB. */
+const FACTOR_TOTAL = 20;
+const MIN_TOTAL = 512 * 1024 * 1024;
+/** Margen sobre el tamaño que declara cada entrada antes de darla por dañada. */
+const HOLGURA = 1024 * 1024;
+
+/** Lo que se comparte al abrir un ZIP y los de dentro: cuántos archivos van y cuánto queda por descomprimir. */
+interface Cuenta {
+  entradas: number;
+  restante: number;
+  tope: number;
 }
 
-function leerIndice(b: Uint8Array): { ruta: string; metodo: number; comprimido: number; tamano: number; local: number }[] {
+const errorTotal = (cuenta: Cuenta) =>
+  new Error(trad('El ZIP ocupa demasiado al descomprimirlo (más de {mb} MB). Por seguridad no se sigue abriendo.', { mb: Math.round(cuenta.tope / 1048576).toLocaleString(LOCALE) }));
+
+/** Bytes que recibe DecompressionStream de cada vez. */
+const TROZO_ENTRADA = 64 * 1024;
+
+/**
+ * Los datos en trozos de TROZO_ENTRADA, como en lib/importarDocx.ts (inflarZlib). DecompressionStream descomprime de
+ * una vez cada trozo que recibe, y Blob.stream() puede dárselo entero: una entrada de 1 MB que se infla a 1 GB llegaba
+ * a más de 1 GB de memoria antes de poder cortarla por `limite` o por `cuenta`.
+ */
+function enTrozos(datos: Uint8Array): ReadableStream<BufferSource> {
+  let p = 0;
+  return new ReadableStream<BufferSource>({
+    pull(control) {
+      if (p >= datos.length) return control.close();
+      const trozo = datos.subarray(p, p + TROZO_ENTRADA);
+      p += TROZO_ENTRADA;
+      control.enqueue(trozo as BufferSource);
+    },
+  });
+}
+
+/** Descomprime sin pasar de `limite` bytes (lo que declara la entrada) ni de lo que queda en `cuenta`. */
+async function inflar(datos: Uint8Array, limite: number, ruta: string, cuenta: Cuenta): Promise<Uint8Array> {
+  const lector = enTrozos(datos).pipeThrough(new DecompressionStream('deflate-raw')).getReader();
+  const trozos: Uint8Array[] = [];
+  let largo = 0;
+  for (;;) {
+    const { done, value } = await lector.read();
+    if (done) break;
+    largo += value.byteLength;
+    const error =
+      largo > limite ? new Error(trad('El ZIP está dañado: «{ruta}» ocupa más de lo que dice.', { ruta })) : value.byteLength > cuenta.restante ? errorTotal(cuenta) : null;
+    if (error) {
+      await lector.cancel().catch(() => undefined);
+      throw error;
+    }
+    cuenta.restante -= value.byteLength;
+    trozos.push(value);
+  }
+  if (trozos.length === 1) return trozos[0];
+  const salida = new Uint8Array(largo);
+  let p = 0;
+  for (const t of trozos) salida.set(t, p), (p += t.byteLength);
+  return salida;
+}
+
+function leerIndice(b: Uint8Array, maxEntradas = MAX_ENTRADAS): { ruta: string; metodo: number; comprimido: number; tamano: number; local: number }[] {
   const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
   let fin = -1;
   for (let i = b.length - 22; i >= Math.max(0, b.length - 65557); i--) {
@@ -38,6 +104,8 @@ function leerIndice(b: Uint8Array): { ruta: string; metodo: number; comprimido: 
       inicio = Number(v.getBigUint64(pos64 + 48, true));
     }
   }
+  // El bucle de abajo nunca lee más de `total` entradas: basta con mirarlo aquí.
+  if (total > maxEntradas) throw new Error(trad('El ZIP tiene demasiados archivos (más de {n}). Por seguridad no se abre.', { n: MAX_ENTRADAS.toLocaleString(LOCALE) }));
   const utf8 = new TextDecoder('utf-8');
   const latin = new TextDecoder('windows-1252');
   const estricto = new TextDecoder('utf-8', { fatal: true });
@@ -80,23 +148,44 @@ function leerIndice(b: Uint8Array): { ruta: string; metodo: number; comprimido: 
   return entradas;
 }
 
-/** Abre un ZIP y devuelve sus archivos (sin carpetas). Los .zip de dentro se abren y se suman. */
-export async function leerZip(datos: Uint8Array | Blob, prefijo = ''): Promise<EntradaZip[]> {
+export interface OpcionesZip {
+  /** Abrir los .zip de dentro y sumar sus archivos (sí, por omisión). Con `false` quedan como archivos normales. */
+  abrirZips?: boolean;
+}
+
+/**
+ * Abre un ZIP y devuelve sus archivos (sin carpetas). Los .zip de dentro se abren y se suman.
+ * Con límites: archivos en total, ZIP dentro de ZIP y tamaño descomprimido (también al leer cada entrada luego).
+ */
+export async function leerZip(datos: Uint8Array | Blob, prefijo = '', opciones: OpcionesZip = {}): Promise<EntradaZip[]> {
   const b = datos instanceof Uint8Array ? datos : new Uint8Array(await datos.arrayBuffer());
+  const tope = Math.max(MIN_TOTAL, b.length * FACTOR_TOTAL);
+  return abrirZip(b, prefijo, opciones.abrirZips !== false, 0, { entradas: 0, restante: tope, tope });
+}
+
+async function abrirZip(b: Uint8Array, prefijo: string, abrirZips: boolean, nivel: number, cuenta: Cuenta): Promise<EntradaZip[]> {
   const v = new DataView(b.buffer, b.byteOffset, b.byteLength);
   const salida: EntradaZip[] = [];
-  for (const e of leerIndice(b)) {
+  const indice = leerIndice(b, MAX_ENTRADAS - cuenta.entradas);
+  cuenta.entradas += indice.length;
+  for (const e of indice) {
     if (e.ruta.endsWith('/')) continue;
     if (v.getUint32(e.local, true) !== FIRMA_LOCAL) continue;
     const inicio = e.local + 30 + v.getUint16(e.local + 26, true) + v.getUint16(e.local + 28, true);
     const bruto = b.subarray(inicio, inicio + e.comprimido);
+    // Cada lectura descuenta lo que entrega, aunque sea más tarde (los importadores leen las entradas una a una).
     const leer = async () => {
-      if (e.metodo === 0) return bruto;
-      if (e.metodo === 8) return inflar(bruto);
+      if (e.metodo === 0) {
+        if (bruto.length > cuenta.restante) throw errorTotal(cuenta);
+        cuenta.restante -= bruto.length;
+        return bruto;
+      }
+      if (e.metodo === 8) return inflar(bruto, e.tamano + HOLGURA, e.ruta, cuenta);
       throw new Error(trad('Compresión no admitida en {ruta}', { ruta: e.ruta }));
     };
-    if (/\.zip$/i.test(e.ruta)) {
-      salida.push(...(await leerZip(await leer(), prefijo)));
+    // Pasado MAX_ANIDADOS, el .zip se queda como archivo normal (ver arriba).
+    if (abrirZips && nivel < MAX_ANIDADOS && /\.zip$/i.test(e.ruta)) {
+      salida.push(...(await abrirZip(await leer(), prefijo, abrirZips, nivel + 1, cuenta)));
       continue;
     }
     salida.push({ ruta: prefijo + e.ruta, tamano: e.tamano, leer });
@@ -130,6 +219,20 @@ function fechaDos(d: Date): [number, number] {
   return [hora, fecha];
 }
 
+/**
+ * Ruta de una entrada sin forma de salirse de la carpeta donde se descomprima («zip slip»): sin barras al
+ * principio, sin segmentos vacíos, «.», «..» ni solo puntos y espacios, y sin «:» (C:, flujos de NTFS).
+ * Las rutas normales de la exportación y del sitio no cambian.
+ */
+export function rutaSegura(ruta: string): string {
+  const segmentos = ruta
+    .replace(/\\/g, '/')
+    .split('/')
+    .filter((s) => !/^[.\s]*$/.test(s))
+    .map((s) => s.replace(/:/g, '-'));
+  return segmentos.join('/') || trad('archivo');
+}
+
 export class CreadorZip {
   private partes: BlobPart[] = [];
   private central: Uint8Array[] = [];
@@ -152,7 +255,7 @@ export class CreadorZip {
   }
 
   async agregar(ruta: string, contenido: string | Uint8Array | Blob, fecha = new Date()): Promise<string> {
-    ruta = this.rutaLibre(ruta.replace(/\\/g, '/').replace(/^\/+/, ''));
+    ruta = this.rutaLibre(rutaSegura(ruta));
     this.rutas.add(ruta);
     const datos =
       typeof contenido === 'string' ? this.cod.encode(contenido) : contenido instanceof Uint8Array ? contenido : new Uint8Array(await contenido.arrayBuffer());

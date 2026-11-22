@@ -183,7 +183,7 @@
 
 .muestra-tema span:last-child {
   flex: 1;
-  background: #fcfcfa;
+  background: var(--papel-claro);
 }
 
 .tema-oscuro .muestra-tema span:first-child {
@@ -197,8 +197,14 @@
 .muestra-paleta span:last-child {
   display: grid;
   place-items: center;
-  background: #fcfcfa;
+  background: var(--papel);
 }
+
+/* Cada paleta enseña su propio papel en el modo actual, no el de la paleta activa. */
+.muestra-paleta-laguna span:last-child { background: var(--papel-laguna-claro); }
+.muestra-paleta-yuva span:last-child { background: var(--papel-yuva-claro); }
+:root[data-tema='oscuro'] .muestra-paleta-laguna span:last-child { background: var(--papel-laguna-oscuro); }
+:root[data-tema='oscuro'] .muestra-paleta-yuva span:last-child { background: var(--papel-yuva-oscuro); }
 
 .muestra-paleta i {
   width: 46%;
@@ -213,11 +219,11 @@
 }
 
 .tema-oscuro .muestra-tema span:last-child {
-  background: #141a19;
+  background: var(--papel-oscuro);
 }
 
 .tema-sistema .muestra-tema span:last-child {
-  background: linear-gradient(135deg, #fcfcfa 50%, #141a19 50%);
+  background: linear-gradient(135deg, var(--papel-claro) 50%, var(--papel-oscuro) 50%);
 }
 
 .opciones-acento {
@@ -466,6 +472,228 @@
   font-size: var(--t-s);
 }
 
+/* «Tus plantillas» (Modales.tsx › Plantillas, lib/plantillasPropias.ts): arriba, las propias; debajo, las de siempre. */
+.plantillas-seccion + .plantillas-seccion {
+  margin-top: 22px;
+}
+
+.plantillas-seccion h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: var(--t-s);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--tinta-3);
+}
+
+/* La rayita dorada de la firma, sesgada a −18°, delante del título de cada sección. */
+.plantillas-seccion h3::before {
+  content: '';
+  width: 2.5px;
+  height: 0.95em;
+  border-radius: 1px;
+  background: var(--oro-m, var(--acento));
+  transform: skewX(var(--ang));
+}
+
+.plantillas-vacio {
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px dashed var(--linea-fuerte);
+  border-radius: var(--r-3);
+  color: var(--tinta-3);
+  font-size: var(--t-s);
+}
+
+.plantillas-destino {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px;
+  color: var(--tinta-2);
+  font-size: var(--t-s);
+}
+
+.rejilla-propias {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tarjeta-propia {
+  position: relative;
+  display: flex;
+  min-width: 0;
+}
+
+.tarjeta-propia > .tarjeta-plantilla {
+  flex: 1;
+  min-width: 0;
+  padding-right: 42px;
+}
+
+.tarjeta-propia .tarjeta-plantilla strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tarjeta-propia .plantilla-emoji {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+}
+
+.tarjeta-propia-mas {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  opacity: 0.55;
+  transition: opacity var(--dur);
+}
+
+.tarjeta-propia:hover .tarjeta-propia-mas,
+.tarjeta-propia-mas:focus-visible,
+.tarjeta-propia-mas[aria-expanded='true'] {
+  opacity: 1;
+}
+
+/* La del Diario: borde dorado y, delante de «Diario», la diagonal de la firma. */
+.tarjeta-propia.del-diario > .tarjeta-plantilla {
+  border-color: color-mix(in srgb, var(--oro-m, var(--acento)) 55%, var(--linea));
+}
+
+.plantilla-diario {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: 6px;
+  color: var(--acento-fuerte);
+  font-weight: 600;
+}
+
+.plantilla-diario::before {
+  content: '';
+  width: 2px;
+  height: 0.9em;
+  border-radius: 1px;
+  background: var(--oro-m, var(--acento));
+  transform: skewX(var(--ang));
+}
+
+.tarjeta-plantilla.renombrando .campo {
+  width: 100%;
+}
+
+.guardar-plantilla {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.guardar-plantilla-campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--t-s);
+  color: var(--tinta-2);
+}
+
+.guardar-plantilla .ayuda {
+  margin: 0;
+}
+
+.guardar-plantilla .botones-fila {
+  flex-direction: row;
+  justify-content: flex-end;
+  margin-top: 0;
+}
+
+/* «Empezar con» (componentes/EmpezarConPlantilla.tsx): la franja de una página recién creada y vacía, entre la
+   cabecera y el cuerpo. Entra con un fundido corto; quieta con movimiento reducido. */
+.empezar-con {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  /* Alineada con la cabecera y el cuerpo de la hoja (estilos/pagina.css). */
+  max-width: var(--ancho-pagina);
+  margin: 4px auto 12px;
+  padding: 0 var(--margen-pagina);
+  animation: empezar-con-entra 220ms var(--ease-salida, ease-out) both;
+}
+
+.empezar-con-titulo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--tinta-3);
+  font-size: var(--t-s);
+}
+
+.empezar-con-titulo::before {
+  content: '';
+  width: 2px;
+  height: 0.9em;
+  border-radius: 1px;
+  background: var(--oro-m, var(--acento));
+  transform: skewX(var(--ang));
+}
+
+.empezar-con ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.empezar-con .boton-suave {
+  max-width: 240px;
+}
+
+.empezar-con .boton-suave > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empezar-con .boton-suave:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 1px;
+}
+
+@keyframes empezar-con-entra {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .empezar-con {
+    animation: none;
+  }
+}
+
+:root[data-movimiento='reducido'] .empezar-con {
+  animation: none;
+}
+
+/* Alto contraste: bordes de verdad en las tarjetas propias y en la franja. */
+:root[data-contraste='alto'] .tarjeta-propia-mas {
+  opacity: 1;
+}
+
+:root[data-contraste='alto'] .empezar-con .boton-suave {
+  border: 1px solid var(--linea-fuerte);
+  color: var(--tinta);
+}
+
 /* importar */
 .zona-soltar {
   display: flex;
@@ -597,17 +825,106 @@
   font-size: 18px;
 }
 
-.historial-lista ul {
-  list-style: none;
-  margin: 0;
-  padding: 4px 8px;
+/* Línea de tiempo «Pulso»: días con cabecera mono en versalitas, un riel vertical y un nudo sesgado a −18° por
+   versión (la elegida en oro, las que tienen nombre en vino, el resto huecas), y la diferencia de palabras frente a la
+   anterior con su signo y una raya de avance proporcional. */
+.panel-historial {
+  --hist-vino: #5e1a2d;
+  --hist-nudo-hueco: var(--papel-2);
+  --hist-riel: var(--linea-fuerte);
+}
+
+:root[data-tema='oscuro'] .panel-historial {
+  --hist-vino: #d9798f;
+}
+
+.historial-linea {
   flex: 1;
   overflow-y: auto;
+  padding: 2px 8px 10px;
+}
+
+.hist-dia + .hist-dia {
+  margin-top: 6px;
+}
+
+.hist-dia-cabeza {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 6px 6px 4px;
+  background: var(--papel-2);
+  font: 500 11px/1.3 var(--f-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--tinta-2);
+}
+
+.hist-dia-cabeza small {
+  font: inherit;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--tinta-3);
+}
+
+.hist-riel {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* el riel: una línea fina que pasa por el centro de los nudos */
+.hist-riel::before {
+  content: '';
+  position: absolute;
+  left: 11px;
+  top: 6px;
+  bottom: 6px;
+  width: 1px;
+  background: var(--hist-riel);
+}
+
+.hist-punto {
+  position: relative;
+  padding-left: 22px;
+}
+
+.hist-nudo {
+  position: absolute;
+  z-index: 1;
+  left: 7px;
+  top: 14px;
+  width: 9px;
+  height: 9px;
+  border-radius: 1.5px;
+  border: 1.5px solid var(--tinta-3);
+  background: var(--hist-nudo-hueco);
+  transform: skewX(var(--ang));
+  transition: background var(--dur-rapida) ease, border-color var(--dur-rapida) ease, transform var(--dur-rapida) var(--rebote-corto);
+  pointer-events: none;
+}
+
+.hist-punto.con-nombre .hist-nudo {
+  border-color: var(--hist-vino);
+  background: var(--hist-vino);
+}
+
+.hist-punto.elegida .hist-nudo {
+  border-color: var(--oro-m);
+  background: var(--oro-m);
+  transform: skewX(var(--ang)) scale(1.2);
 }
 
 .version {
   display: flex;
   flex-direction: column;
+  gap: 1px;
   width: 100%;
   padding: 8px 10px;
   border-radius: var(--r-2);
@@ -620,11 +937,80 @@
 
 .version.activa {
   background: var(--flota);
-  box-shadow: inset 3px 0 0 var(--acento);
+  box-shadow: inset 0 0 0 1px var(--linea);
 }
 
 .version small {
   color: var(--tinta-3);
+}
+
+/* diferencia de palabras: cifra con signo y raya de avance proporcional (rayas a −18°) */
+.hist-dif {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 3px;
+  font: 500 11px/1.2 var(--f-mono);
+  color: var(--tinta-3);
+  --hist-tono: var(--tinta-3);
+}
+
+.hist-dif.mas {
+  --hist-tono: var(--exito);
+}
+
+.hist-dif.menos {
+  --hist-tono: var(--peligro);
+}
+
+.hist-dif.primera {
+  font-family: var(--f-ui);
+  font-size: var(--t-xs);
+}
+
+.hist-cifra {
+  flex: none;
+  min-width: 4.5ch;
+  color: var(--hist-tono);
+  font-variant-numeric: tabular-nums;
+}
+
+.hist-raya {
+  flex: 1;
+  height: 7px;
+  max-width: 120px;
+  background: linear-gradient(var(--papel-3), var(--papel-3));
+  border-radius: 1px;
+  overflow: hidden;
+  position: relative;
+}
+
+.hist-raya::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--parte, 0%);
+  background: repeating-linear-gradient(
+    calc(90deg - var(--ang)),
+    var(--hist-tono) 0 var(--raya-ancho),
+    transparent var(--raya-ancho) calc(var(--raya-ancho) + var(--raya-hueco))
+  );
+}
+
+:root[data-contraste='alto'] .hist-nudo {
+  border-width: 2px;
+}
+
+:root[data-contraste='alto'] .hist-riel {
+  --hist-riel: var(--tinta-3);
+}
+
+:root[data-contraste='alto'] .version.activa {
+  box-shadow: inset 0 0 0 2px var(--oro-m);
+}
+
+:root[data-contraste='alto'] .hist-raya::after {
+  background: var(--hist-tono);
 }
 
 .historial-pie {
@@ -764,6 +1150,25 @@
 
 .muestra-portada:hover {
   background: var(--papel-2);
+}
+
+/* La portada puesta (patrón o Estudio 3D): el mismo anillo que la paleta elegida. */
+.muestra-portada.activa > span {
+  box-shadow: 0 0 0 2px var(--flota), 0 0 0 4px var(--acento);
+}
+
+/* Con los colores forzados de Windows el navegador quita las sombras, y con ellas el anillo: ahí la portada lleva un
+   contorno alrededor de la miniatura (el del foco va alrededor del botón) y la paleta, un filo de Highlight por
+   dentro, porque su contorno sería igual que el anillo del foco (2 px, a 2 px, en Highlight). */
+@media (forced-colors: active) {
+  .muestra-portada.activa > span {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+  }
+
+  .muestra-paleta.activa {
+    border: 2px solid Highlight;
+  }
 }
 
 .rejilla-colores {
@@ -1060,20 +1465,117 @@
   font-size: var(--t-s);
 }
 
+/* Cambios frente a la versión anterior, con los tokens del tema: lo añadido con --exito suave, lo editado con el oro
+   y lo quitado tachado con --peligro (5,4:1 sobre el papel claro y 6,7:1 sobre el oscuro, en el fondo del resumen). */
+.panel-historial {
+  --cambio-nuevo: var(--exito);
+  --cambio-nuevo-fondo: color-mix(in srgb, var(--exito) 13%, transparent);
+  --cambio-editado: var(--oro-m);
+  --cambio-editado-fondo: color-mix(in srgb, var(--oro-m) 16%, transparent);
+  --cambio-quitado: var(--peligro);
+}
+
 .cambios-quitados {
   margin: 6px 0 0;
   padding-left: 18px;
-  color: #c0392b;
+  color: var(--cambio-quitado);
+}
+
+.cambios-quitados del {
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+
+.cambios-leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin-top: 6px;
+  font: 500 11px/1.4 var(--f-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.cambios-clave {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cambios-clave::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  transform: skewX(var(--ang));
+}
+
+.cambios-clave.clave-nuevo::before {
+  background: var(--cambio-nuevo);
+}
+
+.cambios-clave.clave-editado::before {
+  background: var(--cambio-editado);
+}
+
+.cambios-clave.clave-quitado {
+  color: var(--cambio-quitado);
+  text-decoration: line-through;
+}
+
+.cambios-clave.clave-quitado::before {
+  background: var(--cambio-quitado);
 }
 
 .historial-previa .bn-block-content.cambio-nuevo {
-  background: rgba(46, 160, 67, 0.2);
-  box-shadow: inset 3px 0 0 #2ea043;
+  background: var(--cambio-nuevo-fondo);
+  box-shadow: inset 3px 0 0 var(--cambio-nuevo);
 }
 
 .historial-previa .bn-block-content.cambio-editado {
-  background: rgba(210, 153, 34, 0.2);
-  box-shadow: inset 3px 0 0 #d29922;
+  background: var(--cambio-editado-fondo);
+  box-shadow: inset 3px 0 0 var(--cambio-editado);
+}
+
+/* Alto contraste: sin velos de color, filo más grueso para que el cambio se lea por la forma y no solo por el tono. */
+:root[data-contraste='alto'] .historial-previa .bn-block-content.cambio-nuevo,
+:root[data-contraste='alto'] .historial-previa .bn-block-content.cambio-editado {
+  background: transparent;
+  box-shadow: inset 4px 0 0 var(--cambio-nuevo), 0 0 0 1px var(--cambio-nuevo);
+}
+
+:root[data-contraste='alto'] .historial-previa .bn-block-content.cambio-editado {
+  box-shadow: inset 4px 0 0 var(--cambio-editado), 0 0 0 1px var(--cambio-editado);
+}
+
+:root[data-contraste='alto'] .cambios-quitados del {
+  text-decoration-thickness: 2px;
+}
+
+/* La versión elegida entra con un fundido corto (se apaga con el movimiento reducido). */
+@keyframes hist-entrar {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.historial-previa {
+  animation: hist-entrar var(--dur-rapida, 160ms) ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .historial-previa,
+  .hist-nudo {
+    animation: none;
+    transition: none;
+  }
+}
+
+:root[data-movimiento='reducido'] .historial-previa,
+:root[data-movimiento='reducido'] .hist-nudo {
+  animation: none;
+  transition: none;
 }
 
 /* ajustes: buscador, grupos y secciones nuevas */
@@ -1174,6 +1676,29 @@
   border-color: var(--acento);
 }
 
+/* Avatar animado (pajarito hecho en Blender): sobre un círculo claro, también con el tema oscuro, como una foto. */
+.avatar-animado {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  overflow: hidden;
+  border-radius: 50%;
+  background: radial-gradient(circle at 50% 32%, #fbf3ec, #ecdcd2);
+}
+
+.avatar-animado.crema {
+  background: radial-gradient(circle at 50% 32%, #f3e0dc, #dcbcb6);
+}
+
+.avatar-animado video,
+.avatar-animado img {
+  width: 116%;
+  height: 116%;
+  margin-top: 6%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
 .campo-emoji {
   width: 64px;
   text-align: center;
@@ -1271,16 +1796,216 @@
   color: var(--rojo, #c2365e);
   font-size: 13px;
 }
+/* ---------- Mis tareas («Pulso») ----------
+   componentes/MisTareas.tsx. La casilla sesgada y la pastilla «Solo de «…»» están en editor.css.
+   Encabezado de grupo: «▾ Hoy ///// 2/5» (rayas: lo de hoy hecho sobre todo lo de hoy) o «▾ Atrasadas 18», con la
+   cifra en mono. Cada fila lleva el color de su página (--c, --cs) en el punto sesgado y en la casilla, y a la
+   derecha la fecha como la meta del cronograma. Al marcar: anillo, palomita y tachado; después la fila se pliega. */
+.panel-tareas .grupo-tareas + .grupo-tareas {
+  margin-top: 10px;
+}
+
 .panel-tareas .grupo-tareas h3 {
   display: flex;
   align-items: center;
   gap: 6px;
+  margin: 4px 0 2px;
 }
-.panel-tareas .grupo-atrasadas h3 .boton-texto {
-  color: var(--rojo, #c2365e);
+
+.panel-tareas .tareas-cab {
+  gap: 8px;
+  max-width: 100%;
+  margin-left: -4px;
+  padding: 5px 8px 5px 4px;
+  font-weight: 650;
 }
+
+.panel-tareas .tareas-cab-flecha {
+  flex: none;
+  width: 12px;
+  color: var(--tinta-3);
+  font-size: 11px;
+  text-align: center;
+}
+
+.panel-tareas .tareas-cab-nombre {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.panel-tareas .tareas-cab-cifra {
+  flex: none;
+  color: var(--tinta-2);
+  font: 600 11.5px/1 var(--f-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.panel-tareas .tareas-cab .rayas-pulso {
+  flex: none;
+  margin-left: 2px;
+}
+
+.panel-tareas .grupo-atrasadas .tareas-cab,
+.panel-tareas .grupo-atrasadas .tareas-cab-cifra {
+  color: var(--peligro);
+}
+
+/* «Hoy» sin nada pendiente y algo hecho: solo el encabezado, con las rayas llenas y «¡listo!». */
+.panel-tareas .tareas-cab-listo {
+  padding: 5px 8px 5px 20px;
+}
+
+.panel-tareas .tareas-cab-falta {
+  color: var(--tinta-3);
+  font: italic 400 12.5px/1.2 var(--f-serif);
+}
+
+/* La fila: una rejilla de un renglón que se pliega al salir (de 1fr a 0fr). */
+.panel-tareas .tarea-item {
+  display: grid;
+  grid-template-rows: 1fr;
+  padding-left: 0;
+  transition:
+    grid-template-rows 200ms ease-in,
+    opacity 160ms ease-in;
+}
+
+.panel-tareas .tarea-cuerpo {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 0;
+  padding-left: 8px;
+}
+
+.panel-tareas .tarea-item.saliendo {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.panel-tareas .tarea-item.saliendo .tarea-cuerpo {
+  overflow: hidden;
+}
+
+.panel-tareas .tarea-item .rec-textos {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  align-items: center;
+}
+
+.panel-tareas .tarea-item .rec-texto,
+.panel-tareas .tarea-item .rec-textos small {
+  grid-column: 1;
+}
+
 .panel-tareas .tarea-item small svg {
   vertical-align: -2px;
+}
+
+/* El color de la página de la tarea (de una fila, el de su base): un punto con el sesgo de la firma. */
+.panel-tareas .tarea-punto {
+  display: inline-block;
+  width: 7px;
+  height: 9px;
+  margin: 0 6px 0 2px;
+  border-radius: 1.5px;
+  background: var(--c);
+  transform: skewX(var(--ang));
+  vertical-align: -1px;
+}
+
+/* La fecha, como la meta del cronograma: «hoy 17:00», «17 nov · 3 d tarde», «mié 25 nov · faltan 5 d». */
+.panel-tareas .tarea-meta {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  color: var(--tinta-2);
+  font: 500 11px/1.2 var(--f-mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.panel-tareas .tarea-meta b {
+  color: var(--tinta);
+  font-weight: 600;
+}
+
+.panel-tareas .tarea-meta .mal {
+  color: var(--peligro);
+  font-weight: 700;
+}
+
+.panel-tareas .tarea-meta i {
+  color: var(--tinta-3);
+  font: italic 400 12px/1.2 var(--f-serif);
+}
+
+.panel-tareas .tarea-meta-sep {
+  color: var(--tinta-3);
+}
+
+/* En pantallas angostas el texto se queda con todo el renglón y la fecha baja junto a «dónde». */
+@media (max-width: 520px) {
+  .panel-tareas .tarea-item .rec-texto {
+    grid-column: 1 / -1;
+  }
+
+  .panel-tareas .tarea-meta {
+    grid-row: 2;
+  }
+}
+
+/* Al marcar: el anillo corto de la casilla y el tachado que corre (la palomita la traza editor.css). El anillo es el
+   del editor (casilla-anillo, en editor.css): un contorno, así no tapa el foco de doble contorno, que es una sombra. */
+.panel-tareas .tarea-item.marcando .casilla-pulso::before {
+  animation: casilla-anillo 500ms ease-out;
+}
+
+.panel-tareas .tarea-item:is(.marcando, .saliendo) .rec-texto {
+  justify-self: start;
+  max-width: 100%;
+  color: var(--tinta-3);
+  background: linear-gradient(
+      transparent calc(58% - 0.75px),
+      currentColor calc(58% - 0.75px) calc(58% + 0.75px),
+      transparent calc(58% + 0.75px)
+    )
+    no-repeat 0 0 / 100% 100%;
+  transition: color 180ms ease;
+}
+
+.panel-tareas .tarea-item.marcando .rec-texto {
+  animation: tarea-tachado 300ms ease-out 60ms both;
+}
+
+@keyframes tarea-tachado {
+  from {
+    background-size: 0% 100%;
+  }
+}
+
+/* Con movimiento reducido: sin anillo, el tachado entero al momento y la fila se va sin plegarse. */
+@media (prefers-reduced-motion: reduce) {
+  .panel-tareas .tarea-item,
+  .panel-tareas .tarea-item .rec-texto,
+  .panel-tareas .tarea-item .casilla-pulso::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+:root[data-movimiento='reducido'] .panel-tareas .tarea-item,
+:root[data-movimiento='reducido'] .panel-tareas .tarea-item .rec-texto,
+:root[data-movimiento='reducido'] .panel-tareas .tarea-item .casilla-pulso::before {
+  animation: none !important;
+  transition: none !important;
 }
 .ayuda-pestanas {
   display: flex;
@@ -1374,5 +2099,42 @@
   .mcp-registro li {
     flex-direction: column;
     gap: 2px;
+  }
+}
+
+
+/* Estados vacíos con ilustración 3D (componentes/Ilustracion.tsx): entra suave y flota despacio. */
+.vacio-ilustrado {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 14px 12px 6px;
+  text-align: center;
+}
+
+.vacio-ilustrado .vacio,
+.vacio-ilustrado .vacio-chico {
+  padding-top: 4px;
+  text-align: center;
+  max-width: 46ch;
+}
+
+.ilustracion-3d {
+  display: block;
+  user-select: none;
+  filter: drop-shadow(0 10px 14px rgba(42, 10, 18, 0.12));
+  animation: ilus-entra 520ms var(--ease-rebote, ease-out) both, ilus-flota 5.5s ease-in-out 600ms infinite;
+}
+
+@keyframes ilus-entra {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.92);
+  }
+}
+
+@keyframes ilus-flota {
+  50% {
+    transform: translateY(-4px);
   }
 }

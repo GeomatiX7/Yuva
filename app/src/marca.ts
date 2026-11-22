@@ -9,5 +9,5 @@ export const MARCA = {
   autor: 'GeomatiX',
   lema: trad('Notas, documentos, tareas y bases de datos, sin internet'),
   logo: `${import.meta.env.BASE_URL}logo.svg`,
-  version: '0.7.2',
+  version: '0.7.3',
 };

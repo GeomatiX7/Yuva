@@ -616,6 +616,14 @@ select.campo {
   padding-top: 12vh;
 }
 
+/* Anclado arriba, el diálogo mide como mucho lo que queda bajo ese aire (y los 16 px de abajo): si no, uno largo,
+   como Mis tareas con la lista llena, se sale por abajo. Buscar y «Mover página» son más bajos. El cuadro de
+   contraseña (Bloqueo.tsx, .velo-clave) no tiene parte que se desplace: con el tope, en una ventana baja se le
+   cortarían los botones, así que se queda como estaba. */
+.velo-arriba:not(.velo-clave) > .modal {
+  max-height: calc(88vh - 16px);
+}
+
 @keyframes velo {
   from {
     opacity: 0;

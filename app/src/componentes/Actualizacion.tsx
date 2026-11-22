@@ -1,4 +1,4 @@
-// Aviso de versión nueva del programa de escritorio (abajo a la derecha), como en Notion:
+// Aviso de versión nueva del programa de escritorio (abajo a la derecha):
 // «Instalar ahora» o «Recordármelo más tarde». Tras actualizar, un aviso corto con la versión nueva.
 import { useEffect, useState } from 'react';
 import { PartyPopper, Sparkles, X } from 'lucide-react';

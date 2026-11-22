@@ -1,16 +1,16 @@
-// Ajustes de S1: Seguridad (bloqueo con PIN o contraseña, bloqueo automático, dónde están los datos),
+// Ajustes de S1: Seguridad (bloqueo con PIN o contraseña, bloqueo automático y al cerrar la ventana, dónde están los datos),
 // copias cifradas, y en General el ID del espacio y «Eliminar este espacio» (el principal solo se vacía).
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Copy, Download, Lock, LockOpen, KeyRound, ShieldAlert, Trash2 } from 'lucide-react';
-import { avisar } from '../data/estado';
+import { avisar, usar } from '../data/estado';
 import { bd } from '../data/bd';
 import { PRINCIPAL, abrirEspacio, eliminarEspacio, espacioActualId, nombreBase } from '../data/espacios';
-import { activarBloqueo, bloquearAhora, cambiarMinutos, quitarBloqueo, usarBloqueo } from '../lib/bloqueo';
+import { activarBloqueo, bloquearAhora, cambiarAlCerrar, cambiarMinutos, quitarBloqueo, usarBloqueo } from '../lib/bloqueo';
 import { pedirClave } from '../lib/dialogoClave';
 import { comprobarContrasena } from '../lib/cifrado';
-import { exportarRespaldo, exportarRespaldoCifrado } from '../lib/respaldo';
+import { exportarRespaldo, exportarRespaldoCifrado, nombreCarpeta, soportaCarpeta } from '../lib/respaldo';
 import { enEscritorio, useAjustesEscritorio } from '../lib/escritorio';
-import { confirmar, CTRL } from './ui';
+import { confirmar, CTRL, Interruptor } from './ui';
 import { useEspacioActual, useEspacios } from './MenuEspacios';
 import { LOCALE, trad } from '../i18n';
 
@@ -35,6 +35,7 @@ async function pedirNueva(tipo: 'pin' | 'contrasena') {
     repetir: true,
     minimo: tipo === 'pin' ? 4 : 6,
     aceptar: trad('Guardar'),
+    autocompletar: 'one-time-code', // la clave del bloqueo no se guarda en el navegador
   });
   if (clave && tipo === 'pin' && !/^\d{4,12}$/.test(clave)) {
     avisar(trad('El PIN debe tener de 4 a 12 cifras, solo números'));
@@ -46,6 +47,14 @@ async function pedirNueva(tipo: 'pin' | 'contrasena') {
 function DondeEstanLosDatos() {
   const escritorioAj = useAjustesEscritorio();
   const espacios = useEspacios();
+  const auto = usar((s) => s.ajustes.respaldoAuto);
+  // Encendida de verdad solo con carpeta, como en «Datos y copias»: en la web, una copia del programa restaurada con
+  // «Reemplazar» trae respaldoAuto encendido, pero sin carpeta elegida no se copia nada.
+  const [carpeta, setCarpeta] = useState<string | null>(null);
+  useEffect(() => {
+    if (auto && soportaCarpeta()) nombreCarpeta().then(setCarpeta, () => setCarpeta(null));
+  }, [auto]);
+  const copiaAuto = auto && !!carpeta;
   return (
     <ul className="lista-ayuda">
       {enEscritorio ? (
@@ -65,7 +74,19 @@ function DondeEstanLosDatos() {
         ))}
         .{' '}{trad('La lista de espacios y el bloqueo van en')} <code>yuva-espacios</code>.
       </li>
-      <li>{trad('No hay cuentas, sesiones ni servidor: nada sale del equipo salvo las funciones con internet (clima, mapas, insertar) y las copias que tú guardes.')}</li>
+      <li>
+        {enEscritorio
+          ? trad('No hay cuentas, sesiones ni servidor: nada sale del equipo salvo las funciones con internet (clima, mapas, «Insertar», imágenes por enlace…), la búsqueda de actualizaciones, lo que Claude lea si conectas Yuva MCP y lo que tú exportes, copies o publiques.')
+          : trad('No hay cuentas, sesiones ni servidor: nada sale del equipo salvo las funciones con internet (clima, mapas, «Insertar», imágenes por enlace…) y lo que tú exportes, copies o publiques.')}
+      </li>
+      {/* La copia automática no la «guarda» la persona: en el programa viene encendida, sin cifrar y en Documentos,
+          que en Windows suele ir a OneDrive. Si esa carpeta se sincroniza, las copias sí salen del equipo. */}
+      {soportaCarpeta() && copiaAuto && (
+        <li>
+          {trad('La copia automática está encendida y se guarda sin cifrar en la carpeta de «Datos y copias»: si esa carpeta se sincroniza con una nube (OneDrive, Google Drive…), las copias salen del equipo.')}
+          {enEscritorio && <> {trad('De fábrica va en Documentos, que en Windows suele sincronizarse con OneDrive.')}</>}
+        </li>
+      )}
     </ul>
   );
 }
@@ -86,7 +107,7 @@ export function SeccionSeguridad() {
 
   const conActual = async (titulo: string): Promise<string | null> => {
     if (!config) return null;
-    const actual = await pedirClave({ titulo, texto: trad('Escribe {clave} actual.', { clave: nombreClave(config.tipo) }), minimo: 1, aceptar: trad('Seguir') });
+    const actual = await pedirClave({ titulo, texto: trad('Escribe {clave} actual.', { clave: nombreClave(config.tipo) }), minimo: 1, aceptar: trad('Seguir'), autocompletar: 'one-time-code' });
     if (!actual) return null;
     setOcupado(true);
     const ok = await comprobarContrasena(actual, config.hash);
@@ -105,6 +126,7 @@ export function SeccionSeguridad() {
         <p>
           <strong>{trad('Es un bloqueo de pantalla, no un cifrado.')}</strong>{' '}
           {trad('Impide que alguien abra Yuva en tu equipo sin {clave}, pero la base de datos sigue sin cifrar: quien pueda leer los archivos del equipo podría leer tus páginas. Para guardar algo a salvo fuera del equipo, usa las copias cifradas.', { clave: config ? nombreClave(config.tipo) : trad('el PIN') })}
+          {soportaCarpeta() && <> {trad('Las copias automáticas en una carpeta (Datos y copias) tampoco van cifradas: quien abra esa carpeta puede leerlas sin {clave}.', { clave: config ? nombreClave(config.tipo) : trad('el PIN') })}</>}
         </p>
       </div>
 
@@ -153,6 +175,18 @@ export function SeccionSeguridad() {
               ))}
             </select>
           </div>
+          {enEscritorio && (
+            // Encendido si no se eligió nada (config.alCerrar sin valor), como hace bloqueo.ts al ocultar en la bandeja.
+            <div className="ajuste-fila">
+              <div>
+                <strong>{trad('Bloquear al cerrar la ventana')}</strong>
+                <p className="ayuda">
+                  {trad('Si al cerrar la ventana Yuva sigue en la bandeja, con esto encendido queda bloqueada y pide {clave} al volver. Mientras está bloqueada, los asistentes conectados por Yuva MCP (como Claude) no pueden leer ni escribir en ella hasta que la desbloquees.', { clave: nombreClave(config.tipo) })}
+                </p>
+              </div>
+              <Interruptor etiqueta={trad('Bloquear al cerrar la ventana')} activo={config.alCerrar !== false} alCambiar={(v) => void cambiarAlCerrar(v)} />
+            </div>
+          )}
           <div className="botones-fila">
             <button
               className="boton"

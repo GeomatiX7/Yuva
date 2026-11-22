@@ -28,6 +28,11 @@ const NOMBRE_HERRAMIENTA: Record<string, string> = {
   crear_vista: trad('Crear una vista en'),
   agregar_bloques: trad('Añadir bloques a'),
   cambiar_apariencia: trad('Cambiar la apariencia de'),
+  cambiar_vista: trad('Cambiar una vista de'),
+  listar_plantillas: trad('Ver tus plantillas'),
+  guardar_como_plantilla: trad('Guardar como plantilla'),
+  plantilla_del_diario: trad('Elegir la plantilla del Diario'),
+  diario: trad('Abrir el Diario de'),
 };
 
 function configuracionDesktop(e: EstadoMcp) {
@@ -165,8 +170,8 @@ export function SeccionMcp() {
       <div className="opciones-tema mcp-modos" role="radiogroup" aria-label={trad('Qué puede hacer Claude')}>
         {(
           [
-            [true, trad('Solo leer'), trad('Buscar, leer páginas y bases, ver tareas y agenda.'), Eye],
-            [false, trad('Leer y escribir'), trad('Además crear páginas y filas, añadir contenido, cambiar propiedades y mover a la papelera.'), PencilLine],
+            [true, trad('Solo leer'), trad('Buscar, leer páginas y bases, ver tareas, agenda y tus plantillas.'), Eye],
+            [false, trad('Leer y escribir'), trad('Además crear páginas (también desde tus plantillas) y filas, añadir contenido, guardar plantillas, escribir en el Diario, cambiar propiedades y mover a la papelera.'), PencilLine],
           ] as const
         ).map(([solo, nombre, detalle, I]) => (
           <button key={nombre} role="radio" aria-checked={estado.soloLectura === solo} className={`opcion-tema${estado.soloLectura === solo ? ' activa' : ''}`} onClick={() => cambiar({ soloLectura: solo })}>
@@ -181,7 +186,10 @@ export function SeccionMcp() {
       <div className="ajuste-fila">
         <div>
           <strong>{trad('Token de acceso')}</strong>
-          <p className="ayuda">{trad('Se guarda en mcp.json, en la carpeta de datos. Si crees que otro programa lo conoce, regenéralo.')}</p>
+          <p className="ayuda">
+            {trad('Se guarda en mcp.json, en la carpeta de datos. Si crees que otro programa lo conoce, regenéralo.')}{' '}
+            {trad('Cambia cada vez que Yuva arranca y el puente lo lee solo: no hace falta copiarlo a mano.')}
+          </p>
         </div>
         <button className="boton" onClick={regenerar}>
           <KeyRound size={15} /> {trad('Regenerar el token')}

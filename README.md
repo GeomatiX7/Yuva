@@ -48,7 +48,7 @@ Yuva es un espacio de trabajo con páginas anidadas, un editor de bloques y base
 - **12 plantillas listas**, como Gestor de tareas, Proyecto, Biblioteca de lectura, Hábitos, Presupuesto, Revisión semanal o Centro de mando, con datos de ejemplo.
 - **Recordatorios** con notificaciones de Windows, aunque cierres la ventana.
 - **Diario, historial de versiones, papelera y búsqueda** con `Ctrl+K`.
-- **Copias de seguridad** automáticas en una carpeta, cifradas si quieres, y bloqueo con PIN.
+- **Copias de seguridad** automáticas en una carpeta (van sin cifrar), copia cifrada con contraseña cuando la descargas a mano, y bloqueo con PIN.
 - **Importar** desde Notion (.zip), Markdown, CSV, HTML, Evernote, Trello, OPML, Word, PDF y correos `.eml`. **Exportar** a Markdown, HTML, CSV o un ZIP con todo.
 - **Yuva MCP:** si lo activas, Claude (Claude Desktop o Claude Code) puede buscar, leer y escribir en tus páginas a través de una conexión local, con modo de solo lectura y un registro de lo que hizo.
 

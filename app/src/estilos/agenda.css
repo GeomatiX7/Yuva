@@ -1,80 +1,156 @@
-/* Agenda, calendarios ICS y bloque Grabación (S3). */
+/* Agenda, calendarios ICS y bloque Grabación (S3).
+   La Agenda va en el lenguaje «Pulso» (DESIGN.md): antetítulo mono con la raya de Inicio, selector .segmentado
+   (atelier.css), «hoy» en vino con el pulso del calendario de las bases, eventos con el punto y el canto del color
+   de su origen (--ev, que pone Agenda.tsx) y en Lista las rayas de avance del día. Todo con tokens: claro, oscuro y
+   alto contraste; el movimiento se apaga con reducido. Las reglas de Ajustes › Calendarios (.cal-*), la capa ICS de
+   las bases (.capa-ics), el detalle ICS (.agenda-velo, .agenda-detalle) y la Grabación siguen como estaban. */
 
 .agenda {
+  /* Sesgo dorado de «hoy» en Lista: el oro de la firma con tinta vino encima (más de 7:1). */
+  --agenda-sesgo: var(--oro-c);
+  --agenda-sesgo-tinta: #3d0f1c;
   max-width: 1100px;
   margin: 0 auto;
   padding: 5vh var(--margen-pagina, 32px) 100px;
 }
+
+:root[data-contraste='alto'] .agenda {
+  --agenda-sesgo: var(--tinta);
+  --agenda-sesgo-tinta: var(--papel);
+}
+
 .agenda-cabeza {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  gap: 12px;
+  gap: 12px 20px;
   flex-wrap: wrap;
+  margin-bottom: 16px;
 }
-.agenda-cabeza h1 {
+
+.agenda-titulos {
+  min-width: 0;
+}
+
+/* El antetítulo de Inicio: mono, versalitas y la raya que crece a la derecha. */
+.agenda-antetitulo {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin: 0 0 10px;
+  font: 500 11px var(--f-mono);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--acento-fuerte);
+}
+
+.agenda-antetitulo::after {
+  content: '';
+  flex: none;
+  width: 40px;
+  height: 1px;
+  background: var(--acento);
+  transform-origin: left;
+  animation: agenda-crece 900ms 200ms var(--ease-salida) both;
+}
+
+@keyframes agenda-crece {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.agenda-antetitulo-cifra {
+  white-space: nowrap;
+}
+
+.agenda-cabeza h1 {
   margin: 0;
   font-family: var(--f-titulo);
-  font-size: 36px;
+  font-size: clamp(28px, 3.4vw, 36px);
+  line-height: 1.1;
   letter-spacing: -0.02em;
+  overflow-wrap: anywhere;
 }
+
 .agenda-controles {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px 12px;
   flex-wrap: wrap;
 }
-.agenda .segmentos {
-  display: inline-flex;
-  border: 1px solid var(--linea);
-  border-radius: 8px;
-  overflow: hidden;
+
+.agenda-pasos {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
-.agenda .segmentos button {
-  border: 0;
-  background: transparent;
-  color: var(--tinta-2);
-  padding: 5px 12px;
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-.agenda .segmentos button.activo {
-  background: var(--acento-suave);
-  color: var(--acento-fuerte);
-  font-weight: 600;
-}
-.agenda-titulo {
-  margin: 10px 0 8px;
-  color: var(--acento-fuerte);
-  font-weight: 650;
-}
+
+/* ---------- orígenes: fichas de radio 7 con el punto de su color ---------- */
 .agenda-origenes {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
 }
+
 .agenda-origen {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
+  max-width: 100%;
+  min-height: 26px;
+  padding: 2px 10px 2px 8px;
   border: 1px solid var(--linea);
+  border-radius: 7px;
   background: var(--papel);
   color: var(--tinta-2);
-  border-radius: 999px;
-  padding: 3px 10px;
   font: inherit;
   font-size: 12.5px;
   cursor: pointer;
+  transition:
+    border-color var(--dur-rapida),
+    background var(--dur-rapida),
+    color var(--dur-rapida);
 }
+
+.agenda-origen:hover {
+  border-color: color-mix(in srgb, var(--ev) 55%, var(--linea));
+  color: var(--tinta);
+}
+
+.agenda-origen-nombre {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Oculto: borde de trazos, nombre tachado y el punto hueco (sin bajar la opacidad, para que se siga leyendo). */
 .agenda-origen.apagado {
-  opacity: 0.45;
+  border-style: dashed;
+  background: transparent;
+  color: var(--tinta-3);
+}
+
+.agenda-origen.apagado .agenda-origen-nombre {
   text-decoration: line-through;
 }
+
+.agenda-punto {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ev, var(--tinta-3));
+}
+
+.agenda-origen.apagado .agenda-punto {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--ev, var(--tinta-3));
+}
+
+/* El punto de color de los calendarios en Ajustes y en el detalle de un evento ICS. */
 .cal-punto {
   display: inline-block;
   width: 9px;
@@ -84,26 +160,37 @@
   border: 0;
   padding: 0;
 }
+
 .cal-punto.grande {
   width: 16px;
   height: 16px;
   cursor: pointer;
 }
 
+/* ---------- Mes y Semana ---------- */
 .agenda-rejilla {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   border-top: 1px solid var(--linea);
   border-left: 1px solid var(--linea);
 }
+
+/* Los días de la semana en mono y versalitas, como el calendario de las bases. */
 .agenda-dia-nombre {
-  padding: 6px 8px;
-  font-size: 12px;
-  color: var(--tinta-3);
-  text-transform: capitalize;
+  padding: 7px 8px 6px;
+  font-family: var(--f-mono);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--tinta-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   border-right: 1px solid var(--linea);
   border-bottom: 1px solid var(--linea);
 }
+
 .agenda-celda {
   min-height: 108px;
   padding: 4px;
@@ -111,78 +198,350 @@
   border-bottom: 1px solid var(--linea);
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 3px;
   min-width: 0;
 }
+
 .agenda-rejilla.semana .agenda-celda {
   min-height: 380px;
 }
+
+/* Cada celda mide su ancho: si es estrecha (ventana chica), en Mes se esconde la hora y en Semana el punto, para
+   que se lea el título (el canto sigue llevando el color del origen). */
+.agenda-celda {
+  container-type: inline-size;
+}
+
 .agenda-celda.fuera {
   background: var(--papel-2);
 }
+
+.agenda-celda.hoy {
+  background: color-mix(in srgb, var(--principal) 5%, transparent);
+}
+
+.agenda-num {
+  align-self: flex-end;
+  min-width: 22px;
+  padding: 1px 5px;
+  border-radius: 5px;
+  font-family: var(--f-mono);
+  font-size: 12px;
+  line-height: 18px;
+  text-align: center;
+  color: var(--tinta-2);
+  font-variant-numeric: tabular-nums;
+}
+
 .agenda-celda.fuera .agenda-num {
   color: var(--tinta-3);
 }
-.agenda-num {
-  font-size: 12px;
-  color: var(--tinta-2);
-  padding: 2px 4px;
-  align-self: flex-end;
-}
+
+/* «Hoy» en vino con el pulso del calendario de las bases (keyframes pulso-hoy de atelier-paginas.css). */
 .agenda-celda.hoy .agenda-num {
-  background: var(--acento);
-  color: var(--acento-sobre);
-  border-radius: 999px;
-  min-width: 22px;
-  text-align: center;
-  font-weight: 700;
+  background: var(--principal);
+  color: var(--principal-sobre);
+  font-weight: 600;
+  animation: pulso-hoy 2.4s var(--ease-salida) 3;
 }
+
+/* Un evento: el punto y un canto fino del color de su origen, el texto en tinta normal. */
 .agenda-chip {
-  border: 0;
-  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  max-width: 100%;
   padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, var(--ev) 40%, transparent);
+  border-radius: 5px;
+  background: var(--papel);
+  color: var(--tinta);
   font: inherit;
   font-size: 12px;
+  line-height: 1.35;
   text-align: left;
-  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background var(--dur-rapida),
+    border-color var(--dur-rapida);
+}
+
+.agenda-chip:hover {
+  border-color: color-mix(in srgb, var(--ev) 70%, transparent);
+  background: color-mix(in srgb, var(--ev) 8%, var(--papel));
+}
+
+.agenda-chip .agenda-punto {
+  width: 7px;
+  height: 7px;
+}
+
+/* El tramo de un evento de varios días que viene del día anterior lleva el punto hueco. */
+.agenda-chip.sigue .agenda-punto {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--ev);
+}
+
+.agenda-chip-texto {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  cursor: pointer;
-  max-width: 100%;
+  white-space: nowrap;
 }
-.agenda-rejilla.semana .agenda-chip {
-  white-space: normal;
-}
+
 .agenda-chip b {
-  font-weight: 650;
+  margin-right: 1px;
+  font: 600 11px var(--f-mono);
+  color: var(--tinta-2);
+  font-variant-numeric: tabular-nums;
 }
+
+/* En Semana el texto baja de línea: la hora arriba, con el punto, y el título debajo (con guiones si no cabe). */
+.agenda-rejilla.semana .agenda-chip {
+  display: block;
+  padding: 3px 5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agenda-rejilla.semana .agenda-chip .agenda-punto {
+  display: inline-block;
+  margin: 0 5px 1px 0;
+  vertical-align: middle;
+}
+
+.agenda-rejilla.semana .agenda-chip-texto {
+  display: inline;
+  white-space: normal;
+  hyphens: auto;
+}
+
+.agenda-rejilla.semana .agenda-chip b {
+  margin-right: 0;
+}
+
+@container (max-width: 96px) {
+  .agenda-rejilla.mes .agenda-chip {
+    gap: 4px;
+    padding: 2px 4px;
+  }
+  .agenda-rejilla.mes .agenda-chip b {
+    display: none;
+  }
+}
+
+@container (max-width: 72px) {
+  .agenda-rejilla.semana .agenda-chip .agenda-punto {
+    display: none;
+  }
+}
+
+:root[data-contraste='alto'] .agenda-chip {
+  border-color: var(--ev);
+}
+
+/* ---------- poco ancho (ventana estrecha o panel lateral abierto) ----------
+   Con columnas de menos de ~90 px los títulos no se leen (se cortaban a dos letras). En Mes cada evento queda en su
+   punto de color: el título sigue en el botón para el lector de pantalla y en la pista al pasar el ratón. En Semana
+   cada día pasa a ser una fila, con su nombre a la izquierda y los eventos en una línea cada uno. */
+.agenda {
+  container: agenda / inline-size;
+}
+
+.agenda-celda-dia {
+  display: none;
+}
+
+@container agenda (max-width: 640px) {
+  .agenda-rejilla.mes .agenda-celda {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 18px);
+    grid-auto-rows: 18px;
+    align-content: start;
+    gap: 3px;
+    min-height: 76px;
+  }
+  .agenda-rejilla.mes .agenda-num {
+    grid-column: 1 / -1;
+    justify-self: end;
+    height: 18px;
+  }
+  .agenda-rejilla.mes .agenda-chip {
+    position: relative;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: transparent;
+  }
+  .agenda-rejilla.mes .agenda-chip:hover {
+    background: color-mix(in srgb, var(--ev) 16%, transparent);
+  }
+  .agenda-rejilla.mes .agenda-chip .agenda-punto {
+    width: 9px;
+    height: 9px;
+  }
+  .agenda-rejilla.mes .agenda-chip-texto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .agenda-rejilla.mes .agenda-mas {
+    grid-column: 1 / -1;
+    padding: 0 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .agenda-rejilla.semana {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .agenda-rejilla.semana .agenda-dia-nombre {
+    display: none;
+  }
+  .agenda-rejilla.semana .agenda-celda {
+    display: grid;
+    grid-template-columns: 3.4em minmax(0, 1fr);
+    grid-auto-flow: row dense;
+    align-content: start;
+    gap: 3px 10px;
+    min-height: 44px;
+    padding: 6px 8px;
+  }
+  .agenda-rejilla.semana .agenda-celda-dia {
+    display: block;
+    grid-column: 1;
+    font: 500 10.5px/18px var(--f-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--tinta-2);
+  }
+  .agenda-rejilla.semana .agenda-num {
+    grid-column: 1;
+    justify-self: start;
+    align-self: start;
+  }
+  .agenda-rejilla.semana .agenda-celda > :is(.agenda-chip, .agenda-mas) {
+    grid-column: 2;
+  }
+  .agenda-rejilla.semana .agenda-chip {
+    display: flex;
+    padding: 2px 6px;
+  }
+  .agenda-rejilla.semana .agenda-chip .agenda-punto {
+    display: block;
+    margin: 0;
+  }
+  .agenda-rejilla.semana .agenda-chip-texto {
+    display: block;
+    white-space: nowrap;
+  }
+  .agenda-rejilla.semana .agenda-chip b {
+    margin-right: 4px;
+  }
+}
+
+@media (forced-colors: active) {
+  .agenda-rejilla.mes .agenda-chip .agenda-punto {
+    forced-color-adjust: none;
+  }
+}
+
 .agenda-mas {
   border: 0;
   background: none;
-  color: var(--tinta-3);
-  font: inherit;
-  font-size: 12px;
+  color: var(--tinta-2);
+  font: 500 11px var(--f-mono);
   text-align: left;
   cursor: pointer;
-  padding: 0 6px;
+  padding: 1px 6px;
 }
 
-.agenda-lista section {
-  margin-bottom: 16px;
+.agenda-mas:hover {
+  color: var(--tinta);
 }
+
+/* ---------- Lista ---------- */
+.agenda-lista section {
+  margin-bottom: 18px;
+}
+
+.agenda-dia-cabeza {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin-bottom: 4px;
+  padding: 0 8px 6px;
+  border-bottom: 1px solid var(--linea);
+}
+
 .agenda-lista h3 {
+  min-width: 0;
+  margin: 0;
   font-size: 14px;
-  margin: 0 0 4px;
+  font-weight: 600;
   color: var(--tinta-2);
 }
+
 .agenda-lista section.hoy h3 {
-  color: var(--acento-fuerte);
+  color: var(--tinta);
 }
+
+.agenda-dia-rayas {
+  margin-left: auto;
+}
+
+.agenda-dia-cifra {
+  font: 500 11px var(--f-mono);
+  color: var(--tinta-2);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.agenda-dia-cifra b {
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+/* El día de hoy: una pastilla dorada sesgada a -18°. */
+.agenda-sesgo-hoy {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 12px;
+  font: 600 10.5px/1.6 var(--f-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--agenda-sesgo-tinta);
+}
+
+.agenda-sesgo-hoy::before {
+  content: '';
+  position: absolute;
+  /* El sesgo asoma 3 px por cada lado: se mete 3 px para quedar dentro de su caja. */
+  inset: 0 3px;
+  z-index: -1;
+  border-radius: 3px;
+  background: var(--agenda-sesgo);
+  transform: skewX(var(--ang));
+}
+
 .agenda-lista ul {
   list-style: none;
   margin: 0;
   padding: 0;
 }
+
 .agenda-fila {
   display: flex;
   align-items: center;
@@ -196,17 +555,32 @@
   color: var(--tinta);
   text-align: left;
   cursor: pointer;
+  box-shadow: inset 2px 0 0 transparent;
+  transition:
+    background var(--dur-rapida),
+    box-shadow var(--dur-rapida);
 }
+
 .agenda-fila:hover {
   background: var(--papel-2);
+  box-shadow: inset 2px 0 0 var(--ev);
 }
+
+.agenda-fila.pasado .agenda-fila-titulo {
+  color: var(--tinta-2);
+}
+
 .agenda-hora {
-  width: 92px;
+  width: 96px;
   flex: none;
-  font-size: 12.5px;
+  font: 500 12px var(--f-mono);
   color: var(--tinta-2);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
+
 .agenda-fila-titulo {
   flex: 1;
   min-width: 0;
@@ -214,9 +588,48 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
 .agenda-fila small {
+  max-width: 40%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--tinta-3);
   font-size: 12px;
+}
+
+/* ---------- sin nada fechado: la ilustración y «Conectar un calendario» ---------- */
+.agenda .vacio-ilustrado {
+  margin: 4px 0 18px;
+}
+
+.agenda-conectar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+/* ---------- movimiento reducido ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .agenda-celda.hoy .agenda-num,
+  .agenda-antetitulo::after {
+    animation: none;
+  }
+  .agenda-origen,
+  .agenda-chip,
+  .agenda-fila {
+    transition: none;
+  }
+}
+
+:root[data-movimiento='reducido'] .agenda-celda.hoy .agenda-num,
+:root[data-movimiento='reducido'] .agenda-antetitulo::after {
+  animation: none;
+}
+
+:root[data-movimiento='reducido'] :is(.agenda-origen, .agenda-chip, .agenda-fila) {
+  transition: none;
 }
 
 .agenda-velo {

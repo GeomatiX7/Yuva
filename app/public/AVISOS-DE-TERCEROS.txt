@@ -1,5 +1,5 @@
 Yuva: avisos de terceros
-Generado el 2026-11-18 a partir de las dependencias de producción (215 paquetes).
+Generado el 2026-11-21 a partir de las dependencias de producción (215 paquetes).
 
 Yuva usa software de código abierto de terceros. Sus licencias y avisos de copyright están abajo,
 completos. Notas sobre licencias con condiciones de código fuente:

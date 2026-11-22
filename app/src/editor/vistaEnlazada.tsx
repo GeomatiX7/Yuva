@@ -68,6 +68,13 @@ export const bloqueVistaEnlazada = createReactBlockSpec(
     render: ({ block, editor }) => (
       <VistaEnlazada bdId={block.props.bdId} enlace={block.props.enlace} alElegir={(bdId, enlace) => editor.updateBlock(block, { props: { bdId, enlace } })} />
     ),
-    toExternalHTML: ({ block }) => <p>{trad('[Vista de: {titulo}]', { titulo: tituloDe(usar.getState().paginas[block.props.bdId]) })}</p>,
+    // Como en el editor («La base de datos de esta vista está en la papelera.»): sin su título en el HTML exportado ni
+    // en el portapapeles.
+    toExternalHTML: ({ block }) => {
+      const { paginas } = usar.getState();
+      const p = paginas[block.props.bdId];
+      if (p && estaBorrada(paginas, block.props.bdId)) return <p>{trad('[Vista de una base de datos en la papelera]')}</p>;
+      return <p>{trad('[Vista de: {titulo}]', { titulo: tituloDe(p) })}</p>;
+    },
   },
 );

@@ -1,7 +1,8 @@
 /* «Atelier» · Inicio, bienvenida y puesta a punto (sesión S-E).
    Fecha en mono con línea dorada, saludo que entra palabra a palabra, dibujo de línea con el monograma,
    cuatro caminos numerados, la puesta a punto con su línea de avance y, debajo, la biblioteca de siempre.
-   Solo apariencia. Todo el movimiento se apaga con data-movimiento='reducido' y prefers-reduced-motion
+   «Pulso»: las tarjetas de la biblioteca cuentan cómo va cada página (rayas, palabras o «vacía») y la puesta a
+   punto avanza en cinco tramos sesgados con --ang. Solo apariencia. Todo el movimiento se apaga con data-movimiento='reducido' y prefers-reduced-motion
    (las reglas generales de movimiento.css dejan cada animación en su estado final). */
 
 /* ---------- lienzo ---------- */
@@ -44,6 +45,7 @@
 
 .inicio-antetitulo::after {
   content: '';
+  flex: none;
   width: 40px;
   height: 1px;
   background: var(--acento);
@@ -55,6 +57,67 @@
   from {
     transform: scaleX(0);
   }
+}
+
+/* «Pulso»: «· 3 tareas para hoy · 1 vencida» después de la fecha. Las cifras son botones (abren Mis tareas)
+   subrayados con el color del texto; la vencida, en rojo. Si no caben, bajan de línea enteras. */
+.inicio-dia {
+  min-width: 0;
+}
+
+/* Con las cifras el antetítulo puede partirse: la raya dorada se queda a la altura del primer renglón, no entre
+   los dos (en un renglón queda igual que centrada). El botón de la cifra, con 1 px de relleno, alza ese renglón a
+   16 px y baja el texto 1 px: el centro del texto queda a 8 px. Con más de 440 px de contenedor la primera cifra
+   siempre cabe en el primer renglón; por debajo la raya no se enseña. */
+.inicio-antetitulo:has(.inicio-dia-cifra) {
+  align-items: flex-start;
+}
+
+.inicio-antetitulo:has(.inicio-dia-cifra)::after {
+  margin-top: 7.5px;
+}
+
+.inicio-dia-cifra {
+  white-space: nowrap;
+  animation: inicio-aparece 400ms var(--ease-salida) both;
+}
+
+@keyframes inicio-aparece {
+  from {
+    opacity: 0;
+  }
+}
+
+.inicio-cifra {
+  margin: 0 -3px;
+  padding: 1px 3px;
+  border-radius: 4px;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  text-decoration: underline 1px color-mix(in srgb, currentColor 45%, transparent);
+  text-underline-offset: 3px;
+  transition: background var(--dur-rapida), text-decoration-color var(--dur-rapida);
+}
+
+/* La última cifra no saca su relleno por la derecha: el antetítulo acaba donde acaba su caja (el fondo del paso del
+   ratón no se sale de ella). */
+.inicio-dia > :last-child .inicio-cifra {
+  margin-right: 0;
+}
+
+.inicio-cifra:hover {
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  text-decoration-color: currentColor;
+}
+
+.inicio-cifra.mal {
+  color: var(--peligro);
+}
+
+:root[data-contraste='alto'] .inicio-cifra {
+  text-decoration-color: currentColor;
 }
 
 .atelier-inicio .inicio-saludo {
@@ -453,18 +516,25 @@
   color: var(--tinta);
 }
 
+/* «Pulso»: cinco tramos con el sesgo de la firma, en oro, llenos en orden (PuestaAPunto.tsx › Tramos). */
 .pap-progreso {
-  height: 2px;
-  margin: 12px 0 8px;
-  background: var(--papel-3);
-  overflow: hidden;
+  display: flex;
+  gap: 5px;
+  height: 7px;
+  /* el sesgo asoma 1 px por cada lado */
+  margin: 12px 2px 8px;
 }
 
 .pap-progreso i {
-  display: block;
-  height: 100%;
-  background: var(--acento);
-  transition: width var(--dur-lenta) var(--ease-salida);
+  flex: 1;
+  border-radius: 2px;
+  background: var(--linea-fuerte);
+  transform: skewX(var(--ang));
+  transition: background var(--dur-lenta) var(--ease-salida);
+}
+
+.pap-progreso i.h {
+  background: var(--oro-m);
 }
 
 .pap-pasos {
@@ -490,14 +560,17 @@
   background: var(--papel-2);
 }
 
+/* La casilla, como todo lo que se marca en «Pulso», es un paralelogramo de -18° (la palomita sigue el sesgo). */
 .pap-casilla {
   flex: none;
   display: grid;
   place-items: center;
   width: 16px;
   height: 16px;
+  margin: 0 1px;
   border: 1.5px solid var(--linea-fuerte);
-  border-radius: 5px;
+  border-radius: 3px;
+  transform: skewX(var(--ang));
   transition: background var(--dur-media) var(--ease-salida), border-color var(--dur-media), transform var(--dur-media) var(--ease-rebote);
 }
 
@@ -517,7 +590,7 @@
 .pap-paso.hecho .pap-casilla {
   background: var(--tinta);
   border-color: var(--tinta);
-  transform: scale(1.08);
+  transform: skewX(var(--ang)) scale(1.08);
 }
 
 .pap-paso.hecho .pap-casilla svg {
@@ -525,7 +598,7 @@
 }
 
 .pap-paso:active .pap-casilla {
-  transform: scale(0.85);
+  transform: skewX(var(--ang)) scale(0.85);
 }
 
 .pap-texto {
@@ -706,38 +779,398 @@
   margin: 4px 0 14px;
 }
 
-.atelier-inicio .segmentado {
-  border-radius: 9px;
+/* ---------- tarjetas de la biblioteca («Pulso») ----------
+   La portada llena la tarjeta (182 × 164, la misma fila de siempre) y el texto va en un pie que mide lo que mide
+   el texto: título, fecha y lo que cuenta la página (rayas «14/22 · faltan 8», «128 palabras» o «vacía, por
+   empezar»). Claro: pie de papel esmerilado. Oscuro: velo que empieza transparente, solo en la mitad de abajo y
+   a 0,74 o más bajo el título. El color de cada tarjeta (--c) sale de colorDePagina (Inicio.tsx). */
+.atelier-inicio .carrusel {
+  grid-auto-columns: 182px;
+  gap: 12px;
+  /* aire para que la tarjeta suba 5 px y se vea el contorno de foco sin que el carrusel lo recorte */
+  margin: -8px -6px 0;
+  padding: 10px 6px 16px;
+  /* el snap y scrollIntoView respetan ese aire: la primera tarjeta queda a ras del título, con su contorno entero */
+  scroll-padding-inline: 6px;
 }
 
-.atelier-inicio .segmentado button {
-  border-radius: 7px;
+.atelier-inicio .carrusel.en-rejilla {
+  grid-template-columns: repeat(auto-fill, minmax(min(170px, 100%), 1fr));
+  gap: 14px 12px;
 }
 
 .atelier-inicio .tarjeta-reciente {
-  border-radius: 12px;
-  background: var(--papel);
-  animation: inicio-entra 600ms var(--ease-salida) both;
+  --velo: 18 7 11;
+  position: relative;
+  display: block;
+  height: 164px;
+  border: 0;
+  border-radius: 14px;
+  background: var(--papel-3);
+  color: var(--tinta);
+  overflow: hidden;
+  isolation: isolate;
+  box-shadow: 0 0 0 1px var(--linea), 0 1px 2px rgb(42 10 18 / 0.06);
+  /* backwards: la entrada no se queda pegada y deja libres el transform del hover y del clic */
+  animation: inicio-entra 600ms var(--ease-salida) backwards;
   animation-delay: calc(var(--i, 0) * 40ms + 200ms);
-  transition: border-color var(--dur-media), box-shadow var(--dur-media), transform var(--dur-media) var(--ease-salida);
+  transition: transform 280ms var(--rebote-corto), box-shadow 280ms ease;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.atelier-inicio .tarjeta-reciente:hover {
-  border-color: var(--linea-fuerte);
-  box-shadow: var(--sombra-suave);
-  transform: translateY(-2px);
+:root[data-paleta='laguna'] .atelier-inicio .tarjeta-reciente {
+  --velo: 8 15 14;
 }
 
-.atelier-inicio .reciente-icono {
+.atelier-inicio .rec-portada {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-color: var(--papel-3);
+  background-position: center;
+  background-size: cover;
+  transition: transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1), filter 150ms ease;
+}
+
+/* Icono redondo esmerilado arriba a la izquierda; la flecha de abrir, arriba a la derecha (solo al pasar). */
+.atelier-inicio :is(.rec-icono, .rec-abrir) {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  color: var(--tinta);
+  background: color-mix(in srgb, var(--papel) 82%, transparent);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  box-shadow: inset 0 0 0 1px rgb(42 10 18 / 0.1);
+}
+
+.atelier-inicio .rec-icono {
+  top: 10px;
+  left: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+}
+
+.atelier-inicio .rec-abrir {
+  top: 12px;
+  right: 12px;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  opacity: 0;
+  transform: translate(-4px, 4px);
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.atelier-inicio .rec-pie {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  padding: 9px 12px 10px;
+  background: color-mix(in srgb, var(--papel) 86%, transparent);
+  -webkit-backdrop-filter: blur(12px) saturate(1.3);
+  backdrop-filter: blur(12px) saturate(1.3);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.55);
+}
+
+.atelier-inicio .rec-titulo {
+  display: -webkit-box;
+  overflow: hidden;
+  font: 600 15px/1.2 var(--f-titulo);
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.atelier-inicio .rec-fecha {
+  max-height: 15px;
+  padding: 0;
+  overflow: hidden;
+  font: 500 11px/15px var(--f-mono);
+  color: var(--tinta-2);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  transition: max-height 250ms ease, opacity 200ms ease;
+}
+
+/* Vista rápida: dos líneas con puntos suspensivos (las dos próximas tareas o, en una página vacía, una
+   invitación a empezar), cada una con una diagonal del color de la página delante. */
+.atelier-inicio .rec-vista {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  max-height: 0;
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--tinta);
+  opacity: 0;
+  transition: max-height 300ms ease, opacity 200ms ease, margin 300ms ease;
+}
+
+.atelier-inicio .rec-vista > span {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.atelier-inicio .rec-vista > span::before {
+  content: '';
+  display: inline-block;
+  width: 2px;
+  height: 9px;
+  margin-right: 6px;
+  background: var(--c);
+  transform: skewX(var(--ang));
+}
+
+.atelier-inicio .rec-vista b {
+  font-weight: 650;
+  color: var(--c);
+}
+
+.atelier-inicio .rec-vista i {
+  font-family: var(--f-serif);
+}
+
+/* Página sin nada pendiente: cómo empieza su texto, en Literata cursiva y tinta-2, en dos líneas con puntos
+   suspensivos. Si lleva imágenes o enlaces, el extracto ocupa una línea y la otra dice «1 imagen · 2 enlaces». */
+.atelier-inicio .rec-vista > .rec-extracto {
+  display: -webkit-box;
+  /* la cursiva asoma un poco por la derecha */
+  padding-right: 2px;
+  /* sangría francesa: la diagonal (2 px y 6 px de aire) marca el bloque y el segundo renglón empieza donde el texto
+     del primero, como las tareas de al lado */
+  padding-left: 8px;
+  text-indent: -8px;
+  font: italic 400 12px/1.3 var(--f-serif);
+  color: var(--tinta-2);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.atelier-inicio .rec-vista > .rec-extracto:not(:only-child) {
+  -webkit-line-clamp: 1;
+}
+
+.atelier-inicio .rec-vista > .rec-adjuntos {
+  font: 500 11px/15.6px var(--f-mono);
+  color: var(--tinta-2);
+}
+
+.atelier-inicio .rec-dato {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 16px;
+  margin-top: 5px;
+  /* 2 px más a la derecha para que quepa «14/22 · faltan 8» en 182 px */
+  margin-right: -2px;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Rayas y cifra un poco más juntas que en la cabecera; si la cifra es larga («128/130 · faltan 2»), lo último
+   se corta con puntos suspensivos y no a medio trazo. */
+.atelier-inicio :is(.rec-dato, .biblioteca-dato) .rayas-pulso {
+  gap: 6px;
+  min-width: 0;
+}
+
+.atelier-inicio :is(.rec-dato, .biblioteca-dato) .rayas-cifra {
+  gap: 4px;
+  overflow: hidden;
+}
+
+.atelier-inicio :is(.rec-dato, .biblioteca-dato) .rayas-cifra .falta {
+  min-width: 0;
+  padding-right: 2px;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--tinta-2);
+  text-overflow: ellipsis;
+}
+
+/* Como en la maqueta: «14/22» entera en mono 600 de 11 px (tinta en la tarjeta, tinta-2 en la lista), y en la
+   lista solo la cifra, sin «faltan». */
+.atelier-inicio :is(.rec-dato, .biblioteca-dato) .rayas-cifra > span:first-child {
+  font: 600 11px/1.2 var(--f-mono);
+  color: inherit;
+}
+
+.atelier-inicio :is(.rec-dato, .biblioteca-dato) .rayas-cifra b {
+  font-weight: inherit;
+  color: inherit;
+}
+
+.atelier-inicio .rec-dato .rayas-cifra {
+  color: var(--tinta);
+}
+
+.atelier-inicio .biblioteca-dato .rayas-cifra .falta {
+  display: none;
+}
+
+.atelier-inicio :is(.rec-dato, .biblioteca-dato) .rec-lit {
+  overflow: hidden;
+  /* la cursiva asoma un poco por la derecha */
+  padding-right: 2px;
+  font: italic 400 12px/1.3 var(--f-serif);
+  color: var(--tinta-2);
+  text-overflow: ellipsis;
+}
+
+.atelier-inicio :is(.rec-dato, .biblioteca-dato) .rec-nada {
+  font: 500 11px var(--f-mono);
+  font-style: normal;
+  color: var(--tinta-3);
+}
+
+/* Pasar el ratón o llegar con el teclado: sube 5 px, la portada se acerca un 7 %, aparece la flecha y la fecha
+   deja su sitio a la próxima tarea. Pulsada, se hunde. */
+.atelier-inicio .tarjeta-reciente:is(:hover, :focus-visible) {
+  transform: translateY(-5px);
+  box-shadow: 0 16px 30px -14px rgb(42 10 18 / 0.4), 0 0 0 1px color-mix(in srgb, var(--c) 45%, transparent);
+}
+
+.atelier-inicio .tarjeta-reciente:is(:hover, :focus-visible) .rec-portada {
+  transform: scale(1.07);
+}
+
+.atelier-inicio .tarjeta-reciente:is(:hover, :focus-visible) .rec-abrir {
+  opacity: 1;
+  transform: none;
+}
+
+.atelier-inicio .tarjeta-reciente.con-vista:is(:hover, :focus-visible) .rec-fecha {
+  max-height: 0;
+  opacity: 0;
+}
+
+.atelier-inicio .tarjeta-reciente.con-vista:is(:hover, :focus-visible) .rec-vista {
+  max-height: 34px;
+  margin-top: 3px;
+  opacity: 1;
+}
+
+.atelier-inicio .tarjeta-reciente:focus-visible {
+  outline: 2px solid var(--oro-m);
+  outline-offset: 3px;
+  border-radius: 14px;
+}
+
+:root[data-contraste='alto'] .atelier-inicio .tarjeta-reciente:focus-visible {
+  outline-color: var(--tinta);
+}
+
+.atelier-inicio .tarjeta-reciente:active {
+  transform: translateY(-1px) scale(0.97);
+  transition-duration: 80ms;
+}
+
+.atelier-inicio .tarjeta-reciente:active .rec-portada {
+  filter: brightness(0.88);
+}
+
+/* Oscuro: velo en vez de papel, texto claro y rayas vacías translúcidas sobre la portada. */
+:root[data-tema='oscuro'] .atelier-inicio .tarjeta-reciente {
+  color: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.25);
+}
+
+:root[data-tema='oscuro'] .atelier-inicio .tarjeta-reciente:is(:hover, :focus-visible) {
+  box-shadow: 0 18px 34px -14px rgb(0 0 0 / 0.7), 0 0 0 1px color-mix(in srgb, var(--c) 55%, transparent);
+}
+
+:root[data-tema='oscuro'] .atelier-inicio :is(.rec-icono, .rec-abrir) {
+  color: #fff;
+  background: rgb(var(--velo) / 0.5);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.18);
+}
+
+:root[data-tema='oscuro'] .atelier-inicio .rec-pie {
+  padding-top: 22px;
+  background: linear-gradient(180deg, rgb(var(--velo) / 0), rgb(var(--velo) / 0.74) 18px, rgb(var(--velo) / 0.9));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+:root[data-tema='oscuro'] .atelier-inicio .rec-titulo {
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+}
+
+:root[data-tema='oscuro'] .atelier-inicio .rec-fecha {
+  color: rgb(255 255 255 / 0.78);
+}
+
+:root[data-tema='oscuro'] .atelier-inicio .rec-vista {
+  color: rgb(255 255 255 / 0.92);
+}
+
+:root[data-tema='oscuro'] .atelier-inicio .rec-dato .rec-lit {
+  color: rgb(255 255 255 / 0.85);
+}
+
+:root[data-tema='oscuro'] .atelier-inicio .rec-dato .rec-nada {
+  color: rgb(255 255 255 / 0.7);
+}
+
+:root[data-tema='oscuro'] .atelier-inicio .rec-dato {
+  --raya-vacia: rgb(255 255 255 / 0.3);
+}
+
+:root[data-tema='oscuro'] .atelier-inicio .rec-dato .rayas-cifra {
+  color: #fff;
+}
+
+:root[data-tema='oscuro'] .atelier-inicio .rec-dato .rayas-cifra .falta {
+  color: rgb(255 255 255 / 0.85);
+}
+
+/* Alto contraste: pie opaco (papel lleno en claro, velo más hondo en oscuro). */
+:root[data-contraste='alto'] .atelier-inicio .rec-pie {
   background: var(--papel);
-  box-shadow: 0 0 0 3px var(--papel);
+  box-shadow: inset 0 1px 0 var(--linea-fuerte);
 }
 
-.atelier-inicio .tarjeta-reciente small,
+:root[data-contraste='alto'][data-tema='oscuro'] .atelier-inicio .rec-pie {
+  background: linear-gradient(180deg, rgb(var(--velo) / 0), rgb(var(--velo) / 0.9) 18px, rgb(var(--velo) / 0.96));
+  box-shadow: none;
+}
+
+/* Lista de la biblioteca: lo mismo que cuentan las tarjetas, entre el título y la fecha. */
+.atelier-inicio .biblioteca-dato {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  max-width: 45%;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
 .atelier-inicio .biblioteca-lista small,
 .atelier-inicio .proxima small {
   font-family: var(--f-mono);
   font-size: 11px;
+}
+
+.atelier-inicio .biblioteca-lista small {
+  min-width: 112px;
+  text-align: right;
 }
 
 .atelier-inicio .proximas {
@@ -797,13 +1230,27 @@
   }
 }
 
+@container inicio (max-width: 620px) {
+  .atelier-inicio .biblioteca-lista small {
+    min-width: 0;
+  }
+}
+
 @container inicio (max-width: 440px) {
   .camino .atajo,
   .inicio-acciones .atajo {
     display: none;
   }
+  /* en el teléfono, con las cifras del día, el antetítulo ocupa dos o tres renglones: la raya dorada le quitaría
+     el sitio que le falta */
+  .inicio-antetitulo:has(.inicio-dia-cifra)::after {
+    display: none;
+  }
   .camino {
     grid-template-columns: 30px minmax(0, 1fr) 18px;
+  }
+  .atelier-inicio .biblioteca-dato {
+    display: none;
   }
 }
 
@@ -825,59 +1272,77 @@
   display: none;
 }
 
-/* ---------- tarjeta mínima de la barra lateral ---------- */
+/* ---------- tarjeta mínima de la barra lateral ----------
+   Una ficha sobre la barra (como .puesta de la maqueta): «Puesta a punto» en 600, la cifra «3» en Bricolage
+   dorada con «/ 5» en mono apagado, los cinco tramos sesgados y la frase. */
 .tarjeta-puesta {
   position: relative;
   flex: none;
-  margin: 0 10px;
-  border-top: 1px solid var(--barra-linea);
+  margin: 6px 10px 8px;
 }
 
 .tarjeta-puesta-abrir {
-  display: block;
+  display: grid;
+  gap: 7px;
   width: 100%;
-  padding: 12px 8px 8px;
-  border-radius: 0 0 8px 8px;
+  padding: 10px 12px;
+  border-radius: 12px;
   text-align: left;
   color: var(--barra-texto);
+  background: var(--barra-2);
   transition: background var(--dur-rapida);
 }
 
-.tarjeta-puesta-abrir:hover {
-  background: color-mix(in srgb, var(--barra-texto) 4%, transparent);
+.tarjeta-puesta:hover .tarjeta-puesta-abrir {
+  background: var(--barra-3);
 }
 
 .tarjeta-puesta-fila {
   display: flex;
+  align-items: baseline;
   justify-content: space-between;
   gap: 8px;
-  padding-right: 20px;
+  /* sitio para la X de ocultar, que aparece al pasar el ratón */
+  padding-right: 22px;
   font-size: 12.5px;
   white-space: nowrap;
 }
 
-.tarjeta-puesta-cuenta {
-  font: 500 11px var(--f-mono);
-  color: var(--acento);
+.tarjeta-puesta-fila > span:first-child {
+  font-weight: 600;
 }
 
+.tarjeta-puesta-cuenta {
+  font: 700 15px/1 var(--f-titulo);
+  color: var(--oro-c);
+}
+
+.tarjeta-puesta-cuenta small {
+  font: 500 11px var(--f-mono);
+  color: var(--barra-texto-2);
+}
+
+/* «Pulso»: cinco tramos en oro con el sesgo de la firma, sobre la barra. */
 .tarjeta-puesta-linea {
-  display: block;
-  height: 2px;
-  margin: 8px 0 5px;
-  border-radius: 2px;
-  background: var(--barra-linea);
-  overflow: hidden;
+  display: flex;
+  gap: 6px;
+  height: 9px;
+  margin: 0 2px;
 }
 
 .tarjeta-puesta-linea i {
-  display: block;
-  height: 100%;
-  background: var(--acento);
-  transition: width var(--dur-lenta) var(--ease-salida);
+  flex: 1;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--barra-texto) 16%, transparent);
+  transform: skewX(var(--ang));
+  transition: background var(--dur-lenta) var(--ease-salida);
 }
 
-.tarjeta-puesta small {
+.tarjeta-puesta-linea i.h {
+  background: var(--oro-c);
+}
+
+.tarjeta-puesta-abrir > small {
   display: block;
   font-size: 11.5px;
   color: var(--barra-texto-2);
@@ -902,8 +1367,8 @@
 
 .tarjeta-puesta-cerrar {
   position: absolute;
-  top: 9px;
-  right: 4px;
+  top: 8px;
+  right: 6px;
   display: grid;
   place-items: center;
   width: 20px;
@@ -920,7 +1385,7 @@
 }
 
 .tarjeta-puesta-cerrar:hover {
-  background: var(--barra-2);
+  background: color-mix(in srgb, var(--barra-texto) 12%, transparent);
   color: var(--barra-texto);
 }
 

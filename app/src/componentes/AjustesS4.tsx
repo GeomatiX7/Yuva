@@ -77,7 +77,12 @@ export function SeccionPrivacidad() {
           <p className="ayuda">
             {conInternet
               ? trad('Encendidas: clima, mapas, búsqueda de lugares, «Insertar» y calendarios en línea pueden conectarse.')
-              : trad('Apagadas: Yuva no hace ninguna petición a internet. Esas funciones muestran un aviso y lo demás sigue igual.')}
+              : enEscritorio
+                ? // El programa corta con un filtro de red todo lo que la ventana pida a internet (lib/internet.ts). La
+                  // búsqueda de actualizaciones no depende de este interruptor: no se promete de más.
+                  trad('Apagadas: clima, mapas, búsqueda de lugares, «Insertar» y calendarios en línea no se conectan y muestran un aviso, y la ventana de Yuva no pide nada a internet (tampoco imágenes, vídeos ni audios por enlace). La búsqueda de actualizaciones va aparte: se apaga con «Buscar actualizaciones solo».')
+                : // En la web no hay filtro de red: se dice lo que todavía puede salir (lib/internet.ts).
+                  trad('Apagadas: clima, mapas, búsqueda de lugares, «Insertar» y calendarios en línea no se conectan y muestran un aviso, y las imágenes, vídeos, audios y portadas por enlace no se cargan. En la web el navegador no deja cortarlo todo: copiar o exportar una nota con imágenes por enlace, o un estilo con url() dentro de un diagrama, aún puede pedir algo a internet. El programa de escritorio sí lo corta todo.')}
           </p>
         </div>
         <Interruptor activo={conInternet} etiqueta={trad('Funciones con internet')} alCambiar={(v) => cambiarAjustes({ internet: v })} />
@@ -95,7 +100,8 @@ export function SeccionPrivacidad() {
         <li>
           <MapPin size={16} />{' '}
           <span>
-            <strong>{trad('Imágenes por enlace:')}</strong> {trad('si pegas la dirección web de una imagen (en vez de subirla), el editor la pide a esa web al mostrarla. Las imágenes subidas se guardan en el equipo.')}
+            <strong>{trad('Imágenes por enlace:')}</strong> {trad('si pegas la dirección web de una imagen (en vez de subirla), el editor la pide a esa web al mostrarla. Las imágenes subidas se guardan en el equipo.')}{' '}
+            {!conInternet && <em>{trad('(ahora bloqueado)')}</em>}
           </span>
         </li>
       </ul>

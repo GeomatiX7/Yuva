@@ -5,6 +5,8 @@ import type { Version } from './tipos';
 
 const INTERVALO = 10 * 60 * 1000;
 const MAXIMO = 60;
+/** Tope de versiones sin nombre por página: con tantas, las más viejas pudieron purgarse (componentes/Historial.tsx). */
+export const MAXIMO_VERSIONES = MAXIMO;
 const ultimas = new Map<string, number>();
 const colas = new Map<string, Promise<void>>();
 

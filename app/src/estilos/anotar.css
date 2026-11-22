@@ -1,0 +1,198 @@
+/* «Anotar»: el texto anotado del editor, el campo de la nota nueva, la tarjeta al pasar el ratón y la cita en el panel
+   de Notas. Oro Pulso: #BE8D47 en claro y #EAC46F en oscuro; en alto contraste, la tinta. Lo importa editor/anotar.tsx. */
+
+:root {
+  --anotacion-oro: #be8d47;
+}
+
+:root[data-tema='oscuro'] {
+  --anotacion-oro: #eac46f;
+}
+
+/* Una página con modo fijo («Apariencia»: .modo-claro / .modo-oscuro en .vista-pagina o en el panel lateral) toma el
+   oro de su modo, no el de la app. */
+:root .modo-claro {
+  --anotacion-oro: #be8d47;
+}
+
+:root .modo-oscuro {
+  --anotacion-oro: #eac46f;
+}
+
+/* En alto contraste, la tinta del sitio: se declara también en las páginas de modo fijo, para que var(--tinta) se
+   resuelva con su tinta y no con la de la raíz. */
+:root[data-contraste='alto'],
+:root[data-contraste='alto'] .modo-claro,
+:root[data-contraste='alto'] .modo-oscuro {
+  --anotacion-oro: var(--tinta);
+}
+
+/* ---------- el texto anotado ---------- */
+
+.anotacion.activa {
+  text-decoration-line: underline;
+  text-decoration-thickness: 2px;
+  text-decoration-color: color-mix(in srgb, var(--anotacion-oro) 55%, transparent);
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: none;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color var(--dur-rapida, 120ms) ease-out, text-decoration-color var(--dur-rapida, 120ms) ease-out;
+}
+
+/* Al pasar el ratón, con la tarjeta abierta o con el cursor de texto dentro (teclado). */
+.anotacion.activa:hover,
+.anotacion.activa.viendo,
+.anotacion.activa.con-cursor {
+  background-color: color-mix(in srgb, var(--anotacion-oro) 14%, transparent);
+  text-decoration-color: var(--anotacion-oro);
+}
+
+:root[data-contraste='alto'] .anotacion.activa {
+  text-decoration-color: var(--tinta);
+}
+
+:root[data-contraste='alto'] .anotacion.activa:hover,
+:root[data-contraste='alto'] .anotacion.activa.viendo,
+:root[data-contraste='alto'] .anotacion.activa.con-cursor {
+  background-color: color-mix(in srgb, var(--tinta) 12%, transparent);
+  text-decoration-style: double;
+}
+
+/* El texto ya subrayado con «Subrayado» conserva su raya: la del oro va por debajo de la suya. */
+.bn-editor u .anotacion.activa,
+.bn-editor .anotacion.activa u {
+  text-underline-offset: 5px;
+}
+
+/* ---------- campo de la nota nueva y tarjeta ---------- */
+
+.campo-anotacion,
+.tarjeta-anotacion {
+  padding: 10px 12px;
+}
+
+.campo-anotacion {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.campo-anotacion textarea {
+  width: 100%;
+  min-height: 52px;
+  resize: vertical;
+  font: inherit;
+}
+
+.anotacion-cita {
+  margin: 0;
+  padding: 1px 0 1px 9px;
+  border-left: 3px solid var(--anotacion-oro);
+  color: var(--tinta-2);
+  font-style: italic;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.anotacion-pie {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.anotacion-pie small {
+  flex: 1;
+  min-width: 0;
+  color: var(--tinta-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tarjeta-anotacion-caja {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tarjeta-anotacion-texto {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 180px;
+  overflow: auto;
+}
+
+/* ---------- panel de Notas: la nota con su cita ---------- */
+
+.nota-anclada {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.nota-anclada .anotacion-cita {
+  font-size: 0.92em;
+}
+
+.nota-anclada-ir {
+  align-self: flex-start;
+  padding: 2px 9px;
+  font-size: 0.86em;
+  font-weight: 600;
+  color: var(--tinta);
+  border: 1px solid color-mix(in srgb, var(--anotacion-oro) 70%, transparent);
+  background: color-mix(in srgb, var(--anotacion-oro) 10%, transparent);
+}
+
+/* «Ir al texto» es un botón, con su flecha (como los enlaces de la cabecera). */
+.nota-anclada-ir::after {
+  content: '→';
+  margin-left: 2px;
+}
+
+.nota-anclada-ir:hover {
+  background: color-mix(in srgb, var(--anotacion-oro) 22%, transparent);
+}
+
+/* En oscuro, el amarillo de las notas sobre el papel vino quedaba oliva, fuera de la paleta: oro sobre vino. */
+:root[data-tema='oscuro'] .nota-pagina:not(.modo-claro *),
+:root .modo-oscuro .nota-pagina {
+  background: color-mix(in srgb, var(--anotacion-oro) 11%, var(--papel));
+}
+
+.nota-anclada-perdida {
+  color: var(--tinta-3);
+  font-size: 0.86em;
+}
+
+.nota-pagina.nota-vista {
+  outline: 2px solid var(--anotacion-oro);
+  outline-offset: 1px;
+  transition: outline-color 600ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anotacion.activa,
+  .nota-pagina.nota-vista {
+    transition: none;
+  }
+}
+
+:root[data-movimiento='reducido'] .anotacion.activa,
+:root[data-movimiento='reducido'] .nota-pagina.nota-vista {
+  transition: none;
+}
+
+@media print {
+  .anotacion.activa {
+    text-decoration: none;
+    background: none;
+  }
+}

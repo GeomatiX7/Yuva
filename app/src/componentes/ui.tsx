@@ -68,16 +68,21 @@ export function Flotante(props: {
   ancho?: number;
   className?: string;
   separacion?: number;
+  /** El sitio del ancla se mide al abrir (y al cambiar el tamaño de la ventana), no en cada recálculo: así, si el
+   *  botón ancla se mueve mientras el flotante está abierto (en la portada, «Reposicionar» aparece o desaparece al
+   *  elegir), el flotante no salta cuando cambia de alto. */
+  anclaFija?: boolean;
 }) {
-  const { ancla, alCerrar, children, lado = 'abajo', alinear = 'inicio', ancho, className = '', separacion = 6 } = props;
+  const { ancla, alCerrar, children, lado = 'abajo', alinear = 'inicio', ancho, className = '', separacion = 6, anclaFija = false } = props;
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number; origen: string } | null>(null);
 
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el || !ancla) return;
+    let fijo: DOMRect | null = null;
     const calcular = () => {
-      const r = rectDe(ancla);
+      const r = anclaFija ? (fijo ??= rectDe(ancla)) : rectDe(ancla);
       const w = el.offsetWidth;
       const h = el.offsetHeight;
       const vw = window.innerWidth;
@@ -100,15 +105,20 @@ export function Flotante(props: {
       const origen = `${arr + h / 2 < r.top + r.height / 2 ? 'bottom' : 'top'} ${izq + w / 2 < r.left + r.width / 2 ? 'right' : 'left'}`;
       setPos({ left: izq, top: arr, origen });
     };
+    // Con la ventana de otro tamaño el ancla sí cambia de sitio: se vuelve a medir.
+    const alRedimensionar = () => {
+      fijo = null;
+      calcular();
+    };
     calcular();
     const ro = new ResizeObserver(calcular);
     ro.observe(el);
-    window.addEventListener('resize', calcular);
+    window.addEventListener('resize', alRedimensionar);
     return () => {
       ro.disconnect();
-      window.removeEventListener('resize', calcular);
+      window.removeEventListener('resize', alRedimensionar);
     };
-  }, [ancla, lado, alinear, separacion]);
+  }, [ancla, lado, alinear, separacion, anclaFija]);
 
   useCapa(ref, alCerrar, ancla);
 
@@ -163,6 +173,81 @@ export function colocarResalte(sel: HTMLElement, caja: HTMLElement, item: HTMLEl
   }
 }
 
+// ---------- segmentado («Pulso») ----------
+// La pastilla elegida es un <span className="seg-ind" aria-hidden="true" /> (primer hijo del .segmentado) que se
+// desliza hasta el botón elegido. Uso, sin tocar la lógica del componente:
+//   <div className="segmentado" role="radiogroup" ref={refSegmentado}>
+//     <span className="seg-ind" aria-hidden="true" />
+//     …los mismos botones de siempre (aria-pressed, aria-selected, aria-checked o .activo)…
+//   </div>
+// Es una ref de función (React 19 llama a su limpieza al desmontar), así sirve también en un .segmentado que
+// aparece y desaparece. Mide al montar, cuando cambia la opción elegida, al cambiar de tamaño y al cargar las
+// fuentes. Con el teclado: ← → Inicio Fin pasan a la opción vecina y la eligen (como un grupo de radios), y
+// solo la elegida entra en el orden de tabulación. Si elegir tiene un efecto que no se deshace (el Pomodoro para y
+// reinicia el temporizador), la caja lleva data-activacion="manual": las flechas solo mueven el foco y la opción
+// se elige con Intro o Espacio, como las pestañas de activación manual de ARIA.
+
+const ELEGIDO_SEG = '[aria-pressed="true"], [aria-selected="true"], [aria-checked="true"], .activo';
+
+export function refSegmentado(caja: HTMLElement | null): (() => void) | void {
+  if (!caja) return;
+  const botones = () => [...caja.querySelectorAll<HTMLButtonElement>(':scope > button')];
+  let cuadro = 0;
+  const colocar = () => {
+    const lista = botones();
+    const elegido = lista.find((b) => b.matches(ELEGIDO_SEG)) ?? null;
+    // Solo la opción elegida (o la primera, si no hay) se alcanza con Tab; las demás, con las flechas.
+    lista.forEach((b) => (b.tabIndex = b === (elegido ?? lista[0]) ? 0 : -1));
+    const ind = caja.querySelector<HTMLElement>(':scope > .seg-ind');
+    if (!ind || !elegido || !elegido.offsetWidth) {
+      caja.classList.remove('seg-listo');
+      return;
+    }
+    caja.style.setProperty('--x', `${elegido.offsetLeft}px`);
+    caja.style.setProperty('--y', `${elegido.offsetTop}px`);
+    caja.style.setProperty('--w', `${elegido.offsetWidth}px`);
+    caja.style.setProperty('--h', `${elegido.offsetHeight}px`);
+    if (!caja.classList.contains('seg-listo')) {
+      // La primera vez aparece en su sitio, sin deslizarse desde la izquierda.
+      caja.classList.add('seg-quieto', 'seg-listo');
+      void ind.offsetWidth;
+      cancelAnimationFrame(cuadro);
+      cuadro = requestAnimationFrame(() => (cuadro = requestAnimationFrame(() => caja.classList.remove('seg-quieto'))));
+    }
+  };
+  const alTecla = (e: KeyboardEvent) => {
+    if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key) || e.altKey || e.ctrlKey || e.metaKey) return;
+    const actual = (e.target as Element | null)?.closest?.('button');
+    const lista = botones().filter((b) => !b.disabled);
+    const i = actual ? lista.indexOf(actual as HTMLButtonElement) : -1;
+    if (i < 0 || lista.length < 2) return;
+    e.preventDefault();
+    const sig =
+      e.key === 'Home' ? 0 : e.key === 'End' ? lista.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + lista.length) % lista.length;
+    lista[sig].focus();
+    if (caja.dataset.activacion !== 'manual' && !lista[sig].matches(ELEGIDO_SEG)) lista[sig].click();
+  };
+  colocar();
+  // Las clases que pone esta misma función en la caja no cuentan; los botones nuevos o cambiados, sí.
+  const mo = new MutationObserver((cambios) => {
+    if (cambios.some((m) => !(m.type === 'attributes' && m.target === caja))) colocar();
+  });
+  mo.observe(caja, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['aria-pressed', 'aria-selected', 'aria-checked', 'class'] });
+  const ro = new ResizeObserver(() => colocar());
+  ro.observe(caja);
+  let vivo = true;
+  document.fonts?.ready.then(() => vivo && colocar()).catch(() => undefined);
+  caja.addEventListener('keydown', alTecla);
+  return () => {
+    vivo = false;
+    cancelAnimationFrame(cuadro);
+    mo.disconnect();
+    ro.disconnect();
+    caja.removeEventListener('keydown', alTecla);
+    caja.classList.remove('seg-listo', 'seg-quieto');
+  };
+}
+
 const ITEM_MENU = '[role="menuitem"], [role="menuitemradio"], [role="menuitemcheckbox"]';
 
 /** «Atelier»: la selección de un menú es una cápsula que se desliza entre opciones con el ratón y con las flechas. */
@@ -213,7 +298,7 @@ function useSeleccionDeslizante(ref: React.RefObject<HTMLDivElement | null>) {
   }, [ref]);
 }
 
-export function Menu(props: { children: ReactNode; className?: string; autoFoco?: boolean }) {
+export function Menu(props: { children: ReactNode; className?: string; autoFoco?: boolean; /** Nombre accesible del role="menu". */ etiqueta?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   useSeleccionDeslizante(ref);
   useEffect(() => {
@@ -226,7 +311,7 @@ export function Menu(props: { children: ReactNode; className?: string; autoFoco?
     return () => cancelAnimationFrame(id);
   }, [props.autoFoco]);
   return (
-    <div ref={ref} role="menu" className={`menu ${props.className ?? ''}`} onKeyDown={navegarMenu}>
+    <div ref={ref} role="menu" aria-label={props.etiqueta} className={`menu ${props.className ?? ''}`} onKeyDown={navegarMenu}>
       <span className="sel-menu" aria-hidden="true" />
       {props.children}
     </div>
@@ -276,6 +361,29 @@ export function TituloMenu({ children }: { children: ReactNode }) {
   return <div className="titulo-menu">{children}</div>;
 }
 
+const ENFOCABLES = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])';
+
+/** El foco no sale de un diálogo con Tab: del último elemento que se puede enfocar pasa al primero, y con Mayús+Tab
+ *  del primero al último. Solo con el foco dentro del diálogo (no en un menú o en otro diálogo abiertos desde él, que
+ *  van en su propia capa) y si nadie usó ya la tecla (el editor, por ejemplo, sangra con Tab). */
+function retenerFoco(e: KE<HTMLDivElement>) {
+  if (e.key !== 'Tab' || e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+  const caja = e.currentTarget;
+  const activo = document.activeElement;
+  if (!activo || !caja.contains(activo)) return;
+  const lista = [...caja.querySelectorAll<HTMLElement>(ENFOCABLES)].filter((el) => el.tabIndex >= 0 && !el.matches(':disabled') && el.getClientRects().length > 0);
+  if (!lista.length) return;
+  const sigue = (el: HTMLElement) => !!(activo.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING);
+  const antes = (el: HTMLElement) => !!(activo.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_PRECEDING);
+  if (!e.shiftKey && !lista.some(sigue)) {
+    e.preventDefault();
+    lista[0].focus();
+  } else if (e.shiftKey && !lista.some(antes)) {
+    e.preventDefault();
+    lista[lista.length - 1].focus();
+  }
+}
+
 export function Modal(props: {
   alCerrar: () => void;
   children: ReactNode;
@@ -286,11 +394,41 @@ export function Modal(props: {
 }) {
   const ref = useRef<HTMLDivElement>(null);
   useCapa(ref, props.alCerrar);
+  // Lo que tenía el foco antes de abrir, leído al pintar por primera vez: en el efecto ya sería tarde, porque React
+  // enfoca los autoFocus al montar (antes de los efectos) y el foco ya estaría dentro.
+  const [alPintar] = useState(() => document.activeElement);
+  const anterior = useRef(alPintar);
+  // Lo que se enfocó al abrir: con StrictMode el efecto corre dos veces (y la limpieza de en medio devuelve el foco
+  // afuera); la segunda vez vuelve aquí en vez de buscar otro.
+  const inicial = useRef<HTMLElement | null>(null);
   useEffect(() => {
-    const anterior = document.activeElement as HTMLElement | null;
-    const primero = ref.current?.querySelector<HTMLElement>('[autofocus], input, textarea, button');
-    primero?.focus({ preventScroll: true });
-    return () => anterior?.focus?.({ preventScroll: true });
+    const caja = ref.current;
+    // Un diálogo que abre otro al cerrarse (la paleta que abre Plantillas o Papelera): los dos cambian en el mismo
+    // commit, así que al pintar el foco aún estaba en la paleta, que ya no está en el documento. Su limpieza corre
+    // antes que este efecto y devolvió el foco a donde estaba antes de ella: ese es el que hay que recordar.
+    const ahora = document.activeElement;
+    if (!anterior.current?.isConnected && ahora && ahora !== document.body && !caja?.contains(ahora)) anterior.current = ahora;
+    if (caja) {
+      const activo = document.activeElement;
+      if (activo instanceof HTMLElement && caja.contains(activo)) inicial.current = activo;
+      else {
+        // Por orden de lectura: el primero que se puede enfocar, menos la X de la cabecera (si no hay otro, esa).
+        const enfocables = [...caja.querySelectorAll<HTMLElement>(ENFOCABLES)].filter(
+          (el) => el.tabIndex >= 0 && !el.matches(':disabled') && el.getClientRects().length > 0,
+        );
+        const destino =
+          (inicial.current?.isConnected && caja.contains(inicial.current) ? inicial.current : null) ??
+          enfocables.find((el) => !el.hasAttribute('data-cerrar-modal')) ??
+          enfocables[0] ??
+          null;
+        destino?.focus({ preventScroll: true });
+        inicial.current = destino;
+      }
+    }
+    return () => {
+      const a = anterior.current;
+      if (a instanceof HTMLElement && a.isConnected) a.focus({ preventScroll: true });
+    };
   }, []);
   return createPortal(
     <div className={`velo${props.arriba ? ' velo-arriba' : ''}`}>
@@ -299,6 +437,7 @@ export function Modal(props: {
         role="dialog"
         aria-modal="true"
         aria-label={props.etiqueta}
+        onKeyDown={retenerFoco}
         className={`modal ${props.className ?? ''}`}
         style={{ width: props.ancho ? `min(${props.ancho}px, calc(100vw - 32px))` : undefined }}
       >
@@ -314,7 +453,7 @@ export function CabeceraModal({ titulo, alCerrar, children }: { titulo: string; 
     <div className="modal-cabecera">
       <h2>{titulo}</h2>
       {children}
-      <button type="button" className="boton-icono" onClick={alCerrar} aria-label={trad('Cerrar')}>
+      <button type="button" className="boton-icono" onClick={alCerrar} aria-label={trad('Cerrar')} data-cerrar-modal="">
         <X size={18} />
       </button>
     </div>

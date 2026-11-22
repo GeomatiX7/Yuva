@@ -11,8 +11,10 @@ import type { AvisoPropiedad, AvisoTexto, EstadoRecordatorio, Pagina, RecTexto }
 import { fechaCorta } from './fechas';
 import { enlacePagina, ir } from './ruta';
 import { enEscritorio, escritorio } from './escritorio';
+import { usarBloqueo } from './bloqueo';
 import { MARCA } from '../marca';
 import { sonar } from './sonidos';
+import { abrirDiario } from './diario';
 import { trad } from '../i18n';
 
 export interface Recordatorio {
@@ -197,6 +199,14 @@ export async function pedirPermiso(): Promise<Permiso> {
 
 /** Muestra una notificación del sistema; al tocarla abre la página. Devuelve si se pudo mostrar. */
 export async function notificar(titulo: string, cuerpo: string, destino: string, etiqueta: string): Promise<boolean> {
+  // Con Yuva bloqueada, el aviso de Windows (o del navegador) no enseña nada de las notas: ni el texto del recordatorio,
+  // ni el título de la página, ni las tareas del resumen del día. Se conserva el destino: al tocarlo, la página se abre
+  // detrás de la pantalla de bloqueo y queda a la vista al desbloquear.
+  const { bloqueada, comprobando } = usarBloqueo.getState();
+  if (bloqueada || comprobando) {
+    titulo = trad('Tienes un aviso en {nombre}', { nombre: MARCA.nombre });
+    cuerpo = trad('Desbloquea {nombre} para verlo.', { nombre: MARCA.nombre });
+  }
   if (escritorio) return escritorio.notificar({ titulo, cuerpo, destino }).catch(() => false);
   if (permisoNotificaciones() !== 'granted') return false;
   const opciones: NotificationOptions = { body: cuerpo, icon: MARCA.logo, badge: MARCA.logo, tag: etiqueta, data: { destino } };
@@ -266,6 +276,8 @@ export function iniciarRecordatorios(): () => void {
     if (destino === ':recordatorios') abrirModal('recordatorios');
     else if (destino === ':buscar') abrirModal('buscar'); // búsqueda rápida global (Ctrl+Shift+K)
     else if (destino === ':tareas') abrirModal('tareas'); // resumen del día
+    else if (destino === ':captura') abrirModal('captura'); // nota rápida (Ctrl+Shift+Espacio, bandeja, lista de saltos)
+    else if (destino === ':diario') abrirDiario();
     else if (destino) location.hash = destino;
   });
   return () => {

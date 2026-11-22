@@ -2,28 +2,23 @@
 // (las mismas que deja pasar el filtro de la vista). Dibujado en SVG propio, sin librerías ni internet.
 import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { addDays, addMonths, addWeeks, addYears, format, parseISO, startOfDay, startOfMonth, startOfWeek, startOfYear } from 'date-fns';
-import { cambiarUi } from '../data/estado';
+import { cambiarUi, tituloDe } from '../data/estado';
 import { ChevronLeft, ChevronRight, Check } from 'lucide-react';
-import type { ColorEtiqueta, ConfigGrafico, Pagina, Propiedad, TipoGrafico, Vista } from '../data/tipos';
+import type { ColorEtiqueta, ConfigGrafico, Pagina, Propiedad, Vista } from '../data/tipos';
+import { Flotante, ItemMenu, Menu, TituloMenu, type Ancla } from '../componentes/ui';
+import { IconoPagina } from '../componentes/IconoPagina';
 import { comoBase } from './derivadas';
 import { opcionesSemana, useSemana } from '../lib/fechas';
-import { cambiarVista, formatearNumero, graficoInicial, textoValor, valorDe } from './operaciones';
+import { decimalesValidos, formatearNumero, graficoInicial, textoValor, valorDe } from './operaciones';
 import { LOCALE, localeFechas, plural, segunIdioma, trad } from '../i18n';
+
+// Los ajustes del gráfico (AjustesGrafico y NOMBRE_GRAFICO) viven en menusBD: así los menús no cargan este
+// archivo, que puede ir aparte del resto de la base.
 
 // Una serie: el azafrán de la marca, oscurecido en claro para pasar 3:1 sobre el papel.
 // Varias (dona): paleta categórica validada para daltonismo en claro y oscuro (orden fijo, nunca ciclado).
 const MAX_DONA = 8;
 const MAX_BARRAS = 40;
-
-export const NOMBRE_GRAFICO: Record<TipoGrafico, string> = {
-  columnas: trad('Columnas'),
-  barras: trad('Barras horizontales'),
-  lineas: trad('Líneas'),
-  dona: trad('Dona'),
-  radar: trad('Radar'),
-  calor: trad('Calendario de calor'),
-  semana: trad('Seguimiento semanal'),
-};
 
 interface Punto {
   clave: string;
@@ -215,9 +210,22 @@ function Pista({ pista }: { pista: Pista | null }) {
   );
 }
 
-/** Marca con pista al pasar el ratón o al llegar con el teclado; con una sola fila detrás, el clic la abre. */
-function usoPista(contenedor: React.RefObject<HTMLDivElement | null>, setPista: (p: Pista | null) => void, fmt: (n: number) => string, contando: boolean) {
+/** Abre las filas que hay detrás de una marca: si es una, en la vista rápida; si son varias, en una lista. */
+type AbrirFilas = (etiqueta: string, ids: string[], e: React.MouseEvent | React.KeyboardEvent) => void;
+
+/** Intro o Espacio sobre una marca con filas detrás hacen lo mismo que el clic. */
+const teclaAbre = (e: React.KeyboardEvent, hayFilas: boolean) => {
+  if ((e.key !== 'Enter' && e.key !== ' ') || !hayFilas) return false;
+  e.preventDefault();
+  return true;
+};
+
+const sinPista = () => undefined;
+
+/** Marca con pista al pasar el ratón o al llegar con el teclado; el clic (o Intro o Espacio) abre lo que hay detrás. */
+function usoPista(contenedor: React.RefObject<HTMLDivElement | null>, setPista: (p: Pista | null) => void, fmt: (n: number) => string, contando: boolean, abrir: AbrirFilas) {
   return (p: Punto) => {
+    const titulo = contando || p.filas.length <= 1 ? p.etiqueta : trad('{etiqueta} · {n} filas', { etiqueta: p.etiqueta, n: p.filas.length });
     const mostrar = (e: React.PointerEvent | React.FocusEvent) => {
       const caja = contenedor.current!.getBoundingClientRect();
       const r = (e.currentTarget as Element).getBoundingClientRect();
@@ -225,23 +233,64 @@ function usoPista(contenedor: React.RefObject<HTMLDivElement | null>, setPista: 
       const y = 'clientY' in e ? e.clientY - caja.top : r.top - caja.top;
       // La pista no se sale por los lados del gráfico.
       const xa = Math.min(Math.max(x, 90), Math.max(90, caja.width - 90));
-      const titulo = contando || p.filas.length <= 1 ? p.etiqueta : trad('{etiqueta} · {n} filas', { etiqueta: p.etiqueta, n: p.filas.length });
       setPista({ x: xa, y, titulo, valor: fmt(p.valor) });
     };
+    const hayFilas = p.filas.length > 0;
     return {
       tabIndex: 0,
-      role: 'img',
-      'aria-label': `${p.etiqueta}: ${fmt(p.valor)}`,
+      role: hayFilas ? 'button' : 'img',
+      'aria-label': `${titulo}: ${fmt(p.valor)}`,
+      'aria-haspopup': p.filas.length > 1 ? ('menu' as const) : undefined,
       onPointerEnter: mostrar,
       onPointerMove: mostrar,
       onPointerLeave: () => setPista(null),
       onFocus: mostrar,
       onBlur: () => setPista(null),
-      onClick: () => p.filas.length === 1 && cambiarUi({ vistazo: p.filas[0] }),
-      onKeyDown: (e: React.KeyboardEvent) => e.key === 'Enter' && p.filas.length === 1 && cambiarUi({ vistazo: p.filas[0] }),
-      style: { cursor: p.filas.length === 1 ? 'pointer' : 'default' },
+      onClick: (e: React.MouseEvent) => abrir(p.etiqueta, p.filas, e),
+      onKeyDown: (e: React.KeyboardEvent) => teclaAbre(e, hayFilas) && abrir(p.etiqueta, p.filas, e),
+      style: { cursor: hayFilas ? 'pointer' : 'default' },
     };
   };
+}
+
+interface ListaAbierta {
+  etiqueta: string;
+  ids: string[];
+  ancla: Ancla;
+  origen: HTMLElement | SVGElement; // la marca, para devolverle el foco al cerrar con el teclado
+  teclado: boolean;
+}
+
+const MAX_LISTA = 200;
+
+/** Las filas que hay detrás de una marca, en un flotante junto a ella: unas 12 a la vista y el resto desplazando. */
+function ListaFilas({ lista, filas, alCerrar }: { lista: ListaAbierta; filas: Pagina[]; alCerrar: (abrioFila?: boolean) => void }) {
+  const porId = useMemo(() => new Map(filas.map((f) => [f.id, f])), [filas]);
+  const paginas = lista.ids.map((id) => porId.get(id)).filter((f): f is Pagina => !!f);
+  return (
+    <Flotante ancla={lista.ancla} alCerrar={() => alCerrar()} ancho={280}>
+      <TituloMenu>{trad('{etiqueta} · {n} filas', { etiqueta: lista.etiqueta, n: paginas.length })}</TituloMenu>
+      <div className="grafico-lista" style={{ maxHeight: 'min(396px, 60vh)', overflowY: 'auto' }}>
+        <Menu etiqueta={trad('Filas de «{etiqueta}»', { etiqueta: lista.etiqueta })}>
+          {paginas.slice(0, MAX_LISTA).map((f) => (
+            <ItemMenu
+              key={f.id}
+              icono={<IconoPagina pagina={f} tam={16} />}
+              onClick={() => {
+                alCerrar(true);
+                cambiarUi({ vistazo: f.id });
+              }}
+            >
+              <span className="recorte">{tituloDe(f)}</span>
+            </ItemMenu>
+          ))}
+        </Menu>
+      </div>
+      {paginas.length > MAX_LISTA && (
+        <p className="ayuda">{trad('Se muestran las primeras {n} de {total}. Filtra la vista para ver las demás.', { n: MAX_LISTA, total: paginas.length })}</p>
+      )}
+    </Flotante>
+  );
 }
 
 // ---------- formas ----------
@@ -535,7 +584,7 @@ function RadarG({ puntos, fmt, marcas }: { puntos: Punto[]; fmt: (n: number) => 
   );
 }
 
-function Calor({ bd, conf, filas, fmt }: { bd: Pagina; conf: ConfigGrafico; filas: Pagina[]; fmt: (n: number) => string }) {
+function Calor({ bd, conf, filas, fmt, abrir }: { bd: Pagina; conf: ConfigGrafico; filas: Pagina[]; fmt: (n: number) => string; abrir: AbrirFilas }) {
   useSemana();
   const [ref, ancho] = useAncho<HTMLDivElement>();
   const [pista, setPista] = useState<Pista | null>(null);
@@ -577,7 +626,7 @@ function Calor({ bd, conf, filas, fmt }: { bd: Pagina; conf: ConfigGrafico; fila
           );
         })}
         {Array.from({ length: 7 }, (_, d) => (
-          <FilaCalor key={d} d={d} semanas={semanas} inicio={inicio} hoy={hoy} valores={valores} porDia={porDia} nivel={nivel} fmt={fmt} setPista={setPista} contenedor={ref} />
+          <FilaCalor key={d} d={d} semanas={semanas} inicio={inicio} hoy={hoy} valores={valores} porDia={porDia} nivel={nivel} fmt={fmt} setPista={setPista} contenedor={ref} abrir={abrir} />
         ))}
       </div>
       <div className="calor-pie">
@@ -604,8 +653,9 @@ function FilaCalor(props: {
   fmt: (n: number) => string;
   setPista: (p: Pista | null) => void;
   contenedor: React.RefObject<HTMLDivElement | null>;
+  abrir: AbrirFilas;
 }) {
-  const { d, semanas, inicio, hoy, valores, porDia, nivel, fmt, setPista, contenedor } = props;
+  const { d, semanas, inicio, hoy, valores, porDia, nivel, fmt, setPista, contenedor, abrir } = props;
   const celdas: ReactNode[] = [
     <span key="dia" className="calor-dia">
       {d % 2 === 0 ? mayuscula(format(addDays(inicio, d), 'EEEEE', { locale: localeFechas })) : ''}
@@ -626,18 +676,23 @@ function FilaCalor(props: {
       const r = (e.currentTarget as Element).getBoundingClientRect();
       setPista({ x: Math.min(Math.max(r.left + r.width / 2 - caja.left, 90), Math.max(90, caja.width - 90)), y: r.top - caja.top, titulo: mayuscula(texto), valor: fmt(v) });
     };
+    const ids = filas.map((f) => f.id);
     celdas.push(
       <span
         key={s}
         className={`calor-celda n${nivel(v)}${k === format(hoy, 'yyyy-MM-dd') ? ' hoy' : ''}`}
-        tabIndex={v ? 0 : -1}
-        role="img"
+        // También con el teclado los días con filas aunque su suma dé 0, porque el clic los abre.
+        tabIndex={v || ids.length ? 0 : -1}
+        role={ids.length ? 'button' : 'img'}
         aria-label={`${texto}: ${fmt(v)}`}
+        aria-haspopup={ids.length > 1 ? 'menu' : undefined}
+        style={ids.length ? { cursor: 'pointer' } : undefined}
         onPointerEnter={mostrar}
         onPointerLeave={() => setPista(null)}
         onFocus={mostrar}
         onBlur={() => setPista(null)}
-        onClick={() => filas.length === 1 && cambiarUi({ vistazo: filas[0].id })}
+        onClick={(e) => abrir(mayuscula(texto), ids, e)}
+        onKeyDown={(e) => teclaAbre(e, ids.length > 0) && abrir(mayuscula(texto), ids, e)}
       />,
     );
   }
@@ -647,7 +702,7 @@ function FilaCalor(props: {
 // ---------- seguimiento semanal ----------
 
 /** Un renglón por grupo (un hábito, por ejemplo) y un círculo por día de la semana: lleno si hay registro. */
-function SemanaHabitos({ bd, conf, filas }: { bd: Pagina; conf: ConfigGrafico; filas: Pagina[] }) {
+function SemanaHabitos({ bd, conf, filas, abrir }: { bd: Pagina; conf: ConfigGrafico; filas: Pagina[]; abrir: AbrirFilas }) {
   useSemana();
   const [salto, setSalto] = useState(0);
   const props = bd.esquema?.propiedades ?? [];
@@ -715,7 +770,8 @@ function SemanaHabitos({ bd, conf, filas }: { bd: Pagina; conf: ConfigGrafico; f
                       className={`semana-punto${ids.length ? ' hecho' : ''}${dias[i] > hoy ? ' futuro' : ''}${claves[i] === hoyClave ? ' hoy' : ''}`}
                       aria-label={`${g.etiqueta}, ${format(dias[i], 'EEEE d', { locale: localeFechas })}: ${ids.length ? plural(ids.length, '{n} registro', '{n} registros') : trad('sin registro')}`}
                       disabled={!ids.length}
-                      onClick={() => ids.length && cambiarUi({ vistazo: ids[0] })}
+                      aria-haspopup={ids.length > 1 ? 'menu' : undefined}
+                      onClick={(e) => abrir(`${g.etiqueta}, ${format(dias[i], 'EEEE d', { locale: localeFechas })}`, ids, e)}
                     >
                       {ids.length > 0 && <Check size={12} strokeWidth={3} />}
                     </button>
@@ -739,12 +795,34 @@ export function VistaGrafico({ bd, vista, filas }: { bd: Pagina; vista: Vista; f
   const props = bd.esquema!.propiedades;
   const valorProp = props.find((p) => p.id === conf.valorProp);
   const ejeProp = conf.eje === 'titulo' ? null : props.find((p) => p.id === conf.eje);
-  const fmt = (n: number) =>
-    conf.medida !== 'contar' && valorProp ? formatearNumero(Math.round(n * 100) / 100, comoBase(valorProp).formato) : plural(n, '{n} fila', '{n} filas', { n: new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1 }).format(n) });
+  const fmt = (n: number) => {
+    if (conf.medida === 'contar' || !valorProp) return plural(n, '{n} fila', '{n} filas', { n: new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 1 }).format(n) });
+    const b = comoBase(valorProp);
+    // Con «Decimales» elegidos, el número se escribe con esas cifras; si no, redondeado a dos.
+    const d = decimalesValidos(b.decimales);
+    return formatearNumero(d === undefined ? Math.round(n * 100) / 100 : n, b.formato, d);
+  };
   const puntos = useMemo(() => (conf.tipo === 'calor' || conf.tipo === 'semana' ? [] : datosGrafico(bd, conf, filas)), [bd, conf, filas]);
   const contenedor = useRef<HTMLDivElement>(null);
   const [pista, setPista] = useState<Pista | null>(null);
-  const marcas = usoPista(contenedor, setPista, fmt, conf.medida === 'contar' || !valorProp);
+  const [lista, setLista] = useState<ListaAbierta | null>(null);
+  const abrirFilas: AbrirFilas = (etiqueta, ids, e) => {
+    if (!ids.length) return;
+    if (ids.length === 1) return cambiarUi({ vistazo: ids[0] });
+    // Con varias filas detrás: la lista, junto al punto del clic (o junto a la marca, si se llegó con el teclado).
+    const origen = e.currentTarget as HTMLElement | SVGElement;
+    const raton = 'clientX' in e && e.detail > 0 ? e : null;
+    setPista(null);
+    setLista({ etiqueta, ids, ancla: raton ? { x: raton.clientX, y: raton.clientY } : origen.getBoundingClientRect(), origen, teclado: !raton });
+  };
+  const cerrarLista = (abrioFila = false) => {
+    const l = lista;
+    setLista(null);
+    // Con el teclado, el foco vuelve a la marca; si se abrió una fila, se queda en su vista rápida.
+    if (l?.teclado && !abrioFila) requestAnimationFrame(() => l.origen.isConnected && l.origen.focus({ preventScroll: true }));
+  };
+  // Con la lista abierta no sale la pista encima.
+  const marcas = usoPista(contenedor, lista ? sinPista : setPista, fmt, conf.medida === 'contar' || !valorProp, abrirFilas);
   const recortados = (conf.tipo === 'columnas' || conf.tipo === 'barras') && puntos.length > MAX_BARRAS;
   const visibles = recortados ? puntos.slice(0, MAX_BARRAS) : puntos;
   const medida =
@@ -767,9 +845,9 @@ export function VistaGrafico({ bd, vista, filas }: { bd: Pagina; vista: Vista; f
               : `${medida} ${por}`}
       </p>
       {conf.tipo === 'calor' ? (
-        <Calor bd={bd} conf={conf} filas={filas} fmt={fmt} />
+        <Calor bd={bd} conf={conf} filas={filas} fmt={fmt} abrir={abrirFilas} />
       ) : conf.tipo === 'semana' ? (
-        <SemanaHabitos bd={bd} conf={conf} filas={filas} />
+        <SemanaHabitos bd={bd} conf={conf} filas={filas} abrir={abrirFilas} />
       ) : !filas.length ? (
         <p className="vacio-chico">{trad('No hay filas que mostrar con los filtros de esta vista.')}</p>
       ) : !puntos.length ? (
@@ -802,139 +880,7 @@ export function VistaGrafico({ bd, vista, filas }: { bd: Pagina; vista: Vista; f
           </tbody>
         </table>
       )}
+      {lista && <ListaFilas lista={lista} filas={filas} alCerrar={cerrarLista} />}
     </div>
-  );
-}
-
-// ---------- ajustes ----------
-
-export function AjustesGrafico({ bd, vista }: { bd: Pagina; vista: Vista }) {
-  const conf = vista.grafico ?? graficoInicial(bd.esquema!);
-  const props = bd.esquema!.propiedades;
-  const poner = (c: Partial<ConfigGrafico>) => cambiarVista(bd.id, vista.id, { grafico: { ...conf, ...c } });
-  const esFecha = (p: Propiedad) => ['fecha', 'creado', 'editado'].includes(comoBase(p).tipo);
-  const ejes = props.filter((p) => p.tipo !== 'boton' && p.tipo !== 'titulo' && comoBase(p).tipo !== 'numero');
-  const fechas = props.filter(esFecha);
-  const numeros = props.filter((p) => comoBase(p).tipo === 'numero');
-  const ejeActual = props.find((p) => p.id === conf.eje);
-  return (
-    <>
-      <label className="campo-etiquetado">
-        <span>{trad('Tipo de gráfico')}</span>
-        <select
-          className="campo"
-          value={conf.tipo}
-          onChange={(e) => {
-            const tipo = e.target.value as TipoGrafico;
-            const extra: Partial<ConfigGrafico> = {};
-            if (tipo === 'calor' && !(ejeActual && esFecha(ejeActual))) extra.eje = fechas[0]?.id ?? conf.eje;
-            if (tipo === 'radar' && conf.eje !== 'titulo' && !ejeActual) extra.eje = 'titulo';
-            if (tipo === 'semana') {
-              if (!conf.fecha) extra.fecha = fechas[0]?.id;
-              if (ejeActual && esFecha(ejeActual)) extra.eje = ejes.find((p) => !esFecha(p))?.id ?? 'titulo';
-            }
-            poner({ tipo, ...extra });
-          }}
-        >
-          {(Object.keys(NOMBRE_GRAFICO) as TipoGrafico[]).map((t) => (
-            <option key={t} value={t}>
-              {NOMBRE_GRAFICO[t]}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="campo-etiquetado">
-        <span>{conf.tipo === 'calor' ? trad('Fecha de cada fila') : conf.tipo === 'radar' ? trad('Una punta por') : conf.tipo === 'semana' ? trad('Un renglón por') : trad('Agrupar por')}</span>
-        <select className="campo" value={conf.eje} onChange={(e) => poner({ eje: e.target.value })}>
-          {conf.tipo !== 'calor' && <option value="titulo">{trad('Cada fila (su título)')}</option>}
-          {(conf.tipo === 'calor' ? fechas : ejes).map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.nombre}
-            </option>
-          ))}
-        </select>
-      </label>
-      {conf.tipo === 'semana' && (
-        <label className="campo-etiquetado">
-          <span>{trad('Fecha de cada registro')}</span>
-          <select className="campo" value={conf.fecha ?? ''} onChange={(e) => poner({ fecha: e.target.value })}>
-            {!conf.fecha && <option value="">{trad('Elige una fecha')}</option>}
-            {fechas.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.nombre}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
-      {ejeActual && esFecha(ejeActual) && conf.tipo !== 'calor' && conf.tipo !== 'semana' && (
-        <label className="campo-etiquetado">
-          <span>{trad('Periodo')}</span>
-          <select className="campo" value={conf.agruparFecha ?? 'mes'} onChange={(e) => poner({ agruparFecha: e.target.value as ConfigGrafico['agruparFecha'] })}>
-            <option value="dia">{trad('Día')}</option>
-            <option value="semana">{trad('Semana')}</option>
-            <option value="mes">{trad('Mes')}</option>
-            <option value="anio">{trad('Año')}</option>
-          </select>
-        </label>
-      )}
-      {conf.tipo !== 'semana' && (
-      <label className="campo-etiquetado">
-        <span>{trad('Valor')}</span>
-        <select
-          className="campo"
-          value={conf.medida === 'contar' || !conf.valorProp ? 'contar' : `${conf.medida}:${conf.valorProp}`}
-          onChange={(e) => {
-            if (e.target.value === 'contar') return poner({ medida: 'contar', valorProp: undefined });
-            const [medida, valorProp] = e.target.value.split(':');
-            poner({ medida: medida as ConfigGrafico['medida'], valorProp });
-          }}
-        >
-          <option value="contar">{trad('Contar filas')}</option>
-          {numeros.flatMap((p) =>
-            (['suma', 'promedio', 'min', 'max'] as const).map((m) => (
-              <option key={`${m}:${p.id}`} value={`${m}:${p.id}`}>
-                {trad('{medida} de {prop}', { medida: { suma: trad('Suma'), promedio: trad('Promedio'), min: trad('Mínimo'), max: trad('Máximo') }[m], prop: p.nombre })}
-              </option>
-            )),
-          )}
-        </select>
-      </label>
-      )}
-      {conf.tipo !== 'lineas' && conf.tipo !== 'calor' && conf.tipo !== 'semana' && (
-        <label className="campo-etiquetado">
-          <span>{trad('Orden')}</span>
-          <select className="campo" value={conf.orden ?? 'eje'} onChange={(e) => poner({ orden: e.target.value as ConfigGrafico['orden'] })}>
-            <option value="eje">{trad('Como en la propiedad')}</option>
-            <option value="mayor">{trad('De mayor a menor')}</option>
-            <option value="menor">{trad('De menor a mayor')}</option>
-          </select>
-        </label>
-      )}
-      {(conf.tipo === 'columnas' || conf.tipo === 'dona') && (
-        <label className="casilla-linea">
-          <input type="checkbox" checked={!!conf.tresD} onChange={(e) => poner({ tresD: e.target.checked })} />
-          {trad('Estilo 3D')}
-        </label>
-      )}
-      {conf.tipo === 'lineas' && (
-        <label className="casilla-linea">
-          <input type="checkbox" checked={!!conf.acumulado} onChange={(e) => poner({ acumulado: e.target.checked })} />
-          {trad('Total acumulado')}
-        </label>
-      )}
-      {conf.tipo === 'lineas' && (
-        <label className="casilla-linea">
-          <input type="checkbox" checked={!!conf.suave} onChange={(e) => poner({ suave: e.target.checked })} />
-          {trad('Curva suave')}
-        </label>
-      )}
-      {conf.tipo === 'calor' && (
-        <label className="campo-etiquetado">
-          <span>{trad('Semanas hacia atrás (si caben)')}</span>
-          <input className="campo" type="number" min={4} max={53} value={conf.semanas ?? 26} onChange={(e) => poner({ semanas: Math.min(53, Math.max(4, Number(e.target.value) || 26)) })} />
-        </label>
-      )}
-    </>
   );
 }

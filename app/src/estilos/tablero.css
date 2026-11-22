@@ -566,20 +566,27 @@
 
 /* ---------- frase ---------- */
 .frase {
-  padding: 18px 20px 16px 52px;
+  padding: 16px 20px 16px 52px;
   min-height: 84px;
   display: grid;
-  align-content: center;
+  align-content: start;
+}
+
+/* «Pulso»: el rótulo «Frase» arriba, alineado con el borde como en las demás fichas; la comilla baja con el texto. */
+.frase > .panel-rotulo {
+  margin-left: -36px;
 }
 
 .frase-comilla {
   position: absolute;
-  top: 2px;
+  top: 30px;
   left: 14px;
   font-family: var(--f-serif);
   font-size: 64px;
+  font-weight: 700;
   line-height: 1;
-  color: var(--acento);
+  /* «Pulso»: la comilla toma el color de la página */
+  color: var(--c);
 }
 
 .frase-texto {
@@ -724,19 +731,27 @@
   margin: 0;
 }
 
+.saludo-texto {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
 .saludo-hola {
   font-family: var(--f-titulo);
-  font-size: clamp(22px, 6cqi, 34px);
-  font-weight: 700;
-  line-height: 1.1;
+  font-size: clamp(19px, 4.6cqi, 26px);
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
 }
 
 .saludo-nombre {
   font-family: var(--f-titulo);
-  font-size: clamp(22px, 6cqi, 34px);
-  font-weight: 700;
+  font-size: clamp(19px, 4.6cqi, 26px);
+  font-weight: 650;
   line-height: 1.15;
-  color: var(--acento-fuerte);
+  letter-spacing: -0.01em;
+  /* «Pulso»: el nombre en el color de la página */
+  color: var(--c);
 }
 
 .saludo-lema {
@@ -745,13 +760,70 @@
   font-size: var(--t-m);
 }
 
+/* «Pulso»: el día en una frase, en Literata; las cifras son botones subrayados del color de la página. */
+.saludo-frase {
+  margin-top: 8px !important;
+  max-width: 62ch;
+  color: var(--tinta-2);
+  font: 400 16px/1.6 var(--f-serif);
+  text-wrap: pretty;
+}
+
+.saludo-cifra {
+  display: inline;
+  margin: 0 -1px;
+  padding: 1px 3px;
+  border-radius: 5px;
+  color: var(--tinta);
+  font: 650 15px/1 var(--f-titulo);
+  font-variant-numeric: tabular-nums;
+  text-decoration: underline 1.5px color-mix(in srgb, var(--c) 60%, transparent);
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition: background var(--dur-rapida, 120ms);
+}
+
+.saludo-cifra:hover {
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+}
+
+.saludo-cifra.mal {
+  color: var(--peligro);
+  text-decoration-color: color-mix(in srgb, var(--peligro) 60%, transparent);
+}
+
+.saludo-cifra.mal:hover {
+  background: color-mix(in srgb, var(--peligro) 12%, transparent);
+}
+
+/* Los números grandes, solo para la hora; los segundos van chicos, en oro. */
 .saludo-hora {
+  display: flex;
+  align-items: baseline;
   font-family: var(--f-titulo);
-  font-size: clamp(36px, 13cqi, 64px);
-  font-weight: 300;
-  letter-spacing: -0.03em;
+  font-size: clamp(40px, 12cqi, 66px);
+  font-weight: 500;
+  letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
   line-height: 1;
+}
+
+.saludo-dos-puntos {
+  margin: 0 1px;
+  animation: saludo-parpadeo 1s steps(1) infinite;
+}
+
+@keyframes saludo-parpadeo {
+  50% {
+    opacity: 0.2;
+  }
+}
+
+.saludo-hora small {
+  margin-left: 8px;
+  color: var(--oro-m);
+  font: 600 13px var(--f-mono);
+  letter-spacing: 0;
 }
 
 /* ---------- relojes nuevos ---------- */
@@ -770,6 +842,11 @@
 
 .panel.reloj-abatible .reloj-fecha {
   min-width: 0;
+}
+
+/* «Pulso»: el rótulo «Reloj» va en su propio renglón, arriba a la izquierda, también en esta caja flexible. */
+.panel.reloj-abatible > .panel-rotulo {
+  flex-basis: 100%;
 }
 
 .abatible {
@@ -823,40 +900,69 @@
   height: auto;
 }
 
+/* «Pulso»: un arco y un punto por órbita (los minutos fuera, en el color de la página; las horas dentro, en el
+   mismo color mezclado con el papel y el punto en oro). */
 .orbita {
   fill: none;
   stroke: var(--linea-fuerte);
-  stroke-width: 1;
+  stroke-width: 1.4;
 }
 
 .orbita-marca {
   fill: var(--tinta-3);
 }
 
-.orbita-hora {
-  fill: var(--tinta);
+.orbita-arco {
+  fill: none;
+  stroke: var(--c);
+  stroke-width: 3;
+  stroke-linecap: round;
+  transition: stroke-dasharray 600ms ease;
 }
 
-.orbita-minuto {
-  fill: var(--acento);
+.orbita-horas .orbita-arco {
+  stroke: color-mix(in srgb, var(--c) 55%, var(--papel-2));
 }
 
-.orbita-segundo {
-  fill: var(--tinta-2);
-  transition: cx 300ms linear, cy 300ms linear;
+.orbita-punto {
+  fill: var(--c);
+}
+
+.orbita-horas .orbita-punto {
+  fill: var(--oro-m);
 }
 
 .orbita-texto {
   fill: var(--tinta);
   font-family: var(--f-titulo);
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 34px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
 }
 
 .orbita-sub {
   fill: var(--tinta-3);
-  font-size: 11px;
-  font-family: var(--f-ui);
+  font: 600 11px var(--f-mono);
+  letter-spacing: 0.1em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orbita-arco,
+  .saludo-cifra {
+    transition: none;
+  }
+  .saludo-dos-puntos {
+    animation: none;
+  }
+}
+
+:root[data-movimiento='reducido'] :is(.orbita-arco, .saludo-cifra) {
+  transition: none;
+}
+
+:root[data-movimiento='reducido'] .saludo-dos-puntos {
+  animation: none;
 }
 
 .reloj-palabras {

@@ -9,8 +9,334 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="author" content="GeomatiX" />
     <title>Yuva</title>
+    <!-- Pantalla de arranque: va aquí, en línea, para que se vea desde el primer instante, antes de que cargue
+         la app (en el programa de escritorio la ventana se muestra con el primer cuadro pintado).
+         La app la cierra al estar lista (src/lib/pantallaArranque.ts). Logo v4 (marca/yuva/v4/elegido/) y logotipo v5 (marca/yuva/v5-logotipo/). -->
+    <style>
+      #arranque {
+        --fondo-arranque: #fcf8f7;
+        --vino: #5e1a2d;
+        --oro: #be8d47;
+        position: fixed;
+        inset: 0;
+        z-index: 2147483000;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        background: var(--fondo-arranque);
+        color: var(--vino);
+        contain: strict;
+      }
+      #arranque[data-tema='oscuro'] { --fondo-arranque: #1c1215; color: #f2e9ea; }
+      #arranque .ar-marca { display: grid; justify-items: center; gap: 22px; position: relative; }
+      #arranque .ar-logo { width: 132px; height: 132px; overflow: visible; }
+      #arranque .ar-nombre { width: 118px; height: auto; overflow: visible; }
+      #arranque[data-tema='oscuro'] .ar-oro { fill: #d9a85a; }
+      #arranque .ar-destello { fill: #f4d88f; opacity: 0.9; }
+      #arranque[data-tema='oscuro'] .ar-destello { fill: #eac46f; }
+      /* Sombra de contacto: el logo «aterriza» sobre la página. */
+      #arranque .ar-sombra {
+        position: absolute;
+        left: 50%;
+        top: 134px;
+        width: 124px;
+        height: 18px;
+        margin-left: -62px;
+        border-radius: 50%;
+        background: radial-gradient(closest-side, rgba(42, 10, 18, 0.26), transparent);
+        opacity: 0;
+        pointer-events: none;
+      }
+      #arranque[data-tema='oscuro'] .ar-sombra { background: radial-gradient(closest-side, rgba(0, 0, 0, 0.55), transparent); }
+      #arranque .ar-onda {
+        position: absolute;
+        left: 50%;
+        top: 66px;
+        width: 132px;
+        height: 132px;
+        margin: -66px 0 0 -66px;
+        border-radius: 34%;
+        border: 2px solid var(--vino);
+        opacity: 0;
+        pointer-events: none;
+      }
+      #arranque[data-tema='oscuro'] .ar-onda { border-color: #c88b98; }
+      #arranque .ar-onda.oro { border-color: var(--oro); border-width: 1.5px; }
+      #arranque .ar-brillo { opacity: 0; }
+      /* Logo en 3D (renderizado en Blender: marca/yuva/v4/3d/). El cuadro ocupa 2/3 del video. */
+      #arranque .ar-video {
+        position: absolute;
+        left: 50%;
+        top: 66px;
+        width: 200px;
+        height: 200px;
+        margin: -100px 0 0 -100px;
+        opacity: 0;
+        pointer-events: none;
+      }
+      #arranque.con-video .ar-video { opacity: 1; }
+      #arranque.con-video .ar-logo { visibility: hidden; }
+      #arranque.espera .ar-marca { visibility: hidden; }
+      #arranque .ar-luz {
+        position: absolute;
+        left: 50%;
+        top: 66px;
+        width: 132px;
+        height: 132px;
+        margin: -66px 0 0 -66px;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(234, 196, 111, 0.42), rgba(94, 26, 45, 0.16) 46%, transparent 70%);
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      /* Animación completa: «plin» al aparecer el rollo dorado, «boom» suave al desplegarse. */
+      #arranque.anima .ar-cuadro { transform-box: view-box; transform-origin: 256px 256px; animation: ar-pop 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 40ms both; }
+      #arranque.anima .ar-letra { animation: ar-sube 420ms cubic-bezier(0.2, 0.8, 0.2, 1) 220ms both; }
+      #arranque.anima .ar-rollo { transform-box: view-box; transform-origin: 300px 200px; animation: ar-rollo 520ms cubic-bezier(0.34, 1.56, 0.64, 1) 340ms both; }
+      #arranque.anima .ar-brillo { transform-box: fill-box; transform-origin: center; animation: ar-brillo 620ms ease-out 400ms both; }
+      /* Texto: cada letra sube desde una línea invisible y se junta con las demás (llegan algo separadas);
+         luego la diagonal dorada de la Y entra por su propio ángulo y un brillo recorre la palabra. */
+      #arranque.anima .ar-nombre .l1,
+      #arranque.anima .ar-nombre .l2,
+      #arranque.anima .ar-nombre .l3,
+      #arranque.anima .ar-nombre .l4 { animation: ar-letra 600ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+      #arranque.anima .ar-nombre .l1 { --dx: -54px; animation-delay: 480ms; }
+      #arranque.anima .ar-nombre .l2 { --dx: -18px; animation-delay: 545ms; }
+      #arranque.anima .ar-nombre .l3 { --dx: 18px; animation-delay: 610ms; }
+      #arranque.anima .ar-nombre .l4 { --dx: 54px; animation-delay: 675ms; }
+      #arranque.anima .ar-nombre .ar-oro { animation: ar-oro 560ms cubic-bezier(0.34, 1.4, 0.64, 1) 820ms both; }
+      #arranque.anima .ar-barrido { animation: ar-barrido 760ms cubic-bezier(0.45, 0, 0.25, 1) 1160ms both; }
+      #arranque.anima .ar-sombra { animation: ar-sombra 640ms cubic-bezier(0.2, 0.8, 0.2, 1) 120ms both; }
+      #arranque.anima .ar-marca { animation: ar-boom 420ms cubic-bezier(0.34, 1.56, 0.64, 1) 1000ms both; }
+      #arranque.anima .ar-luz { animation: ar-luz 950ms cubic-bezier(0.2, 0.8, 0.2, 1) 1000ms both; }
+      #arranque.anima .ar-onda { animation: ar-onda 900ms cubic-bezier(0.2, 0.8, 0.2, 1) 1040ms both; }
+      #arranque.anima .ar-onda.oro { animation-delay: 1120ms; animation-duration: 1000ms; }
+      #arranque.sale { animation: ar-fuera 380ms cubic-bezier(0.5, 0, 0.75, 0) both; pointer-events: none; }
+      #arranque.sale .ar-marca { animation: ar-aleja 380ms cubic-bezier(0.5, 0, 0.75, 0) both; }
+      /* Movimiento reducido (o al recargar): el logo quieto y un fundido rápido. */
+      #arranque.quieto.sale { animation-duration: 200ms; }
+      /* Al recargar en la misma sesión (la animación ya se vio), más corto todavía. */
+      #arranque.quieto.recarga.sale { animation-duration: 120ms; }
+      #arranque.quieto.sale .ar-marca { animation: none; }
+
+      @keyframes ar-pop {
+        0% { transform: scale(0.4) rotate(-14deg); opacity: 0; }
+        60% { opacity: 1; }
+        100% { transform: none; opacity: 1; }
+      }
+      @keyframes ar-sube { from { transform: translateY(70px); opacity: 0; } to { transform: none; opacity: 1; } }
+      @keyframes ar-rollo {
+        0% { transform: scale(0) rotate(-70deg); opacity: 0; }
+        40% { opacity: 1; }
+        100% { transform: none; opacity: 1; }
+      }
+      @keyframes ar-brillo {
+        0% { transform: scale(0) rotate(0deg); opacity: 0; }
+        35% { transform: scale(1.15) rotate(45deg); opacity: 1; }
+        100% { transform: scale(0.2) rotate(90deg); opacity: 0; }
+      }
+      @keyframes ar-letra { from { transform: translate(var(--dx, 0px), 236px); } to { transform: none; } }
+      @keyframes ar-oro {
+        0% { transform: translate(76px, -172px); opacity: 0; }
+        25% { opacity: 1; }
+        100% { transform: none; opacity: 1; }
+      }
+      @keyframes ar-barrido { from { transform: translateX(0) skewX(-18deg); } to { transform: translateX(1000px) skewX(-18deg); } }
+      @keyframes ar-sombra { from { transform: scale(0.3); opacity: 0; } to { transform: none; opacity: 1; } }
+      @keyframes ar-boom {
+        0% { transform: none; }
+        30% { transform: scale(0.955); }
+        65% { transform: scale(1.04); }
+        100% { transform: none; }
+      }
+      @keyframes ar-luz {
+        0% { transform: scale(0.6); opacity: 0; }
+        15% { opacity: 1; }
+        100% { transform: scale(7); opacity: 0; }
+      }
+      @keyframes ar-onda {
+        0% { transform: scale(0.95); opacity: 0; }
+        6% { transform: scale(1.1); opacity: 0.6; }
+        100% { transform: scale(9); opacity: 0; border-width: 0.5px; }
+      }
+      @keyframes ar-fuera { to { opacity: 0; } }
+      @keyframes ar-aleja { to { transform: scale(1.08); } }
+    </style>
   </head>
   <body>
+    <div id="arranque" aria-hidden="true">
+      <div class="ar-marca">
+        <span class="ar-sombra"></span>
+        <span class="ar-luz"></span>
+        <span class="ar-onda"></span>
+        <span class="ar-onda oro"></span>
+        <video class="ar-video" src="/arranque/logo-3d.webm" muted playsinline preload="auto"></video>
+        <svg class="ar-logo" viewBox="0 0 512 512">
+          <path class="ar-cuadro" d="M344 0 L364.8 0.1 L376.5 0.3 L386.2 0.8 L394.8 1.3 L402.5 2.1 L409.7 3 L416.4 4.1 L422.8 5.4 L428.7 6.8 L434.4 8.4 L439.8 10.1 L444.9 12.1 L449.8 14.2 L454.5 16.4 L459 18.9 L463.2 21.5 L467.3 24.3 L471.2 27.2 L474.8 30.3 L478.3 33.7 L481.7 37.2 L484.8 40.8 L487.7 44.7 L490.5 48.8 L493.1 53 L495.6 57.5 L497.8 62.2 L499.9 67.1 L501.9 72.2 L503.6 77.6 L505.2 83.3 L506.6 89.2 L507.9 95.6 L509 102.3 L509.9 109.5 L510.7 117.2 L511.2 125.8 L511.7 135.5 L511.9 147.2 L512 168 L512 344 L511.9 364.8 L511.7 376.5 L511.2 386.2 L510.7 394.8 L509.9 402.5 L509 409.7 L507.9 416.4 L506.6 422.8 L505.2 428.7 L503.6 434.4 L501.9 439.8 L499.9 444.9 L497.8 449.8 L495.6 454.5 L493.1 459 L490.5 463.2 L487.7 467.3 L484.8 471.2 L481.7 474.8 L478.3 478.3 L474.8 481.7 L471.2 484.8 L467.3 487.7 L463.2 490.5 L459 493.1 L454.5 495.6 L449.8 497.8 L444.9 499.9 L439.8 501.9 L434.4 503.6 L428.7 505.2 L422.8 506.6 L416.4 507.9 L409.7 509 L402.5 509.9 L394.8 510.7 L386.2 511.2 L376.5 511.7 L364.8 511.9 L344 512 L168 512 L147.2 511.9 L135.5 511.7 L125.8 511.2 L117.2 510.7 L109.5 509.9 L102.3 509 L95.6 507.9 L89.2 506.6 L83.3 505.2 L77.6 503.6 L72.2 501.9 L67.1 499.9 L62.2 497.8 L57.5 495.6 L53 493.1 L48.8 490.5 L44.7 487.7 L40.8 484.8 L37.2 481.7 L33.7 478.3 L30.3 474.8 L27.2 471.2 L24.3 467.3 L21.5 463.2 L18.9 459 L16.4 454.5 L14.2 449.8 L12.1 444.9 L10.1 439.8 L8.4 434.4 L6.8 428.7 L5.4 422.8 L4.1 416.4 L3 409.7 L2.1 402.5 L1.3 394.8 L0.8 386.2 L0.3 376.5 L0.1 364.8 L0 344 L0 168 L0.1 147.2 L0.3 135.5 L0.8 125.8 L1.3 117.2 L2.1 109.5 L3 102.3 L4.1 95.6 L5.4 89.2 L6.8 83.3 L8.4 77.6 L10.1 72.2 L12.1 67.1 L14.2 62.2 L16.4 57.5 L18.9 53 L21.5 48.8 L24.3 44.7 L27.2 40.8 L30.3 37.2 L33.7 33.7 L37.2 30.3 L40.8 27.2 L44.7 24.3 L48.8 21.5 L53 18.9 L57.5 16.4 L62.2 14.2 L67.1 12.1 L72.2 10.1 L77.6 8.4 L83.3 6.8 L89.2 5.4 L95.6 4.1 L102.3 3 L109.5 2.1 L117.2 1.3 L125.8 0.8 L135.5 0.3 L147.2 0.1 L168 0Z" fill="#5E1A2D" />
+          <g class="ar-letra">
+            <path d="M104 93H196Q209 93 215 106L262 228Q300 196 348 194Q374 193 388 200C372 224 342 252 326 276C318 288 315 298 315 314V404Q315 420 299 420H224Q208 420 208 404V314C208 296 204 284 197 272L101 109Q96 99 104 93Z" fill="#FFFFFF" />
+            <path d="M262 250Q298 208 352 204Q380 202 397 198Q380 190 350 190Q298 192 262 228Z" fill="#D8D1CB" />
+          </g>
+          <g class="ar-rollo">
+            <path d="M262 228C270 204 279 184 288 166C296 142 306 120 318 106C330 94 346 89 360 94C370 99 378 109 386 121L414 162Q422 175 413 185L397 198Q380 190 350 190Q298 192 262 228Z" fill="#BE8D47" />
+            <path d="M397 198C381 221 360 245 341 263C341 251 348 236 359 223C371 212 385 204 397 198Z" fill="#8E6430" />
+            <path d="M331 140C345 131 357 117 366 104C381 119 398 146 410 167Q415 178 403 186C380 189 349 191 318 196C320 176 324 157 331 140Z" fill="#EAC46F" />
+            <path d="M373 112C388 128 401 148 411 166Q414 174 408 181C401 162 389 138 373 112Z" fill="#F4D88F" />
+            <path d="M262 230C270 205 279 185 288 167C296 144 305 124 316 110C306 130 296 156 288 178C280 196 272 212 262 230Z" fill="#8E6430" opacity=".55" />
+            <path d="M318 108C326 98 342 93 356 97C363 103 361 116 351 126C341 136 328 144 318 142C312 132 312 119 318 108Z" fill="#76512A" />
+          </g>
+          <path class="ar-brillo" d="M418 70 L426 96 L452 104 L426 112 L418 138 L410 112 L384 104 L410 96Z" fill="#FFF6DC" />
+        </svg>
+        <svg class="ar-nombre" viewBox="-74 -8 655 219">
+          <defs>
+            <clipPath id="ar-corte"><rect x="-200" y="-14" width="1100" height="222" /></clipPath>
+            <linearGradient id="ar-grad"><stop offset="0" stop-color="#fff" stop-opacity="0" /><stop offset=".5" stop-color="#fff" /><stop offset="1" stop-color="#fff" stop-opacity="0" /></linearGradient>
+            <mask id="ar-mascara" maskUnits="userSpaceOnUse" x="-300" y="-60" width="1300" height="340"><rect class="ar-barrido" x="-280" y="-60" width="160" height="340" fill="url(#ar-grad)" /></mask>
+          </defs>
+          <g clip-path="url(#ar-corte)"><g class="l1"><path d="M-22.1 0.0 L-65.8 0.0 L-20.0 104.0 L-20.0 95.6 L-0.0 50.1Z M-20.0 200.0 L20.0 200.0 L20.0 104.0 L-20.0 104.0Z" fill="currentColor"/><path d="M22.1 0.0 L-20.0 95.6 L-20.0 104.0 L20.0 104.0 L65.8 0.0Z" class="ar-oro" fill="#BE8D47"/></g><path class="l2" d="M77.0 0 H117.0 V128.0 A35.0 35.0 0 0 0 187.0 128.0 V0 H227.0 V128.0 A75.0 75.0 0 0 1 77.0 128.0Z" fill="currentColor"/><path class="l3" d="M243.8 0.0 L287.5 0.0 L337.8 114.3 L388.1 0.0 L431.8 0.0 L343.8 200.0 L331.8 200.0Z" fill="currentColor"/><path class="l4" d="M429.0 200.0 L447.0 159.0 L511.6 159.0 L529.6 200.0 L573.3 200.0 L485.3 0.0 L473.3 0.0 L385.3 200.0Z M479.3 85.7 L498.4 129.0 L460.2 129.0Z" fill="currentColor"/></g>
+          <g class="ar-destello" mask="url(#ar-mascara)"><path d="M-22.1 0.0 L-65.8 0.0 L-20.0 104.0 L-20.0 95.6 L-0.0 50.1Z M-20.0 200.0 L20.0 200.0 L20.0 104.0 L-20.0 104.0Z"/><path d="M22.1 0.0 L-20.0 95.6 L-20.0 104.0 L20.0 104.0 L65.8 0.0Z"/><path d="M77.0 0 H117.0 V128.0 A35.0 35.0 0 0 0 187.0 128.0 V0 H227.0 V128.0 A75.0 75.0 0 0 1 77.0 128.0Z"/><path d="M243.8 0.0 L287.5 0.0 L337.8 114.3 L388.1 0.0 L431.8 0.0 L343.8 200.0 L331.8 200.0Z"/><path d="M429.0 200.0 L447.0 159.0 L511.6 159.0 L529.6 200.0 L573.3 200.0 L485.3 0.0 L473.3 0.0 L385.3 200.0Z M479.3 85.7 L498.4 129.0 L460.2 129.0Z"/></g>
+        </svg>
+      </div>
+    </div>
+    <script>
+      // Arranque: decide al momento (sin esperar a la app) el fondo, si hay animación y si suena.
+      // La app deja en localStorage «yuva:arranque» su tema, el movimiento y el ajuste de sonido.
+      (function () {
+        var el = document.getElementById('arranque');
+        var pref = {};
+        try { pref = JSON.parse(localStorage.getItem('yuva:arranque') || '{}') || {}; } catch (e) {}
+        var oscuro = pref.tema ? pref.tema === 'oscuro' : matchMedia('(prefers-color-scheme: dark)').matches;
+        el.dataset.tema = oscuro ? 'oscuro' : 'claro';
+        if (/^#[0-9a-f]{6}$/i.test(pref.fondo || '')) el.style.setProperty('--fondo-arranque', pref.fondo);
+        var visto = false;
+        try { visto = sessionStorage.getItem('yuva:arranque-visto') === '1'; sessionStorage.setItem('yuva:arranque-visto', '1'); } catch (e) {}
+        var reducido = pref.movimiento === 'reducido' || matchMedia('(prefers-reduced-motion: reduce)').matches;
+        // Con la ventana oculta (el programa abierto en la bandeja al iniciar Windows) no se anima ni suena.
+        var oculta = document.visibilityState === 'hidden';
+        var completa = !reducido && !visto && !oculta;
+        var inicio = performance.now();
+        // Al recargar en la misma sesión (cambio de idioma o de espacio) la animación ya se vio: la pantalla se va
+        // en cuanto la app está lista, con un fundido corto. El primer arranque sigue con su animación completa.
+        var minimo = completa ? 1800 : oculta || visto ? 0 : 250;
+        var fundido = completa ? 380 : visto ? 120 : 200;
+        var listo = false;
+        var terminado = false;
+
+        function sonar() {
+          // Sonido propio, hecho aquí con Web Audio: un «plin» de campanita y un «boom» grave y corto.
+          if (pref.sonido === false) return;
+          var Ctx = window.AudioContext || window.webkitAudioContext;
+          if (!Ctx) return;
+          try {
+            var ctx = new Ctx();
+            // Se cierra una sola vez (a los 300 ms si no pudo sonar, o al terminar): cerrar dos veces rechaza la promesa.
+            var cerrar = function () {
+              if (ctx.state === 'closed') return;
+              var p = ctx.close();
+              if (p && p.catch) p.catch(function () {});
+            };
+            // Los navegadores no dejan sonar antes de que la persona toque la página: entonces se calla.
+            // Si sigue suspendido un instante después, no sonará: se cierra sin más.
+            setTimeout(function () {
+              window.yuvaArranque.sonido = ctx.state === 'running';
+              if (ctx.state !== 'running') cerrar();
+            }, 300);
+            var t0 = ctx.currentTime + 0.02;
+            var salida = ctx.createDynamicsCompressor();
+            var maestro = ctx.createGain();
+            maestro.gain.value = 0.55;
+            salida.connect(maestro).connect(ctx.destination);
+            function tono(f, desde, dura, vol, forma, hasta) {
+              var o = ctx.createOscillator();
+              var g = ctx.createGain();
+              o.type = forma || 'sine';
+              o.frequency.setValueAtTime(f, t0 + desde);
+              if (hasta) o.frequency.exponentialRampToValueAtTime(hasta, t0 + desde + dura * 0.7);
+              g.gain.setValueAtTime(0.0001, t0 + desde);
+              g.gain.exponentialRampToValueAtTime(vol, t0 + desde + 0.008);
+              g.gain.exponentialRampToValueAtTime(0.0001, t0 + desde + dura);
+              o.connect(g).connect(salida);
+              o.start(t0 + desde);
+              o.stop(t0 + desde + dura + 0.05);
+            }
+            // «plin»: campanita con parciales de campana (no armónicos), cuando aparece el rollo dorado.
+            tono(1318.5, 0.4, 0.9, 0.16);
+            tono(1318.5 * 2.76, 0.4, 0.45, 0.05);
+            tono(1318.5 * 5.4, 0.4, 0.2, 0.018);
+            tono(1975.5, 0.5, 0.7, 0.07);
+            // «boom»: una nota grave que cae y un soplo de ruido filtrado, cuando el logo se despliega.
+            tono(150, 1.02, 0.95, 0.42, 'sine', 46);
+            tono(300, 1.02, 0.45, 0.08, 'triangle', 92);
+            var n = Math.floor(ctx.sampleRate * 0.7);
+            var buf = ctx.createBuffer(1, n, ctx.sampleRate);
+            var d = buf.getChannelData(0);
+            for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
+            var ruido = ctx.createBufferSource();
+            ruido.buffer = buf;
+            var filtro = ctx.createBiquadFilter();
+            filtro.type = 'lowpass';
+            filtro.frequency.setValueAtTime(900, t0 + 1.0);
+            filtro.frequency.exponentialRampToValueAtTime(120, t0 + 1.6);
+            var gr = ctx.createGain();
+            gr.gain.setValueAtTime(0.0001, t0 + 1.0);
+            gr.gain.exponentialRampToValueAtTime(0.12, t0 + 1.04);
+            gr.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.7);
+            ruido.connect(filtro).connect(gr).connect(salida);
+            ruido.start(t0 + 1.0);
+            setTimeout(cerrar, 2600);
+          } catch (e) {}
+        }
+        // Con animación completa, el logo en 3D (video) si empieza a tiempo; si no, el SVG animado.
+        // La animación y el sonido arrancan juntos cuando empieza el video, para ir a la par.
+        var video = el.querySelector('.ar-video');
+        var empezado = false;
+        function empezar(conVideo) {
+          if (empezado) return;
+          empezado = true;
+          inicio = performance.now();
+          el.className = 'anima' + (conVideo ? ' con-video' : '');
+          if (!conVideo && video) video.remove();
+          sonar();
+          intentar();
+        }
+        if (!completa) {
+          el.className = visto ? 'quieto recarga' : 'quieto';
+          if (video) video.remove();
+        } else if (video && video.canPlayType('video/webm; codecs="vp9"')) {
+          el.className = 'espera';
+          video.addEventListener('playing', function () {
+            if (window.yuvaArranque) window.yuvaArranque.video = Math.round(performance.now() - inicio);
+            empezar(true);
+          }, { once: true });
+          var reproduce = video.play();
+          if (reproduce && reproduce.catch) reproduce.catch(function () { empezar(false); });
+          setTimeout(function () { empezar(false); }, 600);
+        } else empezar(false);
+
+        function quitar() {
+          if (terminado) return;
+          terminado = true;
+          el.classList.add('sale');
+          setTimeout(function () {
+            el.remove();
+            window.yuvaArranque.terminado = true;
+            window.dispatchEvent(new Event('yuva:arranque-fin'));
+          }, fundido);
+        }
+        function intentar() {
+          if (!listo || terminado || (completa && !empezado)) return;
+          setTimeout(quitar, Math.max(0, minimo - (performance.now() - inicio)));
+        }
+        window.yuvaArranque = {
+          terminado: false,
+          animado: completa,
+          listo: function () { listo = true; intentar(); },
+        };
+        // Por si la app no llega a avisar (un error al abrir): nunca tapa la pantalla más de 8 s.
+        setTimeout(function () { listo = true; quitar(); }, 8000);
+      })();
+    </script>
     <div id="raiz"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

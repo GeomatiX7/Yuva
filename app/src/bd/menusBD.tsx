@@ -1,25 +1,30 @@
 // Menús de la base de datos: propiedad (columna), filtros, orden, propiedades visibles y ajustes de vista.
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as KE } from 'react';
 import {
   ArrowDownNarrowWide, ArrowUpNarrowWide, ArrowLeftToLine, ArrowRightToLine, EyeOff, Eye, Filter, Trash2, Plus, X,
   ChevronLeft, Repeat, Copy, WrapText, Pin, PinOff, GripVertical, ArrowUpRight, Sigma, SquareFunction, Search, BellRing, MousePointerClick, CircleGauge,
+  File as IconoEnBlanco, Pencil, ChevronDown,
 } from 'lucide-react';
-import type { Automatizacion, GrupoFiltro, ReglaColor, AvisoPropiedad, ColorEtiqueta, ConfigResumen, EsquemaBD, Filtro, MostrarNumero, Pagina, Propiedad, TipoPropiedad, Vista } from '../data/tipos';
+import type { Automatizacion, GrupoFiltro, ReglaColor, AvisoPropiedad, ColorEtiqueta, ConfigGrafico, ConfigResumen, EsquemaBD, Filtro, MostrarNumero, Pagina, Propiedad, TipoGrafico, TipoPropiedad, Vista } from '../data/tipos';
 import { HORA_BASE, NOMBRE_AVISO_PROP, pedirPermiso } from '../lib/recordatorios';
 import { nuevoId } from '../data/bd';
-import { estaBorrada, hijosDe, tituloDe, usar } from '../data/estado';
-import { Flotante, ItemMenu, Menu, SeparadorMenu, TituloMenu, Interruptor, confirmar, type Ancla } from '../componentes/ui';
+import { actualizarPagina, duplicarPagina, estaBorrada, hijosDe, tituloDe, usar } from '../data/estado';
+import { Flotante, ItemMenu, Menu, SeparadorMenu, TituloMenu, Interruptor, confirmar, refSegmentado, type Ancla } from '../componentes/ui';
 import { IconoPagina } from '../componentes/IconoPagina';
+import { ir } from '../lib/ruta';
 import {
   agregarPropiedad, cambiarPropiedad, cambiarTipoPropiedad, cambiarVista, eliminarPropiedad, NOMBRE_TIPO, operadoresDe,
   ordenPropsDe, agregarOpcion, cambiarEsquema, configurarRelacion, FORMATOS, funcionesResumen, gemelaDe, NOMBRE_RESUMEN,
   propsVisibles, COLORES, NOMBRE_COLOR, NOMBRE_GRUPO_ESTADO, activarSubelementos, activarDependencias,
+  valorDe, plantillaPorDefecto, crearPlantilla, graficoInicial,
 } from './operaciones';
 import { calcularEsquema, comoBase } from './derivadas';
 import { Etiqueta, IconoTipo } from './valores';
-import { EditorFormula } from './EditorFormula';
+// El editor de fórmulas sigue con import estático: cargado aparte, el arranque crecía más (1,3 KB gz y 3 archivos,
+// porque el empaquetador parte otros trozos) de lo que se ahorraba al abrir una base (0,1 KB gz).
+import { EditorFormula, SelectorDecimales } from './EditorFormula';
 import { ConfigBotonMenu } from './botones';
-import { AjustesGrafico } from './VistaGrafico';
+import { AjustesAgrupar, VISTAS_AGRUPABLES } from './agrupar';
 import { LOCALE, plural, trad } from '../i18n';
 
 const TIPOS_BASICOS: TipoPropiedad[] = ['texto', 'numero', 'seleccion', 'multiseleccion', 'estado', 'fecha', 'casilla', 'url', 'correo', 'telefono', 'lugar', 'archivos', 'creado', 'editado', 'id'];
@@ -218,7 +223,8 @@ function MostrarComoMenu({ bd, prop, alVolver }: { bd: Pagina; prop: Propiedad; 
       <button className="volver-menu" onClick={alVolver}>
         <ChevronLeft size={16} /> {trad('Mostrar como')}
       </button>
-      <div className="segmentado" role="radiogroup" aria-label={trad('Mostrar como')}>
+      <div className="segmentado" role="radiogroup" aria-label={trad('Mostrar como')} ref={refSegmentado}>
+        <span className="seg-ind" aria-hidden="true" />
         {(['numero', 'barra', 'anillo'] as const).map((c) => (
           <button key={c} role="radio" aria-checked={(m?.como ?? 'numero') === c} aria-pressed={(m?.como ?? 'numero') === c} onClick={() => poner(c === 'numero' ? null : { como: c })}>
             {c === 'numero' ? trad('Número') : c === 'barra' ? trad('Barra') : trad('Anillo')}
@@ -244,7 +250,7 @@ function MostrarComoMenu({ bd, prop, alVolver }: { bd: Pagina; prop: Propiedad; 
             </select>
           </label>
           <label className="casilla-linea">
-            <input type="checkbox" checked={m.numero} onChange={(e) => poner({ numero: e.target.checked })} />
+            <input type="checkbox" className="casilla" checked={m.numero} onChange={(e) => poner({ numero: e.target.checked })} />
             {trad('Mostrar también el número')}
           </label>
         </>
@@ -498,6 +504,7 @@ export function MenuPropiedad({
                   cambiarPropiedad(bd.id, id, {
                     opciones: prop.opciones && structuredClone(prop.opciones),
                     formato: prop.formato,
+                    decimales: prop.decimales,
                     formula: prop.formula,
                     resumen: prop.resumen && { ...prop.resumen },
                     relacion: prop.relacion && { bdId: prop.relacion.bdId, limite: prop.relacion.limite },
@@ -592,6 +599,11 @@ export function MenuPropiedad({
               {n}
             </ItemMenu>
           ))}
+          <SeparadorMenu />
+          <label className="menu-en-pagina">
+            <span>{trad('Decimales')}</span>
+            <SelectorDecimales prop={prop} alCambiar={(decimales) => cambiarPropiedad(bd.id, prop.id, { decimales })} />
+          </label>
         </Menu>
       )}
       {modo === 'opciones' && (
@@ -1164,6 +1176,8 @@ export function MenuAjustesVista({ bd, vista, ancla, alCerrar }: { bd: Pagina; v
             </select>
           </label>
         )}
+        {/* Tabla, lista y cronograma: «Agrupar por» con su propio campo (Vista.agrupar), no el agruparPor del tablero. */}
+        {VISTAS_AGRUPABLES.includes(vista.tipo) && <AjustesAgrupar bd={bd} vista={vista} />}
         {vista.tipo === 'mapa' && (
           <label className="campo-etiquetado">
             <span>{trad('Pines según el lugar de')}</span>
@@ -1240,7 +1254,8 @@ export function MenuAjustesVista({ bd, vista, ancla, alCerrar }: { bd: Pagina; v
         {vista.tipo === 'calendario' && (
           <div className="campo-etiquetado en-linea">
             <span>{trad('Mostrar')}</span>
-            <div className="segmentado" role="group" aria-label={trad('Mes o semana')}>
+            <div className="segmentado" role="group" aria-label={trad('Mes o semana')} ref={refSegmentado}>
+              <span className="seg-ind" aria-hidden="true" />
               <button aria-pressed={vista.modoCalendario !== 'semana'} onClick={() => cambiarVista(bd.id, vista.id, { modoCalendario: 'mes' })}>
                 {trad('Mes')}
               </button>
@@ -1285,7 +1300,8 @@ export function MenuAjustesVista({ bd, vista, ancla, alCerrar }: { bd: Pagina; v
         {(vista.tipo === 'tablero' || vista.tipo === 'galeria') && (
           <div className="campo-etiquetado en-linea">
             <span>{trad('Tamaño de tarjeta')}</span>
-            <div className="segmentado" role="group" aria-label={trad('Tamaño de tarjeta')}>
+            <div className="segmentado" role="group" aria-label={trad('Tamaño de tarjeta')} ref={refSegmentado}>
+              <span className="seg-ind" aria-hidden="true" />
               {([['p', trad('Pequeño')], ['m', trad('Mediano')], ['g', trad('Grande')]] as const).map(([t, nombre]) => (
                 <button key={t} aria-pressed={(vista.tamTarjeta ?? 'm') === t} onClick={() => cambiarVista(bd.id, vista.id, { tamTarjeta: t })}>
                   {nombre}
@@ -1388,3 +1404,448 @@ export function MenuAjustesVista({ bd, vista, ancla, alCerrar }: { bd: Pagina; v
     </Flotante>
   );
 }
+
+/* ---------- «Pulso»: avance del cronograma y menú de «Nueva» ---------- */
+
+/** Valor de `vista.avanceDe` para contar las casillas de la página de cada fila (Pagina.resumen). */
+export const AVANCE_PAGINAS = '@paginas';
+
+/** De dónde sale el avance de las barras del cronograma (null: de ninguna parte). */
+export type FuenteAvance = { tipo: 'prop'; prop: Propiedad } | { tipo: 'paginas' } | null;
+
+/** Un número que ya dice cuánto está hecho: un porcentaje o un número dibujado como barra o anillo sobre su total. */
+const esAvanceClaro = (p: Propiedad) => {
+  const b = comoBase(p);
+  return b.tipo === 'casilla' || (b.tipo === 'numero' && (b.formato === 'porcentaje' || !!p.mostrar?.total));
+};
+
+/**
+ * Propiedades que dan el avance sin dudas: porcentajes, números con su total (barra o anillo) y casillas (también
+ * fórmulas y resúmenes que dan eso). Un número cualquiera (presupuesto, horas…) no dice cuánto está hecho.
+ */
+export function propsAvance(props: Propiedad[]): Propiedad[] {
+  return props.filter(esAvanceClaro);
+}
+
+/** Los demás números: se pueden elegir desde «Otra propiedad…», avisando de que 100 cuenta como el 100 %. */
+export function otrasPropsAvance(props: Propiedad[]): Propiedad[] {
+  return props.filter((p) => comoBase(p).tipo === 'numero' && !esAvanceClaro(p));
+}
+
+/** La fuente del avance de una vista. Sin elegir, la primera propiedad de porcentaje (o dibujada como barra). */
+export function fuenteAvance(vista: Vista, props: Propiedad[]): FuenteAvance {
+  const v = vista.avanceDe;
+  if (v === '') return null;
+  if (v === AVANCE_PAGINAS) return { tipo: 'paginas' };
+  const p = v
+    ? [...propsAvance(props), ...otrasPropsAvance(props)].find((x) => x.id === v)
+    : propsAvance(props).find((x) => comoBase(x).tipo === 'numero');
+  return p ? { tipo: 'prop', prop: p } : null;
+}
+
+/** Avance de una fila de 0 a 100 (entero), o null si la fila no tiene el dato. */
+export function pctAvance(fila: Pagina, f: FuenteAvance): number | null {
+  if (!f) return null;
+  if (f.tipo === 'paginas') {
+    const r = fila.resumen;
+    return r && r.tareas > 0 ? Math.round((r.hechas / r.tareas) * 100) : null;
+  }
+  const v = valorDe(fila, f.prop);
+  if (comoBase(f.prop).tipo === 'casilla') return v === true ? 100 : 0;
+  const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN;
+  if (!Number.isFinite(n)) return null;
+  const total = f.prop.mostrar?.total || 100;
+  return Math.max(0, Math.min(100, Math.round((n / total) * 100)));
+}
+
+/** Nombre corto de la fuente, para el botón «Avance: …» («Avance: Avance» se dice «Avance: % hecho»). */
+export function nombreAvance(f: FuenteAvance): string {
+  if (!f) return trad('ninguno@avance');
+  if (f.tipo === 'paginas') return trad('casillas de cada fila');
+  const nombre = f.prop.nombre.trim();
+  if (!nombre) return trad('Sin nombre');
+  return nombre.toLocaleLowerCase() === trad('Avance').toLocaleLowerCase() && comoBase(f.prop).tipo === 'numero' ? trad('% hecho') : nombre;
+}
+
+/** Detalle de una propiedad en el menú de avance: qué valor cuenta como el 100 %. */
+function detalleAvance(p: Propiedad): string {
+  const b = comoBase(p);
+  const calculada = p.tipo === 'formula' || p.tipo === 'resumen' ? `${NOMBRE_TIPO[p.tipo]} · ` : '';
+  if (b.tipo === 'casilla') return calculada + trad('marcada es el 100 %');
+  if (b.formato === 'porcentaje' && (p.mostrar?.total ?? 100) === 100) return calculada + trad('porcentaje de 0 a 100');
+  if (p.mostrar?.total) return calculada + trad('número de 0 a {total}', { total: p.mostrar.total });
+  // Un número sin total: se divide por 100, así que 100 (o más) cuenta como hecho.
+  return calculada + trad('sin total: 100 o más cuenta como hecho');
+}
+
+/** Esc dentro de un flotante: para devolver el foco al botón que lo abrió (un clic fuera no lo roba). */
+function useCierrePorTecla() {
+  const porTecla = useRef(false);
+  useEffect(() => {
+    const alTecla = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') porTecla.current = true;
+    };
+    const alPulsar = () => {
+      porTecla.current = false;
+    };
+    // En la fase de captura de window: antes que la capa del flotante, que detiene el Esc.
+    window.addEventListener('keydown', alTecla, true);
+    window.addEventListener('mousedown', alPulsar, true);
+    return () => {
+      window.removeEventListener('keydown', alTecla, true);
+      window.removeEventListener('mousedown', alPulsar, true);
+    };
+  }, []);
+  return porTecla;
+}
+
+/** ↑ ↓ Inicio Fin entre los elementos `sel` de un contenedor. */
+function moverFoco(e: KE<HTMLElement>, sel: string) {
+  if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return;
+  const items = [...e.currentTarget.querySelectorAll<HTMLElement>(sel)];
+  if (!items.length || !items.includes(document.activeElement as HTMLElement)) return;
+  e.preventDefault();
+  const i = items.indexOf(document.activeElement as HTMLElement);
+  const sig =
+    e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : e.key === 'ArrowDown' ? (i + 1) % items.length : i <= 0 ? items.length - 1 : i - 1;
+  items[sig].focus();
+}
+
+/** Menú «Avance desde…» del cronograma: elige la propiedad del avance de las barras (se guarda en la vista). */
+export function MenuAvance({ bd, vista, ancla, alCerrar }: { bd: Pagina; vista: Vista; ancla: HTMLElement; alCerrar: (devolverFoco: boolean) => void }) {
+  const props = bd.esquema!.propiedades;
+  const actual = fuenteAvance(vista, props);
+  const elegido = actual ? (actual.tipo === 'paginas' ? AVANCE_PAGINAS : actual.prop.id) : '';
+  const porTecla = useCierrePorTecla();
+  const caja = useRef<HTMLDivElement>(null);
+  const otras = otrasPropsAvance(props);
+  // Los números que no dicen cuánto está hecho (presupuesto, horas…) quedan detrás de «Otra propiedad…».
+  const [verOtras, setVerOtras] = useState(() => otras.some((p) => p.id === elegido));
+  // El foco va a la opción elegida (sin desplazar nada: el flotante aún se está colocando).
+  useEffect(() => caja.current?.querySelector<HTMLElement>('[aria-checked="true"]')?.focus({ preventScroll: true }), []);
+  const opcion = (p: Propiedad): [string, string, string] => [p.id, p.nombre || trad('Sin nombre'), detalleAvance(p)];
+  const opciones: [string, string, string][] = [
+    ...propsAvance(props).map(opcion),
+    [AVANCE_PAGINAS, trad('Casillas de cada fila'), trad('las tareas marcadas dentro de su página')],
+    ['', trad('Ninguna propiedad'), trad('se raya, tenue, el tiempo que ya pasó')],
+  ];
+  const elegir = (v: string) => {
+    cambiarVista(bd.id, vista.id, { avanceDe: v });
+    alCerrar(true);
+  };
+  const item = ([v, nombre, detalle]: [string, string, string]) => (
+    <button key={v || 'ninguna'} type="button" role="menuitemradio" aria-checked={v === elegido} className="item-menu mp-item" onClick={() => elegir(v)}>
+      <span className="mp-texto">
+        {nombre}
+        <small>{detalle}</small>
+      </span>
+    </button>
+  );
+  return (
+    <Flotante ancla={ancla} alCerrar={() => alCerrar(porTecla.current)} ancho={300}>
+      <div ref={caja} role="menu" aria-label={trad('Avance desde…')} className="menu menu-pulso" onKeyDown={(e) => moverFoco(e, '[role^="menuitem"]')}>
+        <div className="titulo-menu">{trad('Avance desde…')}</div>
+        {opciones.map(item)}
+        {otras.length > 0 && (
+          <>
+            <SeparadorMenu />
+            <button type="button" role="menuitem" aria-expanded={verOtras} className="item-menu mp-item mp-otras" onClick={() => setVerOtras(!verOtras)}>
+              <span className="mp-texto">
+                {trad('Otra propiedad…')}
+                <small>{trad('números sin total: 100 cuenta como el 100 %')}</small>
+              </span>
+              <ChevronDown size={14} aria-hidden="true" className="mp-chevron" />
+            </button>
+            {verOtras && <div role="group" aria-label={trad('Otra propiedad…')}>{otras.map(opcion).map(item)}</div>}
+          </>
+        )}
+      </div>
+    </Flotante>
+  );
+}
+
+/**
+ * Menú de la flecha de «Nueva»: crear en blanco o con una plantilla (la de siempre lleva la diagonal y recibe
+ * el foco, así Intro la usa) y administrar las plantillas. ↑ ↓ recorren las opciones y Esc devuelve el foco.
+ */
+export function MenuNuevaFila({ bd, vista, ancla, plantillas, fija, alCerrar, alCrear }: {
+  bd: Pagina;
+  vista: Vista;
+  ancla: HTMLElement;
+  plantillas: Pagina[];
+  fija: boolean;
+  alCerrar: (devolverFoco: boolean) => void;
+  alCrear: (plantillaId: string | null) => void;
+}) {
+  const esquema = bd.esquema!;
+  const porDefecto = plantillaPorDefecto(bd, vista)?.id ?? null;
+  const porTecla = useCierrePorTecla();
+  const caja = useRef<HTMLDivElement>(null);
+  useEffect(() => caja.current?.querySelector<HTMLElement>('.nf-item.defecto')?.focus({ preventScroll: true }), []);
+  const crear = (id: string | null) => {
+    alCerrar(false);
+    alCrear(id);
+  };
+  const nombreBd = tituloDe(bd);
+  // Cuántas filas (fuera de la papelera) salieron de cada plantilla: el «4×» de la maqueta.
+  const paginas = usar((s) => s.paginas);
+  const usos = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const f of Object.values(paginas)) {
+      if (f.padreId === bd.id && f.desdePlantilla && !f.enPapelera && !f.esPlantilla) m.set(f.desdePlantilla, (m.get(f.desdePlantilla) ?? 0) + 1);
+    }
+    return m;
+  }, [paginas, bd.id]);
+  return (
+    <Flotante ancla={ancla} alCerrar={() => alCerrar(porTecla.current)} ancho={340} alinear="fin">
+      <div ref={caja} role="dialog" aria-label={trad('Crear en {bd}', { bd: nombreBd })} className="panel-bd menu-nueva" onKeyDown={(e) => moverFoco(e, '.nf-item')}>
+        <div className="titulo-menu">{trad('Crear en {bd}', { bd: nombreBd })}</div>
+        <div className="nf-fila">
+          <button type="button" className={`nf-item${porDefecto ? '' : ' defecto'}`} onClick={() => crear(null)}>
+            <span className="nf-icono">
+              <IconoEnBlanco size={16} />
+            </span>
+            <span className="nf-texto">
+              {trad('En blanco')}
+              <small>{porDefecto ? trad('una fila vacía') : trad('por defecto · Intro')}</small>
+            </span>
+          </button>
+        </div>
+        {plantillas.map((p) => {
+          const enVista = vista.plantillaDefecto === p.id;
+          const enTodas = esquema.plantillaDefecto === p.id;
+          const tareas = p.resumen?.tareas ?? 0;
+          const detalle = [
+            tareas ? plural(tareas, 'plantilla con {n} tarea', 'plantilla con {n} tareas') : trad('plantilla'),
+            enVista ? trad('por defecto aquí') : enTodas ? trad('por defecto') : '',
+            p.id === porDefecto ? trad('Intro') : '',
+          ]
+            .filter(Boolean)
+            .join(' · ');
+          return (
+            <div key={p.id} className="nf-fila">
+              <button type="button" className={`nf-item${p.id === porDefecto ? ' defecto' : ''}`} title={trad('Crear una fila con esta plantilla')} onClick={() => crear(p.id)}>
+                <span className="nf-icono">
+                  <IconoPagina pagina={p} tam={16} />
+                </span>
+                <span className="nf-texto">
+                  {p.titulo || trad('Plantilla sin título')}
+                  <small>{detalle}</small>
+                </span>
+                {!!usos.get(p.id) && (
+                  <span className="nf-usos" title={plural(usos.get(p.id)!, 'Usada {n} vez', 'Usada {n} veces')}>
+                    <span aria-hidden="true">{usos.get(p.id)}×</span>
+                    <span className="solo-lectores">{plural(usos.get(p.id)!, 'usada {n} vez', 'usada {n} veces')}</span>
+                  </span>
+                )}
+              </button>
+              {!fija && (
+                <span className="nf-admin">
+                  <button className="boton-icono chico" aria-label={trad('Duplicar la plantilla {titulo}', { titulo: p.titulo })} title={trad('Duplicar')} onClick={() => duplicarPagina(p.id)}>
+                    <Copy size={14} />
+                  </button>
+                  <button
+                    className="boton-icono chico"
+                    aria-label={trad('Editar la plantilla {titulo}', { titulo: p.titulo })}
+                    title={trad('Editar')}
+                    onClick={() => {
+                      alCerrar(false);
+                      ir(p.id);
+                    }}
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <select
+                    className="campo plantilla-defecto"
+                    aria-label={p.titulo ? trad('Usar {titulo} por defecto', { titulo: p.titulo }) : trad('Usar la plantilla por defecto')}
+                    value={enVista ? 'vista' : enTodas ? 'todas' : ''}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      cambiarVista(bd.id, vista.id, { plantillaDefecto: v === 'vista' ? p.id : enVista ? undefined : vista.plantillaDefecto });
+                      cambiarEsquema(bd.id, (es) => {
+                        es.plantillaDefecto = v === 'todas' ? p.id : enTodas ? undefined : es.plantillaDefecto;
+                        return es;
+                      });
+                    }}
+                  >
+                    <option value="">{trad('No es la de por defecto')}</option>
+                    <option value="vista">{trad('Por defecto en esta vista')}</option>
+                    <option value="todas">{trad('Por defecto en todas')}</option>
+                  </select>
+                  <button
+                    className="boton-icono chico peligro"
+                    aria-label={trad('Eliminar la plantilla {titulo}', { titulo: p.titulo })}
+                    title={trad('Eliminar (va a la papelera)')}
+                    onClick={() => actualizarPagina(p.id, { enPapelera: true, borradoEn: Date.now() }, false)}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </span>
+              )}
+            </div>
+          );
+        })}
+        {plantillas.length === 0 && <p className="vacio-chico">{trad('Sin plantillas. Una plantilla es una fila modelo: título, valores y contenido.')}</p>}
+        {!fija && (
+          <>
+            <SeparadorMenu />
+            <button
+              className="boton-texto nf-nueva-plantilla"
+              onClick={() => {
+                alCerrar(false);
+                ir(crearPlantilla(bd.id).id);
+              }}
+            >
+              <Plus size={15} /> {trad('Nueva plantilla')}
+            </button>
+          </>
+        )}
+      </div>
+    </Flotante>
+  );
+}
+
+// ---------- ajustes del gráfico ----------
+// Viven aquí y no en VistaGrafico: así el menú de ajustes de la vista no carga el dibujo del gráfico.
+
+export const NOMBRE_GRAFICO: Record<TipoGrafico, string> = {
+  columnas: trad('Columnas'),
+  barras: trad('Barras horizontales'),
+  lineas: trad('Líneas'),
+  dona: trad('Dona'),
+  radar: trad('Radar'),
+  calor: trad('Calendario de calor'),
+  semana: trad('Seguimiento semanal'),
+};
+
+export function AjustesGrafico({ bd, vista }: { bd: Pagina; vista: Vista }) {
+  const conf = vista.grafico ?? graficoInicial(bd.esquema!);
+  const props = bd.esquema!.propiedades;
+  const poner = (c: Partial<ConfigGrafico>) => cambiarVista(bd.id, vista.id, { grafico: { ...conf, ...c } });
+  const esFecha = (p: Propiedad) => ['fecha', 'creado', 'editado'].includes(comoBase(p).tipo);
+  const ejes = props.filter((p) => p.tipo !== 'boton' && p.tipo !== 'titulo' && comoBase(p).tipo !== 'numero');
+  const fechas = props.filter(esFecha);
+  const numeros = props.filter((p) => comoBase(p).tipo === 'numero');
+  const ejeActual = props.find((p) => p.id === conf.eje);
+  return (
+    <>
+      <label className="campo-etiquetado">
+        <span>{trad('Tipo de gráfico')}</span>
+        <select
+          className="campo"
+          value={conf.tipo}
+          onChange={(e) => {
+            const tipo = e.target.value as TipoGrafico;
+            const extra: Partial<ConfigGrafico> = {};
+            if (tipo === 'calor' && !(ejeActual && esFecha(ejeActual))) extra.eje = fechas[0]?.id ?? conf.eje;
+            if (tipo === 'radar' && conf.eje !== 'titulo' && !ejeActual) extra.eje = 'titulo';
+            if (tipo === 'semana') {
+              if (!conf.fecha) extra.fecha = fechas[0]?.id;
+              if (ejeActual && esFecha(ejeActual)) extra.eje = ejes.find((p) => !esFecha(p))?.id ?? 'titulo';
+            }
+            poner({ tipo, ...extra });
+          }}
+        >
+          {(Object.keys(NOMBRE_GRAFICO) as TipoGrafico[]).map((t) => (
+            <option key={t} value={t}>
+              {NOMBRE_GRAFICO[t]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="campo-etiquetado">
+        <span>{conf.tipo === 'calor' ? trad('Fecha de cada fila') : conf.tipo === 'radar' ? trad('Una punta por') : conf.tipo === 'semana' ? trad('Un renglón por') : trad('Agrupar por')}</span>
+        <select className="campo" value={conf.eje} onChange={(e) => poner({ eje: e.target.value })}>
+          {conf.tipo !== 'calor' && <option value="titulo">{trad('Cada fila (su título)')}</option>}
+          {(conf.tipo === 'calor' ? fechas : ejes).map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.nombre}
+            </option>
+          ))}
+        </select>
+      </label>
+      {conf.tipo === 'semana' && (
+        <label className="campo-etiquetado">
+          <span>{trad('Fecha de cada registro')}</span>
+          <select className="campo" value={conf.fecha ?? ''} onChange={(e) => poner({ fecha: e.target.value })}>
+            {!conf.fecha && <option value="">{trad('Elige una fecha')}</option>}
+            {fechas.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.nombre}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      {ejeActual && esFecha(ejeActual) && conf.tipo !== 'calor' && conf.tipo !== 'semana' && (
+        <label className="campo-etiquetado">
+          <span>{trad('Periodo')}</span>
+          <select className="campo" value={conf.agruparFecha ?? 'mes'} onChange={(e) => poner({ agruparFecha: e.target.value as ConfigGrafico['agruparFecha'] })}>
+            <option value="dia">{trad('Día')}</option>
+            <option value="semana">{trad('Semana')}</option>
+            <option value="mes">{trad('Mes')}</option>
+            <option value="anio">{trad('Año')}</option>
+          </select>
+        </label>
+      )}
+      {conf.tipo !== 'semana' && (
+      <label className="campo-etiquetado">
+        <span>{trad('Valor')}</span>
+        <select
+          className="campo"
+          value={conf.medida === 'contar' || !conf.valorProp ? 'contar' : `${conf.medida}:${conf.valorProp}`}
+          onChange={(e) => {
+            if (e.target.value === 'contar') return poner({ medida: 'contar', valorProp: undefined });
+            const [medida, valorProp] = e.target.value.split(':');
+            poner({ medida: medida as ConfigGrafico['medida'], valorProp });
+          }}
+        >
+          <option value="contar">{trad('Contar filas')}</option>
+          {numeros.flatMap((p) =>
+            (['suma', 'promedio', 'min', 'max'] as const).map((m) => (
+              <option key={`${m}:${p.id}`} value={`${m}:${p.id}`}>
+                {trad('{medida} de {prop}', { medida: { suma: trad('Suma'), promedio: trad('Promedio'), min: trad('Mínimo'), max: trad('Máximo') }[m], prop: p.nombre })}
+              </option>
+            )),
+          )}
+        </select>
+      </label>
+      )}
+      {conf.tipo !== 'lineas' && conf.tipo !== 'calor' && conf.tipo !== 'semana' && (
+        <label className="campo-etiquetado">
+          <span>{trad('Orden')}</span>
+          <select className="campo" value={conf.orden ?? 'eje'} onChange={(e) => poner({ orden: e.target.value as ConfigGrafico['orden'] })}>
+            <option value="eje">{trad('Como en la propiedad')}</option>
+            <option value="mayor">{trad('De mayor a menor')}</option>
+            <option value="menor">{trad('De menor a mayor')}</option>
+          </select>
+        </label>
+      )}
+      {(conf.tipo === 'columnas' || conf.tipo === 'dona') && (
+        <label className="casilla-linea">
+          <input type="checkbox" className="casilla" checked={!!conf.tresD} onChange={(e) => poner({ tresD: e.target.checked })} />
+          {trad('Estilo 3D')}
+        </label>
+      )}
+      {conf.tipo === 'lineas' && (
+        <label className="casilla-linea">
+          <input type="checkbox" className="casilla" checked={!!conf.acumulado} onChange={(e) => poner({ acumulado: e.target.checked })} />
+          {trad('Total acumulado')}
+        </label>
+      )}
+      {conf.tipo === 'lineas' && (
+        <label className="casilla-linea">
+          <input type="checkbox" className="casilla" checked={!!conf.suave} onChange={(e) => poner({ suave: e.target.checked })} />
+          {trad('Curva suave')}
+        </label>
+      )}
+      {conf.tipo === 'calor' && (
+        <label className="campo-etiquetado">
+          <span>{trad('Semanas hacia atrás (si caben)')}</span>
+          <input className="campo" type="number" min={4} max={53} value={conf.semanas ?? 26} onChange={(e) => poner({ semanas: Math.min(53, Math.max(4, Number(e.target.value) || 26)) })} />
+        </label>
+      )}
+    </>
+  );
+}
+

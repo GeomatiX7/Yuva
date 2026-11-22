@@ -10,6 +10,7 @@ import { ir } from '../lib/ruta';
 import { borrarVisitas, masVisitadas, textoVisitas, useVisitas } from '../lib/visitas';
 import { enviarResumen, HORA_RESUMEN } from '../lib/resumenDia';
 import { IconoPagina } from './IconoPagina';
+import { NotaRapidaGlobal } from './AjustesCaptura';
 import { Interruptor, confirmar } from './ui';
 import { LOCALE, plural, trad } from '../i18n';
 
@@ -91,6 +92,8 @@ function BusquedaGlobal() {
       setGrabando(false);
       escritorio!.cambiarAjustes({ atajoBusqueda: r.atajo!, grabandoAtajo: false }).then((a) => {
         if (a.atajoOcupado) avisar(trad('{atajo} lo usa otro programa: elige otro', { atajo: mostrarAtajo(a.atajoBusqueda) }));
+        // La nota rápida tenía ese mismo atajo: se queda sin él (gana la búsqueda) y su sección lo avisa.
+        else if (a.capturaRapida && a.atajoCapturaChoca) avisar(trad('Búsqueda rápida: {atajo}. La nota rápida usaba ese atajo y se queda sin él.', { atajo: mostrarAtajo(a.atajoBusqueda) }));
         else avisar(trad('Búsqueda rápida: {atajo}', { atajo: mostrarAtajo(a.atajoBusqueda) }));
       });
     };
@@ -176,6 +179,7 @@ export function SeccionPestanas() {
         <Interruptor etiqueta={trad('Ocultar sola la barra de pestañas')} activo={ocultar} alCambiar={(v) => cambiarAjustes({ ocultarPestanas: v })} />
       </div>
       <BusquedaGlobal />
+      <NotaRapidaGlobal />
     </>
   );
 }

@@ -1,15 +1,20 @@
 // Bloques de diseño para tableros: banda de sección, accesos (tarjetas de navegación), indicador
 // (un número sacado de una base de datos), frase del día, cuenta atrás y saludo.
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { createReactBlockSpec } from '@blocknote/react';
 import { useShallow } from 'zustand/react/shallow';
-import { differenceInCalendarDays, format } from 'date-fns';
+import { differenceInCalendarDays, endOfWeek, format } from 'date-fns';
 import { ArrowUpRight, Folder, Plus, RefreshCw, Search, Settings2, Sparkles, X } from 'lucide-react';
-import { estaBorrada, hijosDe, tituloDe, usar } from '../data/estado';
+import { estaBorrada, estaOculta, hijosDe, tituloDe, usar } from '../data/estado';
+import { bd as baseDatos } from '../data/bd';
 import type { ColorEtiqueta, Pagina } from '../data/tipos';
 import { ir } from '../lib/ruta';
+import { hoyISO, opcionesSemana } from '../lib/fechas';
+import { filasPendientes } from '../lib/tareas';
+import { useTareasDelDia } from '../lib/tareasDelDia';
 import { IconoPagina } from '../componentes/IconoPagina';
-import { FondoPortada } from '../componentes/CabeceraPagina';
+import { FondoPortada, pendientesConFecha } from '../componentes/CabeceraPagina';
+import { abrirMisTareas } from '../componentes/MisTareas';
 import { Flotante, ItemMenu, Menu, SeparadorMenu, TituloMenu } from '../componentes/ui';
 import { patronDeId } from '../lib/portadas';
 import { useBdCalculada, comoBase } from '../bd/derivadas';
@@ -40,7 +45,10 @@ function CajaTablero({ clase, etiqueta, children, estilo }: { clase: string; eti
 function useColor(color: string): CSSProperties {
   const tema = useTemaResuelto();
   const oscuro = !!document.querySelector('.modo-oscuro') || (tema === 'oscuro' && !document.querySelector('.modo-claro'));
-  return color ? variablesColor(color as ColorEtiqueta, oscuro) : {};
+  // El color llega de los props del bloque, que pueden venir de un HTML pegado o importado
+  // (data-color="x", "constructor"…). Si no es uno de los colores conocidos se usa el de la
+  // página, igual que con color vacío, en vez de dejar que variablesColor rompa el editor.
+  return color && COLORES.includes(color as ColorEtiqueta) ? variablesColor(color as ColorEtiqueta, oscuro) : {};
 }
 
 function ElegirColor({ actual, alElegir }: { actual: string; alElegir: (c: string) => void }) {
@@ -255,13 +263,18 @@ export const bloqueAccesos = createReactBlockSpec(
         alCambiar={(p) => editor.updateBlock(block, { props: p })}
       />
     ),
-    toExternalHTML: ({ block }) => (
-      <ul>
-        {block.props.paginas.split(',').filter(Boolean).map((id) => (
-          <li key={id}>{tituloDe(usar.getState().paginas[id])}</li>
-        ))}
-      </ul>
-    ),
+    // Como en el editor (Accesos): las páginas en la papelera no salen. Si no, su título iría al HTML exportado y al
+    // portapapeles aunque ya no se vea en la página.
+    toExternalHTML: ({ block }) => {
+      const { paginas } = usar.getState();
+      return (
+        <ul>
+          {block.props.paginas.split(',').filter((id) => id && !estaBorrada(paginas, id)).map((id) => (
+            <li key={id}>{tituloDe(paginas[id])}</li>
+          ))}
+        </ul>
+      );
+    },
   },
 );
 
@@ -270,29 +283,42 @@ export const bloqueAccesos = createReactBlockSpec(
 const movimientoReducido = () =>
   document.documentElement.dataset.movimiento === 'reducido' || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-/** Cifra que sube contando desde el valor anterior (o desde 0 al aparecer), en ~0,9 s con frenado al final. */
+/** Cifra que sube contando desde lo que se ve (0 al aparecer) hasta su valor, en 0,8 s con frenado al final. Es lo
+ *  único que se repinta en cada cuadro (un render por cuadro); el indicador recibe ya el valor final. Sin animación
+ *  con movimiento reducido o con la ventana oculta (sin cuadros se quedaría a medias); y si a los 0,9 s no terminó
+ *  (la ventana pasó a segundo plano), se pone la cifra final. */
 function Conteo({ n, fmt }: { n: number; fmt: (x: number) => string }) {
   const [mostrado, setMostrado] = useState(() => (movimientoReducido() ? n : 0));
-  const previo = useRef(movimientoReducido() ? n : 0);
+  const visto = useRef(mostrado);
   useEffect(() => {
-    if (!Number.isFinite(n) || movimientoReducido()) {
-      previo.current = n;
-      setMostrado(n);
+    const poner = (v: number) => {
+      visto.current = v;
+      setMostrado(v);
+    };
+    if (!Number.isFinite(n) || movimientoReducido() || document.hidden || visto.current === n) {
+      poner(n);
       return;
     }
-    const desde = previo.current;
+    const desde = visto.current;
     const inicio = performance.now();
-    const DUR = 900;
+    const DUR = 800;
     let id = 0;
+    let red = 0;
     const paso = (t: number) => {
-      const k = Math.min(1, (t - inicio) / DUR);
-      const v = desde + (n - desde) * (1 - Math.pow(1 - k, 3));
-      setMostrado(k < 1 ? v : n);
+      const k = Math.min(1, Math.max(0, (t - inicio) / DUR));
+      poner(k < 1 ? desde + (n - desde) * (1 - Math.pow(1 - k, 3)) : n);
       if (k < 1) id = requestAnimationFrame(paso);
+      else window.clearTimeout(red);
     };
     id = requestAnimationFrame(paso);
-    previo.current = n;
-    return () => cancelAnimationFrame(id);
+    red = window.setTimeout(() => {
+      cancelAnimationFrame(id);
+      poner(n);
+    }, DUR + 100);
+    return () => {
+      cancelAnimationFrame(id);
+      window.clearTimeout(red);
+    };
   }, [n]);
   // Mientras cuenta, los enteros se muestran redondeados para que no salgan decimales de paso.
   return <>{fmt(Number.isInteger(n) ? Math.round(mostrado) : mostrado)}</>;
@@ -316,57 +342,20 @@ interface PropsIndicador {
   como: string; // numero · barra · anillo
 }
 
-/** Cuenta animada: el número sube desde 0 hasta su valor (o desde el valor anterior). */
-function useCuenta(valor: number) {
-  const [mostrado, setMostrado] = useState(0);
-  const desde = useRef(0);
-  useEffect(() => {
-    const inicio = performance.now();
-    const de = desde.current;
-    const reducido = document.documentElement.dataset.movimiento === 'reducido' || matchMedia('(prefers-reduced-motion: reduce)').matches;
-    // Sin animación si se pidió menos movimiento o la ventana está oculta (sin cuadros, la cifra se quedaba en 0).
-    if (reducido || document.hidden) {
-      setMostrado(valor);
-      desde.current = valor;
-      return;
-    }
-    let raf = 0;
-    const paso = (t: number) => {
-      const k = Math.min(1, (t - inicio) / 700);
-      const suave = 1 - Math.pow(1 - k, 3);
-      setMostrado(de + (valor - de) * suave);
-      if (k < 1) raf = requestAnimationFrame(paso);
-      else desde.current = valor;
-    };
-    raf = requestAnimationFrame(paso);
-    // Si a los 900 ms la animación no terminó (ventana en segundo plano), se pone la cifra final.
-    const red = window.setTimeout(() => {
-      cancelAnimationFrame(raf);
-      setMostrado(valor);
-      desde.current = valor;
-    }, 900);
-    return () => {
-      cancelAnimationFrame(raf);
-      window.clearTimeout(red);
-    };
-  }, [valor]);
-  return mostrado;
-}
-
 const cifraCompacta = new Intl.NumberFormat(LOCALE, { notation: 'compact', maximumFractionDigits: 1 });
 
-function medir(filas: Pagina[], bd: Pagina, medida: string, propId: string): { n: number; formato?: Parameters<typeof formatearNumero>[1] } {
+function medir(filas: Pagina[], bd: Pagina, medida: string, propId: string): { n: number; formato?: Parameters<typeof formatearNumero>[1]; decimales?: number } {
   const prop = bd.esquema?.propiedades.find((p) => p.id === propId);
   if (medida === 'contar' || !prop) return { n: filas.length };
   const valores = filas.map((f) => valorDe(f, prop));
   if (medida === 'marcadas') return { n: valores.filter((v) => v === true).length };
   const nums = valores.filter((v): v is number => typeof v === 'number');
-  const formato = comoBase(prop).formato;
-  if (!nums.length) return { n: 0, formato };
-  if (medida === 'suma') return { n: nums.reduce((a, b) => a + b, 0), formato };
-  if (medida === 'promedio') return { n: nums.reduce((a, b) => a + b, 0) / nums.length, formato };
-  if (medida === 'min') return { n: Math.min(...nums), formato };
-  return { n: Math.max(...nums), formato };
+  const { formato, decimales } = comoBase(prop); // «Decimales» de la propiedad, como en la tabla
+  if (!nums.length) return { n: 0, formato, decimales };
+  if (medida === 'suma') return { n: nums.reduce((a, b) => a + b, 0), formato, decimales };
+  if (medida === 'promedio') return { n: nums.reduce((a, b) => a + b, 0) / nums.length, formato, decimales };
+  if (medida === 'min') return { n: Math.min(...nums), formato, decimales };
+  return { n: Math.max(...nums), formato, decimales };
 }
 
 function Indicador({ p, editable, alCambiar }: { p: PropsIndicador; editable: boolean; alCambiar: (c: Partial<PropsIndicador>) => void }) {
@@ -392,8 +381,9 @@ function Indicador({ p, editable, alCambiar }: { p: PropsIndicador; editable: bo
     return { valor, total, vista };
   }, [bd, filas, p.vista, p.medida, p.prop, p.total]);
 
-  const n = useCuenta(calculo?.valor.n ?? 0);
-  const fmt = (x: number) => (calculo?.valor.formato ? formatearNumero(x, calculo.valor.formato) : Number.isInteger(calculo?.valor.n ?? 0) ? Math.round(x).toLocaleString(LOCALE) : x.toLocaleString(LOCALE, { maximumFractionDigits: 1 }));
+  // El valor final: la cuenta animada la hace solo <Conteo> (y el tramo y la cifra corta salen de este valor).
+  const n = calculo?.valor.n ?? 0;
+  const fmt = (x: number) => (calculo?.valor.formato || calculo?.valor.decimales !== undefined ? formatearNumero(x, calculo.valor.formato, calculo.valor.decimales) : Number.isInteger(calculo?.valor.n ?? 0) ? Math.round(x).toLocaleString(LOCALE) : x.toLocaleString(LOCALE, { maximumFractionDigits: 1 }));
   const pct = calculo?.total ? Math.max(0, Math.min(100, ((calculo.valor.n ?? 0) / calculo.total) * 100)) : null;
   const titulo = p.etiqueta || (bd ? `${calculo?.vista ? calculo.vista.nombre : tituloDe(bd)}` : trad('Indicador'));
 
@@ -644,6 +634,7 @@ function Frase({ texto, autor, editable, alCambiar }: { texto: string; autor: st
   const frase = propia ? texto : FRASES[(indiceDelDia() + salto) % FRASES.length];
   return (
     <CajaTablero clase="frase" etiqueta={trad('Frase')}>
+      <span className="panel-rotulo" aria-hidden="true">{trad('Frase')}</span>
       <span className="frase-comilla" aria-hidden="true">“</span>
       <blockquote key={frase} className="frase-texto">
         {frase}
@@ -771,12 +762,129 @@ export const bloqueCuentaAtras = createReactBlockSpec(
 
 // ---------- saludo ----------
 
+// «Pulso»: bajo la fecha del saludo, el día en una frase («Hoy tienes 3 tareas, 1 vencida y 2 entregas esta
+// semana») con las cifras como botones: las tareas de hoy abren Mis tareas en «Hoy», las vencidas en «Atrasadas»
+// y las entregas de la semana, la Agenda en la semana (#/agenda?vista=semana). Los números grandes quedan solo
+// para la hora.
+
+interface ResumenDia {
+  hoy: number;
+  vencidas: number;
+  semana: number; // pendientes con fecha después de hoy y hasta el final de la semana
+}
+
+/** Cuenta lo pendiente con fecha leyendo el contenido, con las mismas reglas que Mis tareas: de las páginas solo se
+ *  leen las que tienen casillas sin marcar (o aún no tienen resumen). Solo hace falta mientras alguna página no tiene
+ *  el resumen de ahora (ver useResumenDia). */
+async function contarDia(): Promise<ResumenDia> {
+  const { paginas } = usar.getState();
+  const hoy = hoyISO();
+  const finSemana = format(endOfWeek(new Date(), opcionesSemana()), 'yyyy-MM-dd');
+  const fechas = filasPendientes(paginas).map((t) => t.fecha);
+  const ids = Object.values(paginas)
+    .filter((p) => p.tipo === 'pagina' && (!p.resumen || p.resumen.tareas > p.resumen.hechas) && !estaOculta(paginas, p.id))
+    .map((p) => p.id);
+  const contenidos = ids.length ? await baseDatos.contenidos.bulkGet(ids) : [];
+  for (const c of contenidos) if (c) for (const t of pendientesConFecha(c.bloques)) fechas.push(t.fecha);
+  const r: ResumenDia = { hoy: 0, vencidas: 0, semana: 0 };
+  for (const f of fechas) {
+    if (!f) continue;
+    if (f < hoy) r.vencidas++;
+    else if (f === hoy) r.hoy++;
+    else if (f <= finSemana) r.semana++;
+  }
+  return r;
+}
+
+/** El último resumen contado: al abrir otra página con saludo, la frase sale desde el primer pintado (no aparece
+ *  un momento después empujando lo de abajo) y se recuenta enseguida. */
+let ultimoResumen: ResumenDia | null = null;
+
+/** El resumen del día, al día: sale de los resúmenes en memoria (lib/tareasDelDia.ts), al momento, sin leer
+ *  IndexedDB y con las mismas cifras que Mis tareas. Solo mientras alguna página aún no tiene el resumen de ahora
+ *  (los primeros segundos tras abrir la app con datos de antes, ver `parcial`) se cuenta leyendo el contenido, un
+ *  momento después de cada cambio, para no enseñar una cifra corta. */
+function useResumenDia(): ResumenDia | null {
+  const d = useTareasDelDia({ hasta: 'semana' });
+  const paginas = usar((s) => s.paginas);
+  const [leido, setLeido] = useState<ResumenDia | null>(() => ultimoResumen);
+  const primera = useRef(true);
+  useEffect(() => {
+    if (!d.parcial) return;
+    let vivo = true;
+    const t = window.setTimeout(
+      () => {
+        contarDia()
+          .then((x) => {
+            ultimoResumen = x;
+            if (vivo) setLeido((a) => (a && a.hoy === x.hoy && a.vencidas === x.vencidas && a.semana === x.semana ? a : x));
+          })
+          .catch(() => undefined);
+      },
+      primera.current ? 0 : 1500,
+    );
+    primera.current = false;
+    return () => {
+      vivo = false;
+      window.clearTimeout(t);
+    };
+  }, [d.parcial, paginas]);
+  if (d.parcial) return leido;
+  ultimoResumen = { hoy: d.hoy, vencidas: d.vencidas, semana: d.proximas };
+  return ultimoResumen;
+}
+
+function CifraDia({ texto, titulo, mal, alPulsar }: { texto: string; titulo: string; mal?: boolean; alPulsar: () => void }) {
+  return (
+    <button className={`saludo-cifra${mal ? ' mal' : ''}`} title={titulo} aria-label={`${texto}. ${titulo}`} onClick={alPulsar}>
+      {texto}
+    </button>
+  );
+}
+
+/** La Agenda en la semana actual. La Agenda aún no lee «vista»: hasta entonces abre en su vista de siempre. */
+const irAgendaSemana = () => {
+  location.hash = '#/agenda?vista=semana';
+};
+
+function FraseDia({ r }: { r: ResumenDia }) {
+  const piezas: Record<string, ReactNode> = {
+    hoy: <CifraDia texto={plural(r.hoy, '{n} tarea', '{n} tareas')} titulo={trad('Abrir Mis tareas')} alPulsar={() => abrirMisTareas({ grupo: 'hoy' })} />,
+    vencidas: <CifraDia mal texto={plural(r.vencidas, '{n} vencida', '{n} vencidas')} titulo={trad('Abrir Mis tareas')} alPulsar={() => abrirMisTareas({ grupo: 'atrasadas' })} />,
+    semana: <CifraDia texto={plural(r.semana, '{n} entrega', '{n} entregas')} titulo={trad('Abrir la agenda')} alPulsar={irAgendaSemana} />,
+  };
+  const plantilla = r.hoy
+    ? r.vencidas && r.semana
+      ? trad('Hoy tienes {hoy}, {vencidas} y {semana} esta semana.')
+      : r.vencidas
+        ? trad('Hoy tienes {hoy} y {vencidas}.')
+        : r.semana
+          ? trad('Hoy tienes {hoy} y {semana} esta semana.')
+          : trad('Hoy tienes {hoy}.')
+    : r.vencidas && r.semana
+      ? trad('Hoy no tienes tareas, pero hay {vencidas} y {semana} esta semana.')
+      : r.vencidas
+        ? trad('Hoy no tienes tareas, pero hay {vencidas}.')
+        : r.semana
+          ? trad('Hoy no tienes tareas; esta semana hay {semana}.')
+          : trad('Hoy no tienes nada pendiente.');
+  return (
+    <p className="saludo-frase">
+      {plantilla.split(/(\{\w+\})/).map((parte, i) => {
+        const m = parte.match(/^\{(\w+)\}$/);
+        return <Fragment key={i}>{m ? piezas[m[1]] ?? parte : parte}</Fragment>;
+      })}
+    </p>
+  );
+}
+
 function Saludo({ nombre: nombreBloque, editable, alCambiar }: { nombre: string; editable: boolean; alCambiar: (p: Partial<{ nombre: string }>) => void }) {
   const ahora = new Date(useAhora(1000));
   // Sin nombre propio en el bloque, se usa el del perfil (Ajustes › Perfil).
   const delPerfil = usar((s) => s.ajustes.perfil?.nombre?.trim() ?? '');
   const nombre = nombreBloque || delPerfil;
   const [menu, setMenu] = useState<HTMLElement | null>(null);
+  const resumen = useResumenDia();
   const h = ahora.getHours();
   const saludo = h < 6 ? trad('Buenas noches') : h < 12 ? trad('Buenos días') : h < 20 ? trad('Buenas tardes') : trad('Buenas noches');
   const emoji = h < 6 ? '🌙' : h < 12 ? '☀️' : h < 20 ? '🌤️' : '🌙';
@@ -793,9 +901,20 @@ function Saludo({ nombre: nombreBloque, editable, alCambiar }: { nombre: string;
           </p>
         )}
         <p className="saludo-lema">{mayuscula(format(ahora, segunIdioma("EEEE d 'de' MMMM", 'EEEE, MMMM d'), { locale: localeFechas }))}</p>
+        {resumen ? (
+          <FraseDia r={resumen} />
+        ) : (
+          // reserva el renglón de la frase mientras se cuenta por primera vez (así no empuja lo de abajo)
+          <p className="saludo-frase" aria-hidden="true">
+            {'\u00a0'}
+          </p>
+        )}
       </div>
-      <div className="saludo-hora" aria-label={trad('Son las {hora}', { hora: format(ahora, 'H:mm') })}>
-        {format(ahora, 'HH:mm')}
+      <div className="saludo-hora" role="img" aria-label={trad('Son las {hora}', { hora: format(ahora, 'H:mm') })}>
+        <span aria-hidden="true">{format(ahora, 'HH')}</span>
+        <span className="saludo-dos-puntos" aria-hidden="true">:</span>
+        <span aria-hidden="true">{format(ahora, 'mm')}</span>
+        <small aria-hidden="true">{format(ahora, 'ss')}</small>
       </div>
       {editable && (
         <button className="boton-icono mini panel-ajuste" aria-label={trad('Tu nombre')} title={trad('Tu nombre')} onClick={(e) => setMenu(e.currentTarget)}>

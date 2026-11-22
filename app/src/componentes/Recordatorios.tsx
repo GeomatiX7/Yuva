@@ -9,6 +9,7 @@ import {
 import { enEscritorio } from '../lib/escritorio';
 import { CabeceraModal, Flotante, ItemMenu, Menu, Modal, TituloMenu } from './ui';
 import { trad } from '../i18n';
+import { Vacio } from './Ilustracion';
 
 /** Si las notificaciones del sistema están activas, y el botón para activarlas o probarlas. */
 export function EstadoNotificaciones({ compacto }: { compacto?: boolean }) {
@@ -107,10 +108,12 @@ export function PanelRecordatorios() {
             ))}
           </ul>
         ) : (
+          <Vacio id="recordatorios" chico>
           <p className="vacio-chico">
             {trad('No hay recordatorios. Escribe')} <kbd>{trad('/recordatorio')}</kbd>{' '}
             {trad('en una página, toca una fecha del texto para elegir cuándo avisar, o activa «Recordatorio» en una propiedad de fecha de una base de datos.')}
           </p>
+          </Vacio>
         )}
         {proximos.length > visibles.length && <p className="ayuda">{trad('Y {n} más adelante.', { n: proximos.length - visibles.length })}</p>}
         <p className="ayuda">

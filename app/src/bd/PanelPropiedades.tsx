@@ -1,4 +1,4 @@
-// Propiedades de una fila mostradas en su página (encima del contenido), como en Notion.
+// Propiedades de una fila mostradas en su página (encima del contenido).
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, Plus } from 'lucide-react';
 import type { Pagina } from '../data/tipos';

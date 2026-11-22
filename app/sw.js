@@ -43,9 +43,16 @@ self.addEventListener('fetch', (e) => {
   if (url.origin !== location.origin) return;
   if (req.mode === 'navigate') {
     // Red primero para recibir versiones nuevas; sin red, la copia guardada.
+    // Solo se guarda como copia sin conexión una página HTML correcta de este mismo sitio: un 404, un
+    // error del servidor, una redirección o una respuesta que no sea HTML no deben quedarse como
+    // index.html (dejarían la app rota sin conexión). Esto no protege de un programa que ocupe el mismo
+    // puerto y conteste con su propia página (o su propio sw.js): para eso está el programa de
+    // escritorio, que tiene su propio origen.
     e.respondWith(fetch(req).then((r) => {
-      const copia = r.clone();
-      caches.open(CACHE).then((c) => c.put('./index.html', copia));
+      if (r.ok && r.type === 'basic' && !r.redirected && (r.headers.get('content-type') || '').includes('text/html')) {
+        const copia = r.clone();
+        caches.open(CACHE).then((c) => c.put('./index.html', copia));
+      }
       return r;
     }).catch(() => caches.match('./index.html', { ignoreVary: true })));
     return;

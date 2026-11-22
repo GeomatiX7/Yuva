@@ -1,7 +1,6 @@
 // Arranque: carga páginas y ajustes, purga la papelera, siembra la bienvenida y pide almacenamiento persistente.
 import { bd, guardarClave, leerClave, leerLocal } from './bd';
 import { AJUSTES_BASE, purgarPapelera, usar } from './estado';
-import { sembrarBienvenida } from './plantillas';
 import type { Ajustes, EstadoRecordatorio } from './tipos';
 import { ir } from '../lib/ruta';
 import { prepararPestanas } from '../lib/pestanas';
@@ -9,16 +8,30 @@ import { prepararPestanas } from '../lib/pestanas';
 export async function iniciar() {
   const [lista, ajustes] = await Promise.all([bd.paginas.toArray(), leerClave<Partial<Ajustes>>('ajustes', {})]);
   const paginas = Object.fromEntries(lista.map((p) => [p.id, p]));
+  // Las plantillas (20 módulos de datos) no vienen con el arranque: solo hacen falta para sembrar la bienvenida en un
+  // espacio vacío (la primera apertura o un espacio nuevo). Entonces se piden ya, a la vez que los recordatorios y
+  // antes de dar la app por lista, para que la pantalla de arranque siga tapando la siembra (al recargar se va
+  // enseguida). Si no llegan, la app abre vacía en vez de fallar, y la bienvenida se siembra la próxima vez.
+  const plantillas =
+    lista.length === 0
+      ? import('./plantillas').catch((e: unknown) => {
+          console.error(e);
+          return null;
+        })
+      : null;
   // Los recordatorios se cargan antes de mostrar la app: así no se repiten avisos ya dados.
   await cargarRecordatorios();
+  const modPlantillas = await plantillas;
   usar.setState({ paginas, ajustes: { ...AJUSTES_BASE, ...ajustes }, listo: true });
   await purgarPapelera();
 
   const sinRuta = !location.hash || location.hash === '#/' || location.hash === '#';
   if (lista.length === 0 && !(await leerClave('sembrado', false))) {
-    const p = sembrarBienvenida();
-    await guardarClave('sembrado', true);
-    ir(p.id);
+    if (modPlantillas) {
+      const p = modPlantillas.sembrarBienvenida();
+      await guardarClave('sembrado', true);
+      ir(p.id);
+    }
   } else {
     const { inicio, inicioId } = usar.getState().ajustes;
     // Las pestañas solo se recuperan con «Continuar donde lo dejé»; si no, se empieza sin pestañas.

@@ -11,7 +11,7 @@ Yuva guarda todo en tu equipo. No tiene cuentas ni servidores propios, y no reco
 - **Tus páginas, bases de datos, archivos y ajustes** quedan en tu equipo:
   - En el programa de Windows, en `%APPDATA%\espacio-notas`.
   - En la versión web, en el almacenamiento de tu navegador.
-- **Las copias de seguridad** van a la carpeta que elijas (de entrada, `Documentos\Yuva\Copias`). Pueden ir cifradas.
+- **Las copias de seguridad** automáticas van a la carpeta que elijas (de entrada, `Documentos\Yuva\Copias`) y **no van cifradas**, aunque uses PIN: quien abra esa carpeta, o su nube si se sincroniza, puede leerlas. Solo la copia que descargas a mano con **Descargar copia cifrada** va cifrada con tu contraseña.
 - **Desinstalar Yuva no borra tus datos.** Si quieres borrarlos, elimina esa carpeta.
 
 ## Cuándo se conecta a internet
@@ -25,10 +25,11 @@ Yuva solo se conecta en estos casos:
 | Clima y búsqueda de lugares | Open-Meteo (`open-meteo.com`) | Tu IP y la ciudad o las coordenadas que eliges | Al usar el bloque de clima o la propiedad «Lugar» |
 | Contenido incrustado (YouTube, Spotify, Vimeo…) | El servicio del enlace | Lo que ese servicio recoja al cargar su reproductor | Al pegar o abrir un enlace incrustado |
 | Calendarios en línea (ICS) | La dirección que tú escribas | Tu IP | Al sincronizar ese calendario |
+| Imágenes, vídeos y audios por enlace en tus notas | El servidor de esa dirección | Tu IP | Al abrir una página que los lleve |
 | Yuva MCP (Claude) | Solo tu propio equipo (`127.0.0.1`) | — | Si lo activas en **Ajustes › Funciones**; viene apagado |
 
 **Para apagarlo:**
-- **Ajustes › Privacidad › Funciones con internet** apaga los mapas, el clima, los lugares, el contenido incrustado y los calendarios en línea.
+- **Ajustes › Privacidad › Funciones con internet** apaga los mapas, el clima, los lugares, el contenido incrustado y los calendarios en línea. En el programa de Windows corta también las imágenes, vídeos y audios por enlace: la ventana no hace ninguna petición a internet.
 - **Ajustes › Programa › Buscar actualizaciones solo** apaga la revisión de actualizaciones. Con esa opción apagada, solo se revisa cuando pulsas «Buscar ahora».
 
 Cada servicio tiene su propia política de privacidad:
@@ -52,7 +53,7 @@ Yuva keeps everything on your device. It has no accounts and no servers of its o
 - **Pages, databases, files and settings** stay on your device:
   - In the Windows app, in `%APPDATA%\espacio-notas`.
   - In the web version, in your browser's storage.
-- **Backups** go to the folder you choose and can be encrypted.
+- **Automatic backups** go to the folder you choose and **are not encrypted**, even with a PIN: anyone who opens that folder, or its cloud if it syncs, can read them. Only the backup you download yourself with **Download encrypted backup** is encrypted with your password.
 - **Uninstalling Yuva does not delete your data.** To delete it, remove that folder.
 
 **When Yuva connects to the internet:**
@@ -60,10 +61,11 @@ Yuva keeps everything on your device. It has no accounts and no servers of its o
 - **Maps:** OpenStreetMap receives your IP and the map area you view.
 - **Weather and place search:** Open-Meteo receives your IP and the city or coordinates you pick.
 - **Embeds and online ICS calendars:** the linked service receives your IP, only when you use them.
+- **Images, videos and audio linked in your notes:** that address's server receives your IP when you open a page that has them.
 - **Yuva MCP:** connects only to your own computer (`127.0.0.1`). It is off by default.
 
 **To turn these off:**
-- **Settings › Privacy › Online features** turns off maps, weather, places, embeds and online calendars.
+- **Settings › Privacy › Online features** turns off maps, weather, places, embeds and online calendars. In the Windows app it also blocks linked images, videos and audio: the window makes no requests to the internet.
 - **Settings › Desktop app › Check for updates automatically** turns off the update check.
 
 **Questions:** open an issue at [github.com/GeomatiX7/Yuva](https://github.com/GeomatiX7/Yuva/issues).

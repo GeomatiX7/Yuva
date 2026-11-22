@@ -30,6 +30,11 @@
   outline-color: var(--acento);
 }
 
+/* Con alto contraste el foco general es de tinta, que en claro es casi negra y no se ve sobre la barra vino. */
+:root[data-contraste='alto'] .barra-lateral :focus-visible {
+  outline-color: var(--barra-texto);
+}
+
 .barra-cabeza {
   display: flex;
   align-items: center;
@@ -48,7 +53,8 @@
   text-align: left;
 }
 
-.espacio:hover {
+.espacio:hover,
+.espacio[aria-expanded='true'] {
   background: var(--barra-2);
 }
 
@@ -135,15 +141,39 @@
   background: var(--barra-3);
 }
 
-.nav-item.activo::before {
+/* Los accesos dejan sitio a la izquierda para la diagonal de la fila activa. */
+.barra-nav .nav-item {
+  padding-left: 12px;
+}
+
+/* «Pulso»: el marcador de la fila activa (accesos y árbol) es la diagonal dorada del logo, dentro de la propia
+   fila: 3 × 16 px a -18°, centrada en vertical. Va en el resalte que se desliza (BarraLateral.tsx › useResaltes)
+   y, si no lo hay, en la propia fila. Los selectores llevan .barra-lateral para mandar sobre los de atelier.css. */
+.barra-lateral :is(.nav-item, .nodo).activo::before,
+.barra-lateral .resalte-barra.activo::before {
   content: '';
   position: absolute;
-  left: -8px;
-  top: 6px;
-  bottom: 6px;
+  left: 3px;
+  top: 50%;
+  bottom: auto;
   width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--acento);
+  height: 16px;
+  margin-top: -8px;
+  border-radius: 1px;
+  background: var(--oro-c);
+  transform: skewX(var(--ang));
+  transition: opacity var(--dur);
+}
+
+/* La fila activa va en seminegrita, como en la maqueta (.fila.act, .nav.act). */
+.barra-lateral :is(.nav-item, .nodo).activo {
+  font-weight: 600;
+}
+
+/* Con el menú de espacios abierto no asoma ninguna diagonal suelta. */
+.barra-lateral.menu-abierto :is(.nav-item, .nodo).activo::before,
+.barra-lateral.menu-abierto .resalte-barra.activo::before {
+  opacity: 0;
 }
 
 .nav-item.tenue {
@@ -201,6 +231,16 @@
   opacity: 0;
 }
 
+/* «Pulso»: la cifra del rótulo («PÁGINAS 18»), pegada al «+» que asoma al pasar el ratón. */
+.seccion-cifra {
+  margin-left: auto;
+  padding: 0 4px;
+  font: 500 11px/1 var(--f-mono);
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+  color: var(--barra-texto-2);
+}
+
 .seccion-cabeza:hover .boton-icono,
 .seccion-cabeza .boton-icono:focus-visible {
   opacity: 1;
@@ -225,17 +265,6 @@
 .nodo.activo {
   background: var(--barra-3);
   color: #fff;
-}
-
-.nodo.activo::before {
-  content: '';
-  position: absolute;
-  left: -8px;
-  top: 6px;
-  bottom: 6px;
-  width: 3px;
-  border-radius: 0 3px 3px 0;
-  background: var(--acento);
 }
 
 .nodo-flecha {
@@ -277,13 +306,46 @@
   padding-left: 4px;
 }
 
+/* Foco de teclado de la fila (tabulación itinerante, BarraLateral.tsx › useTabuladorArbol): un contorno por dentro,
+   para que no lo recorte la barra ni pise la fila vecina. Con alto contraste toma --barra-texto (arriba). */
+.barra-lateral .nodo:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: -2px;
+  border-radius: var(--r-1);
+}
+
+/* «Pulso»: cifras del árbol, en mono, pegadas al borde derecho (las acciones salen a su izquierda). Las bases
+   cuentan sus filas y se ven siempre en tinta tenue; las páginas con casillas («14/22») van limpias en reposo, sin
+   reservar sitio, y aparecen al pasar el ratón, con el foco de teclado o en la fila activa. Las carpetas no llevan.
+   En la fila activa, al pasar el ratón y con foco se encienden en oro. La fila toma el foco también al hacer clic
+   (tabindex -1), así que se usa :focus-visible y no :focus-within, para no dejar las acciones puestas tras un clic. */
+.nodo-cifra {
+  flex: none;
+  padding: 0 6px 0 2px;
+  font: 500 11px/1 var(--f-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--barra-texto-2);
+}
+
+.nodo-cifra.de-base {
+  transition: color var(--dur);
+}
+
+.nodo-cifra.de-tareas {
+  display: none;
+}
+
+.nodo:is(:hover, :focus-visible, :has(:focus-visible), .activo) .nodo-cifra {
+  display: inline;
+  color: var(--oro-c);
+}
+
 .nodo-acciones {
   display: none;
   gap: 1px;
 }
 
-.nodo:hover .nodo-acciones,
-.nodo:focus-within .nodo-acciones {
+.nodo:is(:hover, :focus-visible, :has(:focus-visible)) .nodo-acciones {
   display: flex;
 }
 

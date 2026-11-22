@@ -1,17 +1,17 @@
 // Paneles para tableros: reloj, pomodoro, progreso del tiempo (año, mes, semana, día) y calendario del mes.
-// Funcionan sin internet: lo que en Notion se incrusta desde otros sitios, aquí es un bloque propio.
-import { useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
+// Funcionan sin internet: en lugar de incrustar otros sitios, cada uno es un bloque propio.
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from 'react';
 import { createReactBlockSpec } from '@blocknote/react';
 import {
-  addDays, addMonths, eachDayOfInterval, endOfDay, endOfMonth, endOfWeek, endOfYear, format, isSameMonth, startOfDay,
-  startOfMonth, startOfWeek, startOfYear,
+  addDays, addMonths, eachDayOfInterval, endOfDay, endOfMonth, endOfWeek, endOfYear, format, getDaysInMonth, isSameMonth,
+  startOfDay, startOfMonth, startOfWeek, startOfYear,
 } from 'date-fns';
 import { ChevronLeft, ChevronRight, Clock3, Pause, Play, RotateCcw, Settings2 } from 'lucide-react';
 import { avisar, usar } from '../data/estado';
 import { abrirDiario } from '../lib/diario';
 import { hoyISO, opcionesSemana, useSemana } from '../lib/fechas';
 import { notificar } from '../lib/recordatorios';
-import { Flotante, ItemMenu, Menu, TituloMenu } from '../componentes/ui';
+import { Flotante, ItemMenu, Menu, TituloMenu, refSegmentado } from '../componentes/ui';
 import { enIngles, localeFechas, plural, segunIdioma, trad } from '../i18n';
 
 const mayuscula = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
@@ -108,28 +108,41 @@ function Abatible({ valor, etiqueta }: { valor: string; etiqueta: string }) {
   );
 }
 
+/** «Pulso»: reloj de órbitas con un arco y un punto por órbita, como un avance: los minutos van fuera y las
+ *  horas dentro, desde las 12 (y las doce marcas sobre la órbita de fuera). Sin rayas: aquí no hay nada que contar. */
 function Orbitas({ ahora }: { ahora: Date }) {
   const h = ahora.getHours() % 12;
   const m = ahora.getMinutes();
-  const s = ahora.getSeconds();
-  const punto = (r: number, frac: number) => {
+  const orbita = (r: number, frac: number, clase: string, radioPunto: number) => {
+    const largo = 2 * Math.PI * r;
     const a = frac * Math.PI * 2 - Math.PI / 2;
-    return { cx: 100 + r * Math.cos(a), cy: 100 + r * Math.sin(a) };
+    return (
+      <g className={`orbita-${clase}`}>
+        <circle cx="100" cy="100" r={r} className="orbita" />
+        {frac > 0 && (
+          <circle
+            cx="100"
+            cy="100"
+            r={r}
+            className="orbita-arco"
+            strokeDasharray={`${(largo * frac).toFixed(1)} ${largo.toFixed(1)}`}
+            transform="rotate(-90 100 100)"
+          />
+        )}
+        <circle cx={100 + r * Math.cos(a)} cy={100 + r * Math.sin(a)} r={radioPunto} className="orbita-punto" />
+      </g>
+    );
   };
   return (
     <svg className="reloj-orbitas" viewBox="0 0 200 200" role="img" aria-label={trad('Son las {hora}', { hora: format(ahora, 'H:mm') })}>
-      <circle cx="100" cy="100" r="92" className="orbita" />
-      <circle cx="100" cy="100" r="70" className="orbita" />
-      <circle cx="100" cy="100" r="48" className="orbita" />
       {Array.from({ length: 12 }, (_, i) => {
-        const p = punto(92, i / 12);
-        return <circle key={i} {...p} r={1.6} className="orbita-marca" />;
+        const a = (i * Math.PI) / 6;
+        return <circle key={i} cx={100 + 90 * Math.sin(a)} cy={100 - 90 * Math.cos(a)} r={i % 3 ? 1.3 : 2} className="orbita-marca" />;
       })}
-      <circle {...punto(92, (h + m / 60) / 12)} r={9} className="orbita-hora" />
-      <circle {...punto(70, (m + s / 60) / 60)} r={6.5} className="orbita-minuto" />
-      <circle {...punto(48, s / 60)} r={4} className="orbita-segundo" />
-      <text x="100" y="98" textAnchor="middle" className="orbita-texto">{format(ahora, 'HH:mm')}</text>
-      <text x="100" y="116" textAnchor="middle" className="orbita-sub">{mayuscula(format(ahora, 'EEEE', { locale: localeFechas }))}</text>
+      {orbita(90, m / 60, 'minutos', 5)}
+      {orbita(70, (h + m / 60) / 12, 'horas', 4.2)}
+      <text x="100" y="106" textAnchor="middle" className="orbita-texto">{format(ahora, 'HH:mm')}</text>
+      <text x="100" y="126" textAnchor="middle" className="orbita-sub">{format(ahora, 'EEEE', { locale: localeFechas }).toUpperCase()}</text>
     </svg>
   );
 }
@@ -143,6 +156,8 @@ function Reloj({ estilo, editable, alCambiar }: { estilo: string; editable: bool
   const fecha = mayuscula(format(ahora, segunIdioma("EEEE d 'de' MMMM", 'EEEE, MMMM d'), { locale: localeFechas }));
   return (
     <Caja clase={`panel-reloj reloj-${estilo}`} etiqueta={trad('Reloj')}>
+      {/* «Pulso»: cada ficha lleva su rótulo en mono arriba («Reloj», «Avance del tiempo», «Frase»). */}
+      <span className="panel-rotulo" aria-hidden="true">{trad('Reloj')}</span>
       {estilo === 'analogico' ? (
         <svg className="reloj-esfera" viewBox="0 0 120 120" role="img" aria-label={trad('Son las {hora}', { hora: format(ahora, 'H:mm') })}>
           <circle cx="60" cy="60" r="56" className="reloj-fondo" />
@@ -193,12 +208,22 @@ function Reloj({ estilo, editable, alCambiar }: { estilo: string; editable: bool
 
 // ---------- progreso del tiempo ----------
 
-const TRAMOS: Record<string, [string, (d: Date) => Date, (d: Date) => Date, string]> = {
-  anio: [trad('Año'), startOfYear, endOfYear, 'días'],
-  mes: [trad('Mes'), startOfMonth, endOfMonth, 'días'],
-  semana: [trad('Semana'), (d) => startOfWeek(d, opcionesSemana()), (d) => endOfWeek(d, opcionesSemana()), 'días'],
-  dia: [trad('Día'), startOfDay, endOfDay, 'horas'],
+// «Pulso»: las cuatro barras miden lo mismo y solo cambia el ancho de cada tramo: el año en 12 meses agrupados por
+// trimestres, el mes en sus días en bloques de 5, la semana en 7 días y el día en 24 horas en bloques de 6.
+// Los tramos son rectos (aquí no hay tareas que contar, así que no llevan el sesgo de las rayas).
+const TRAMOS: Record<string, [string, (d: Date) => Date, (d: Date) => Date, 'días' | 'horas', (d: Date) => number, number]> = {
+  anio: [trad('Año'), startOfYear, endOfYear, 'días', () => 12, 3],
+  mes: [trad('Mes'), startOfMonth, endOfMonth, 'días', (d) => getDaysInMonth(d), 5],
+  semana: [trad('Semana'), (d) => startOfWeek(d, opcionesSemana()), (d) => endOfWeek(d, opcionesSemana()), 'días', () => 7, 0],
+  dia: [trad('Día'), startOfDay, endOfDay, 'horas', () => 24, 6],
 };
+
+/** Lo que queda del día en horas y minutos, sin redondear hacia arriba: a las 00:14, «quedan 23 h 46». */
+function quedanHoras(ms: number): string {
+  const min = Math.max(0, Math.floor(ms / 60_000));
+  if (min < 60) return plural(min, 'queda {n} min', 'quedan {n} min');
+  return trad('quedan {h} h {m}', { h: Math.floor(min / 60), m: String(min % 60).padStart(2, '0') });
+}
 
 function ProgresoTiempo({ tramos, editable, alCambiar }: { tramos: string; editable: boolean; alCambiar: (t: string) => void }) {
   const ahora = useAhora(60_000);
@@ -207,22 +232,46 @@ function ProgresoTiempo({ tramos, editable, alCambiar }: { tramos: string; edita
   const fecha = new Date(ahora);
   return (
     <Caja clase="panel-progreso" etiqueta={trad('Progreso del tiempo')}>
-      {activos.map((t) => {
-        const [nombre, ini, fin, unidad] = TRAMOS[t];
-        const a = ini(fecha).getTime();
-        const b = fin(fecha).getTime() + 1;
-        const pct = Math.min(100, Math.max(0, ((ahora - a) / (b - a)) * 100));
-        const quedan = unidad === 'horas' ? Math.ceil((b - ahora) / 3_600_000) : Math.ceil((b - ahora) / 86_400_000);
-        return (
-          <div key={t} className="progreso-fila" title={unidad === 'horas' ? plural(quedan, 'Quedan {n} hora', 'Quedan {n} horas') : plural(quedan, 'Quedan {n} día', 'Quedan {n} días')}>
-            <span className="progreso-nombre">{nombre}</span>
-            <span className="progreso-pista" role="progressbar" aria-label={`${nombre}: ${Math.floor(pct)} %`} aria-valuenow={Math.floor(pct)} aria-valuemin={0} aria-valuemax={100}>
-              <span style={{ width: `${pct}%` }} />
-            </span>
-            <span className="progreso-pct">{Math.floor(pct)} %</span>
-          </div>
-        );
-      })}
+      <span className="panel-rotulo" aria-hidden="true">{trad('Avance del tiempo')}</span>
+      <div className="progreso-filas">
+        {activos.map((t) => {
+          const [nombre, ini, fin, unidad, cuantos, grupo] = TRAMOS[t];
+          const a = ini(fecha).getTime();
+          const b = fin(fecha).getTime() + 1;
+          const pct = Math.min(100, Math.max(0, ((ahora - a) / (b - a)) * 100));
+          const queda = unidad === 'horas' ? quedanHoras(b - ahora) : plural(Math.ceil((b - ahora) / 86_400_000), 'queda {n} d', 'quedan {n} d');
+          const n = cuantos(fecha);
+          const lleno = (pct / 100) * n;
+          return (
+            <div key={t} className="progreso-fila">
+              <span className="progreso-nombre">{nombre}</span>
+              <span
+                className={`progreso-tramos${n > 12 ? ' denso' : ''}`}
+                role="progressbar"
+                aria-label={`${nombre}: ${Math.floor(pct)} %, ${queda}`}
+                aria-valuenow={Math.floor(pct)}
+                aria-valuemin={0}
+                aria-valuemax={100}
+              >
+                {Array.from({ length: n }, (_, k) => (
+                  <i
+                    key={k}
+                    className={grupo && (k + 1) % grupo === 0 && k < n - 1 ? 'fin-grupo' : undefined}
+                    style={{ '--f': `${Math.round(Math.max(0, Math.min(1, lleno - k)) * 100)}%` } as CSSProperties}
+                  />
+                ))}
+              </span>
+              <span className="progreso-cifra" aria-hidden="true">
+                <b>
+                  {Math.floor(pct)}
+                  <small>%</small>
+                </b>
+                <i>{queda}</i>
+              </span>
+            </div>
+          );
+        })}
+      </div>
       {!activos.length && <p className="ayuda">{trad('Elige qué mostrar con el botón de ajustes.')}</p>}
       {editable && (
         <button className="boton-icono mini panel-ajuste" aria-label={trad('Elegir qué mostrar')} title={trad('Elegir qué mostrar')} onClick={(e) => setMenu(e.currentTarget)}>
@@ -279,6 +328,7 @@ function guardarPomo(id: string, e: EstadoPomo) {
   } catch {
     /* sin almacenamiento: queda en memoria */
   }
+  vigilarPomos();
   avisarCambio();
 }
 
@@ -293,6 +343,8 @@ function leerPomo(id: string, minutos: Record<ModoPomo, number>): EstadoPomo {
     e ??= { modo: 'trabajo', corriendo: false, finEn: 0, restante: minutos.trabajo * 60_000, hechos: 0, dia: hoyISO(), minutos };
     if (e.dia !== hoyISO()) e = { ...e, hechos: 0, dia: hoyISO() };
     pomos.set(id, e);
+    // Uno que quedó en marcha antes de recargar se vigila desde ya (si ya llegó su hora, termina en el próximo repaso).
+    vigilarPomos();
   }
   return e;
 }
@@ -328,19 +380,29 @@ function terminarPomo(id: string, e: EstadoPomo) {
   avisar(titulo);
 }
 
-let vigilando = false;
+function algunoCorre() {
+  for (const e of pomos.values()) if (e.corriendo) return true;
+  return false;
+}
+
+// Un solo repaso para todos los pomodoros, vivo solo mientras alguno corre: termina los que llegan a su hora aunque
+// su página esté cerrada, y se para cuando ya no queda ninguno en marcha (así no despierta la app cada medio segundo
+// para nada). Lo arrancan guardarPomo y leerPomo.
+let vigilante = 0;
 function vigilarPomos() {
-  if (vigilando) return;
-  vigilando = true;
-  window.setInterval(() => {
+  if (vigilante || !algunoCorre()) return;
+  vigilante = window.setInterval(() => {
     const ahora = Date.now();
     for (const [id, e] of pomos) if (e.corriendo && e.finEn <= ahora) terminarPomo(id, e);
+    if (!algunoCorre()) {
+      window.clearInterval(vigilante);
+      vigilante = 0;
+    }
   }, 500);
 }
 
 function Pomodoro({ id, minutos, editable, alCambiar }: { id: string; minutos: Record<ModoPomo, number>; editable: boolean; alCambiar: (m: Record<ModoPomo, number>) => void }) {
-  vigilarPomos();
-  leerPomo(id, minutos); // deja listo el estado guardado antes de suscribirse
+  leerPomo(id, minutos); // deja listo el estado guardado antes de suscribirse (y lo vigila si quedó en marcha)
   const e = useSyncExternalStore(
     (f) => {
       oyentes.add(f);
@@ -363,7 +425,10 @@ function Pomodoro({ id, minutos, editable, alCambiar }: { id: string; minutos: R
 
   return (
     <Caja clase={`panel-pomodoro modo-${e.modo}${e.corriendo ? ' corriendo' : ''}`} etiqueta={trad('Pomodoro')}>
-      <div className="segmentado pomodoro-modos" role="tablist" aria-label={trad('Modo')}>
+      {/* Activación manual: cambiar de modo para y reinicia el temporizador, así que las flechas solo mueven el foco y
+          el modo se cambia con Intro o Espacio (ver refSegmentado). */}
+      <div className="segmentado pomodoro-modos" role="tablist" aria-label={trad('Modo')} data-activacion="manual" ref={refSegmentado}>
+        <span className="seg-ind" aria-hidden="true" />
         {(Object.keys(NOMBRE_MODO) as ModoPomo[]).map((m) => (
           <button key={m} role="tab" aria-selected={e.modo === m} className={e.modo === m ? 'activo' : ''} onClick={() => cambiarModo(m)}>
             {NOMBRE_MODO[m]}

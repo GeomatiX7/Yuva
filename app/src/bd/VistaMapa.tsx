@@ -10,7 +10,7 @@ import { tituloDe } from '../data/estado';
 import { leerLugar } from '../lib/lugar';
 import { MENSAJE_SIN_INTERNET, useInternet } from '../lib/internet';
 import { valorDe } from './operaciones';
-import { abrirFila } from './VistaBD';
+import { abrirFila } from './abrirFila';
 import { trad } from '../i18n';
 
 const MAX_PINES = 500;

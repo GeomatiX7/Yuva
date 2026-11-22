@@ -1,6 +1,16 @@
 // Inglés de la zona «lib». Clave: el texto exacto en español que va dentro de trad(); valor: el inglés.
 // Cómo funciona y cómo añadir textos: ver el comentario de app/src/i18n/index.ts.
 export const en: Record<string, string> = {
+  // Plantillas propias (lib/plantillasPropias.ts)
+  'Plantilla «{nombre}» guardada': 'Template “{nombre}” saved',
+  'La plantilla no incluye {n} subpágina o base de la página.': 'The template leaves out {n} subpage or database of the page.',
+  'La plantilla no incluye {n} subpáginas ni bases de la página.': 'The template leaves out {n} subpages and databases of the page.',
+  'Ver plantillas': 'See templates',
+  'Se aplicó la plantilla «{nombre}»': 'Applied the “{nombre}” template',
+  'El Diario vuelve a nacer con la plantilla de siempre': 'New journal days use the usual template again',
+  'Cada día nuevo del Diario nacerá con «{nombre}»': 'Each new journal day will start from “{nombre}”',
+  'Plantilla «{nombre}» quitada': 'Template “{nombre}” removed',
+  'Era la del Diario: mientras no la recuperes, el Diario nace con la de siempre.': 'It was the journal’s template: until you restore it, new days use the usual one.',
   "Hoy": "Today",
   "Mañana": "Tomorrow",
   "Ayer": "Yesterday",
@@ -32,6 +42,11 @@ export const en: Record<string, string> = {
   "Puntos": "Dots",
   "Cuadrícula": "Grid",
   "Portada desenfocada": "Blurred cover",
+  "Rayas": "Stripes",
+  "Vino y oro": "Wine and gold",
+  "Papel vino, filo dorado y tinta crema": "Wine paper, gold edges and cream ink",
+  "Pergamino": "Parchment",
+  "Papel crema, tinta vino y letra serif": "Cream paper, wine ink and a serif typeface",
   "Plana": "Flat",
   "Vidrio": "Glass",
   "Relieve": "Embossed",
@@ -79,6 +94,10 @@ export const en: Record<string, string> = {
   "Sin resultados": "No results",
   "No se encontró la página": "Page not found",
   "Esta página no forma parte del sitio": "This page isn't part of the site",
+  // sitio.ts: lo que se publica en lugar del título de una página que no está en el sitio
+  "Página no publicada": "Unpublished page",
+  "[Base de datos no publicada]": "[Unpublished database]",
+  "[Vista de una base de datos no publicada]": "[View of an unpublished database]",
   "Buscar…": "Search…",
   "Buscar en el sitio": "Search the site",
   "Migas": "Breadcrumbs",
@@ -112,6 +131,8 @@ export const en: Record<string, string> = {
   "El PDF está protegido con contraseña o cifrado: no se puede leer su texto.": "The PDF is password-protected or encrypted: its text can't be read.",
   "No se pudo sacar texto legible: puede ser un escaneo (imágenes) o usar fuentes con codificación propia. Prueba a copiar el texto desde el visor de PDF.": "Couldn't get readable text: it may be a scan (images) or use fonts with a custom encoding. Try copying the text from your PDF viewer.",
   "Texto importado de «{archivo}». Sin imágenes ni formato.": "Text imported from “{archivo}”. No images or formatting.",
+  // importarDocx.ts: topes de inflado y de texto de un PDF (ronda 2 de seguridad, 2026-11-20)
+  "El PDF ocupa demasiado al descomprimirlo o al sacar su texto. Por seguridad no se sigue leyendo.": "The PDF is too large once uncompressed or when extracting its text. For safety, it won’t be read any further.",
   "Sin título": "Untitled",
   "«{prop}» en «{pagina}» era una propiedad de resumen en Notion: se trajeron sus valores. Vuelve a crearla si quieres que se calcule.": "“{prop}” in “{pagina}” was a rollup in Notion: its values were brought over. Create it again if you want it to calculate.",
   "«{prop}» en «{pagina}» era una fórmula en Notion: se trajeron sus valores. Vuelve a crearla si quieres que se calcule.": "“{prop}” in “{pagina}” was a formula in Notion: its values were brought over. Create it again if you want it to calculate.",
@@ -197,6 +218,9 @@ export const en: Record<string, string> = {
   "Ver": "View",
   "Abrir": "Open",
   "Recordatorio: {texto}": "Reminder: {texto}",
+  // recordatorios.ts: aviso genérico mientras Yuva está bloqueada (no enseña el texto ni la página)
+  "Tienes un aviso en {nombre}": "You have a notification in {nombre}",
+  "Desbloquea {nombre} para verlo.": "Unlock {nombre} to see it.",
   "Copia cifrada": "Encrypted backup",
   "Esta copia está cifrada. Escribe la contraseña con la que se descargó.": "This backup is encrypted. Enter the password it was downloaded with.",
   "Descifrar y restaurar": "Decrypt and restore",
@@ -205,6 +229,11 @@ export const en: Record<string, string> = {
   "Restauración cancelada: hace falta la contraseña de la copia.": "Restore canceled: the backup's password is needed.",
   "El archivo no es una copia de seguridad de esta app.": "The file isn't a backup from this app.",
   "Copia restaurada: {n} páginas": "Backup restored: {n} pages",
+  // cifrado.ts: número de vueltas fuera de rango en una copia cifrada (ronda 2 de seguridad, 2026-11-20)
+  "Esta copia cifrada no es válida: sus datos de cifrado están fuera de lo normal. Puede estar dañada o manipulada.": "This encrypted backup isn’t valid: its encryption settings are outside the normal range. It may be damaged or tampered with.",
+  // respaldo.ts: archivos de la copia que no venían dentro (enlaces a internet o a este equipo) y se omiten
+  "Se omitió 1 archivo que no venía dentro de la copia.": "1 file was skipped because it wasn’t inside the backup.",
+  "Se omitieron {n} archivos que no venían dentro de la copia.": "{n} files were skipped because they weren’t inside the backup.",
   "Esta versión del programa aún no guarda copias automáticas de otros espacios. Usa «Descargar».": "This version of the desktop app doesn't save automatic backups of other workspaces yet. Use “Download”.",
   "{n} tarea para hoy": "{n} task for today",
   "{n} tareas para hoy": "{n} tasks for today",
@@ -227,6 +256,10 @@ export const en: Record<string, string> = {
   "Vista {n} veces, la última el {fecha} a las {hora}": "Viewed {n} times, last on {fecha} at {hora}",
   "No es un archivo ZIP válido.": "It isn't a valid ZIP file.",
   "Compresión no admitida en {ruta}": "Unsupported compression in {ruta}",
+  // Límites de zip.ts contra las «bombas ZIP» (ronda de seguridad 2026-11-20)
+  "El ZIP ocupa demasiado al descomprimirlo (más de {mb} MB). Por seguridad no se sigue abriendo.": "The ZIP is too large once uncompressed (over {mb} MB). For safety, it won’t be opened any further.",
+  "El ZIP está dañado: «{ruta}» ocupa más de lo que dice.": "The ZIP is damaged: “{ruta}” is larger than it says.",
+  "El ZIP tiene demasiados archivos (más de {n}). Por seguridad no se abre.": "The ZIP has too many files (over {n}). For safety, it won’t be opened.",
   "Mi espacio": "My workspace",
   "Espacio nuevo": "New workspace",
   "El espacio principal no se elimina.": "The main workspace can't be deleted.",
@@ -239,5 +272,17 @@ export const en: Record<string, string> = {
   "«{titulo}» se movió a la papelera": "“{titulo}” was moved to the trash",
   "{titulo} (copia)": "{titulo} (copy)",
   "archivo": "file",
+  // archivos.ts: aviso en lugar de una imagen, vídeo o audio por enlace con internet apagado (ronda 2 de seguridad, 2026-11-20)
+  "Contenido de internet bloqueado": "Internet content blocked",
+  "«Funciones con internet» está apagado": "“Online features” is off",
   "Diario@pagina": "Journal",
+  // Portadas «Estudio 3D» (0.7.3)
+  'Seda': 'Silk',
+  'Cintas de oro': 'Gold ribbons',
+  'Esferas': 'Spheres',
+  'Papel': 'Paper',
+  'Bruma dorada': 'Golden haze',
+  'Pulso': 'Pulse',
+  'Tejido': 'Weave',
+  'Destello': 'Glint',
 };

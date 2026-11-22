@@ -286,7 +286,7 @@ function aFormula(prop: Propiedad, v: ValorProp): ValorF {
     case 'multiseleccion':
       return (Array.isArray(v) ? v : []).map((id) => prop.opciones?.find((o) => o.id === id)?.nombre).filter((x): x is string => !!x);
     case 'fecha':
-      return v ? aFecha(String(v)) : null;
+      return v ? aFecha(String(v)) : null; // de un rango «inicio/fin», el inicio; fechaFin() lee el fin
     case 'creado':
     case 'editado':
       return typeof v === 'number' ? new Date(v) : null;

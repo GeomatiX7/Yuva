@@ -204,3 +204,128 @@
 :root[data-contraste='alto'] .etiqueta {
   box-shadow: inset 0 0 0 1px currentColor;
 }
+
+/* ---------- «Pulso»: la firma ----------
+   La diagonal dorada del logo hecha raya de avance: un solo módulo (3 px de ancho, 2 px de hueco, -18°).
+   Todo lo que se elige o se marca usa ese mismo ángulo (casilla, pastilla del segmentado, tecla «Nueva»).
+   Las rayas, el segmentado y el color de página están en atelier.css y en lib/apariencia.ts. */
+:root {
+  --ang: -18deg;
+  --raya-ancho: 3px;
+  --raya-hueco: 2px;
+  --raya-alto: 11px;
+  --rebote-corto: cubic-bezier(0.3, 1.35, 0.5, 1);
+  /* oro de la firma: --oro-c para marcas sobre vino o sobre oscuro; --oro-m para separadores sobre el papel */
+  --oro-c: #eac46f;
+  --oro-m: #a8772f;
+}
+
+:root[data-tema='oscuro'] {
+  --oro-m: #eac46f;
+}
+
+:root[data-paleta='laguna'] {
+  --oro-c: #e8a13a;
+  --oro-m: #8a5600;
+}
+
+:root[data-paleta='laguna'][data-tema='oscuro'] {
+  --oro-m: #f0b45c;
+}
+
+/* El papel claro y el oscuro de la paleta activa, en cualquier modo (las muestras de Ajustes › Apariencia). */
+:root {
+  --papel-claro: #fcfcfa;
+  --papel-oscuro: #141a19;
+  /* El papel propio de cada paleta, para que su muestra lo enseñe sea cual sea la activa. */
+  --papel-laguna-claro: #fcfcfa;
+  --papel-laguna-oscuro: #141a19;
+  --papel-yuva-claro: #fcf8f7;
+  --papel-yuva-oscuro: #1c1215;
+}
+
+:root[data-paleta='yuva'] {
+  --papel-claro: #fcf8f7;
+  --papel-oscuro: #1c1215;
+}
+
+/* ---------- «Pulso»: color de página ----------
+   --c es el color de la página (rayas, casillas, avance) y --cs la tinta que va encima (la palomita).
+   lib/apariencia.ts (colorDePagina) los fija en cada página y en cada tarjeta. Cuando la página no tiene color
+   propio, ni tema, ni una portada con color (o el color no llega a 3:1 contra el papel), se usa la reserva:
+   el vino con los colores Yuva y el acento con los demás. Todas pasan de 4,3:1 contra su papel. */
+:root {
+  --c-reserva-claro: #8a5600; /* azafrán fuerte (Laguna) · 6,0:1 */
+  --cs-reserva-claro: #ffffff;
+  --c-reserva-oscuro: #e8a13a; /* 8,0:1 */
+  --cs-reserva-oscuro: #141a19;
+  --c-reserva: var(--c-reserva-claro);
+  --cs-reserva: var(--cs-reserva-claro);
+  --c: var(--c-reserva);
+  --cs: var(--cs-reserva);
+}
+
+:root[data-tema='oscuro'] {
+  --c-reserva: var(--c-reserva-oscuro);
+  --cs-reserva: var(--cs-reserva-oscuro);
+}
+
+/* Colores Yuva con el acento por defecto: el vino del logo (12:1) y, en oscuro, el vino claro (6,2:1). */
+:root[data-paleta='yuva'][data-acento='azafran'] {
+  --c-reserva-claro: #5e1a2d;
+  --cs-reserva-claro: #ffffff;
+  --c-reserva-oscuro: #d9798f;
+  --cs-reserva-oscuro: #1c1215;
+}
+
+/* Los otros acentos: su color en claro (de 5,9:1 a 7:1) y en oscuro (de 4,3:1 a 5,4:1), con tinta oscura encima. */
+:root[data-acento='cobalto'] { --c-reserva-claro: #3451c6; --c-reserva-oscuro: #5b7cf0; --cs-reserva-oscuro: #1c1215; }
+:root[data-acento='pino'] { --c-reserva-claro: #1b6e4c; --c-reserva-oscuro: #2a9d6d; --cs-reserva-oscuro: #1c1215; }
+:root[data-acento='granada'] { --c-reserva-claro: #ad2f54; --c-reserva-oscuro: #d24a72; --cs-reserva-oscuro: #1c1215; }
+:root[data-acento='grafito'] { --c-reserva-claro: #4c5760; --c-reserva-oscuro: #7d8a94; --cs-reserva-oscuro: #1c1215; }
+
+/* Una página que se ve siempre clara u oscura toma la reserva de su modo, no la de la app. */
+.modo-claro {
+  --c-reserva: var(--c-reserva-claro);
+  --cs-reserva: var(--cs-reserva-claro);
+  --c: var(--c-reserva);
+  --cs: var(--cs-reserva);
+}
+
+.modo-oscuro {
+  --c-reserva: var(--c-reserva-oscuro);
+  --cs-reserva: var(--cs-reserva-oscuro);
+  --c: var(--c-reserva);
+  --cs: var(--cs-reserva);
+}
+
+/* «Pulso», fase 2: el acento fuerte y el suave de cada modo, para las páginas que se ven siempre claras u oscuras.
+   Sin esto heredan los de la app: en una página clara dentro de la app oscura, las fechas «@» y lo demás que pinta
+   --acento-fuerte salían en el oro claro (1,8:1 contra el papel). Un tema de tablero con color propio los vuelve a
+   fijar en la página (lib/apariencia.ts › variablesColor, en línea, que gana). */
+:root {
+  --acento-fuerte-claro: #8a5600;
+  --acento-fuerte-oscuro: #f0b45c;
+  --acento-suave-claro: rgba(232, 161, 58, 0.18);
+  --acento-suave-oscuro: rgba(232, 161, 58, 0.16);
+}
+:root[data-paleta='yuva'][data-acento='azafran'] {
+  --acento-fuerte-claro: #7a5810;
+  --acento-fuerte-oscuro: #e3b85a;
+  --acento-suave-claro: rgba(217, 174, 82, 0.2);
+  --acento-suave-oscuro: rgba(217, 174, 82, 0.16);
+}
+:root[data-acento='cobalto'] { --acento-fuerte-claro: #3451c6; --acento-fuerte-oscuro: #9db0ff; --acento-suave-claro: rgba(59, 91, 219, 0.14); --acento-suave-oscuro: rgba(59, 91, 219, 0.14); }
+:root[data-acento='pino'] { --acento-fuerte-claro: #1b6e4c; --acento-fuerte-oscuro: #6fd3a3; --acento-suave-claro: rgba(31, 122, 85, 0.14); --acento-suave-oscuro: rgba(31, 122, 85, 0.14); }
+:root[data-acento='granada'] { --acento-fuerte-claro: #ad2f54; --acento-fuerte-oscuro: #f497b0; --acento-suave-claro: rgba(194, 54, 94, 0.13); --acento-suave-oscuro: rgba(194, 54, 94, 0.13); }
+:root[data-acento='grafito'] { --acento-fuerte-claro: #4c5760; --acento-fuerte-oscuro: #b3bec6; --acento-suave-claro: rgba(86, 98, 107, 0.15); --acento-suave-oscuro: rgba(86, 98, 107, 0.15); }
+
+.modo-claro {
+  --acento-fuerte: var(--acento-fuerte-claro);
+  --acento-suave: var(--acento-suave-claro);
+}
+
+.modo-oscuro {
+  --acento-fuerte: var(--acento-fuerte-oscuro);
+  --acento-suave: var(--acento-suave-oscuro);
+}

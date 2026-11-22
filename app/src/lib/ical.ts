@@ -80,23 +80,41 @@ export function desescapar(v: string): string {
   return v.replace(/\\([\\;,nN])/g, (_m, c: string) => (c === 'n' || c === 'N' ? '\n' : c));
 }
 
+// Crear un Intl.DateTimeFormat cuesta unos 0,2 ms. Antes se creaban tres por cada fecha con TZID, y un
+// .ics con 100 000 EXDATE en una zona (1,6 MB) congelaba la app un minuto al importarlo o al refrescar
+// la suscripción, que pasa cada hora. Ahora se crea uno por zona en cada lectura (leerICS vacía la
+// lista). Un calendario con más de TOPE_ZONAS zonas distintas (ninguno real) no consigue que se creen
+// más: las siguientes se tratan como desconocidas.
+const TOPE_ZONAS = 100;
+const formatos = new Map<string, Intl.DateTimeFormat | null>();
+
+function formatoDe(zona: string): Intl.DateTimeFormat | null {
+  const guardado = formatos.get(zona);
+  if (guardado !== undefined) return guardado;
+  if (formatos.size >= TOPE_ZONAS || zona.length > 100) return null;
+  let f: Intl.DateTimeFormat | null;
+  try {
+    f = new Intl.DateTimeFormat('en-US', {
+      timeZone: zona, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+    });
+  } catch {
+    f = null;
+  }
+  formatos.set(zona, f);
+  return f;
+}
+
 /** Diferencia (ms) entre la hora de una zona y UTC en un instante dado. */
 function desfase(ms: number, zona: string): number {
-  const partes = new Intl.DateTimeFormat('en-US', {
-    timeZone: zona, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
-  }).formatToParts(new Date(ms));
+  const f = formatoDe(zona);
+  if (!f) return 0; // no pasa: la zona ya se validó con zonaValida
+  const partes = f.formatToParts(new Date(ms));
   const v = (t: string) => Number(partes.find((p) => p.type === t)?.value ?? 0);
   return Date.UTC(v('year'), v('month') - 1, v('day'), v('hour') % 24, v('minute'), v('second')) - Math.floor(ms / 1000) * 1000;
 }
 
 function zonaValida(zona: string | undefined): string | null {
-  if (!zona) return null;
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone: zona });
-    return zona;
-  } catch {
-    return null;
-  }
+  return zona && formatoDe(zona) ? zona : null;
 }
 
 /** Lee una fecha iCal. Devuelve ms y si es «fecha sola» (todo el día). */
@@ -122,6 +140,35 @@ function leerDuracion(v: string): number {
   return signo === '-' ? -total : total;
 }
 
+// Un calendario real nunca repite una entrada de BYDAY ni de BYMONTHDAY. Uno manipulado puede traer
+// cientos de miles («MO,MO,MO…») y multiplicar el trabajo de cada mes al dibujar la agenda, así que
+// solo se leen las primeras TOPE_ENTRADAS y se quitan las repetidas y las que nunca pueden coincidir.
+// Si todas eran imposibles se deja una: la regla sigue sin coincidir nunca, como antes, en vez de
+// quedarse sin BYDAY o BYMONTHDAY y pasar a repetirse el mismo día que DTSTART.
+const TOPE_ENTRADAS = 1000;
+
+/**
+ * BYDAY sin repetidos. En MONTHLY, también sin ordinales imposibles (ningún mes tiene más de 5 lunes).
+ * En WEEKLY el ordinal no se usa (solo cuenta el día), así que no se mira: quitar «60MO» haría perder los lunes.
+ */
+function limpiarByday(lista: { n: number; dia: number }[], freq: ReglaRepeticion['freq']): { n: number; dia: number }[] {
+  const vistos = new Set<string>();
+  const limpia = lista.slice(0, TOPE_ENTRADAS).filter(({ n, dia }) => {
+    const clave = `${n}:${dia}`;
+    if ((freq === 'MONTHLY' && Math.abs(n) > 5) || vistos.has(clave)) return false;
+    vistos.add(clave);
+    return true;
+  });
+  return limpia.length || !lista.length ? limpia : lista.slice(0, 1);
+}
+
+/** BYMONTHDAY sin repetidos: del 1 al 31 o del -31 al -1 (el -1 es el último día del mes). */
+function limpiarBymonthday(lista: number[]): number[] {
+  const numeros = lista.slice(0, TOPE_ENTRADAS).filter((n) => !Number.isNaN(n) && n !== 0);
+  const limpia = [...new Set(numeros.filter((n) => Number.isInteger(n) && Math.abs(n) <= 31))];
+  return limpia.length || !numeros.length ? limpia : numeros.slice(0, 1);
+}
+
 function leerRegla(v: string, zonaCal?: string): ReglaRepeticion | undefined {
   const partes: Record<string, string> = {};
   for (const p of v.split(';')) {
@@ -137,17 +184,21 @@ function leerRegla(v: string, zonaCal?: string): ReglaRepeticion | undefined {
     if (f) regla.until = f.soloFecha ? f.ms + 86400000 - 1 : f.ms; // UNTIL con fecha sola incluye todo ese día
   }
   if (partes.BYDAY) {
-    regla.byday = partes.BYDAY.split(',')
-      .map((t) => t.trim().match(/^([+-]?\d{1,2})?(SU|MO|TU|WE|TH|FR|SA)$/i))
-      .filter((x): x is RegExpMatchArray => !!x)
-      .map((x) => ({ n: x[1] ? parseInt(x[1], 10) : 0, dia: DIAS[x[2].toUpperCase()] }));
+    regla.byday = limpiarByday(
+      partes.BYDAY.split(',', TOPE_ENTRADAS)
+        .map((t) => t.trim().match(/^([+-]?\d{1,2})?(SU|MO|TU|WE|TH|FR|SA)$/i))
+        .filter((x): x is RegExpMatchArray => !!x)
+        .map((x) => ({ n: x[1] ? parseInt(x[1], 10) : 0, dia: DIAS[x[2].toUpperCase()] })),
+      freq,
+    );
   }
-  if (partes.BYMONTHDAY) regla.bymonthday = partes.BYMONTHDAY.split(',').map((n) => parseInt(n, 10)).filter((n) => !isNaN(n) && n !== 0);
+  if (partes.BYMONTHDAY) regla.bymonthday = limpiarBymonthday(partes.BYMONTHDAY.split(',', TOPE_ENTRADAS).map((n) => parseInt(n, 10)));
   return regla;
 }
 
 /** Lee el texto de un archivo .ics. Lanza un error si no es un calendario. */
 export function leerICS(texto: string): CalendarioLeido {
+  formatos.clear(); // el tope de zonas cuenta por calendario leído
   const lineas = desplegar(texto);
   if (!lineas.some((l) => /^BEGIN:VCALENDAR/i.test(l))) throw new Error(trad('El archivo no es un calendario iCal (falta BEGIN:VCALENDAR).'));
   let nombre: string | undefined;
@@ -231,14 +282,32 @@ function armarEvento(props: Linea[], zonaCal?: string): EventoICS | null {
 // ---------- repeticiones ----------
 
 const TOPE_VUELTAS = 20000;
+const DIA_MS = 86400000;
 
-/** Fechas de inicio (ms) de las repeticiones de un evento que empiezan antes de `hasta`. */
-function iniciosDe(ev: EventoICS, hasta: number): number[] {
+// Trabajo máximo de una llamada a `ocurrencias`, contado en fechas candidatas (más las entradas de
+// BYDAY revisadas cada mes). Un calendario normal se queda muy lejos (mil series diarias durante
+// un año son unas 370 000); uno manipulado con miles de series desde 1900 congelaría la agenda en
+// cada dibujo. Al agotarse, lo que falte por expandir no se expande: el peor caso ronda el segundo
+// en vez de no acabar nunca.
+const PRESUPUESTO = 1_000_000;
+let presupuesto = PRESUPUESTO;
+
+/**
+ * Fechas de inicio (ms) de las repeticiones de un evento que empiezan antes de `hasta`.
+ * Si la serie no tiene COUNT, empieza a contar cerca de `minimo` (los inicios anteriores no se
+ * verían) en vez de recorrer desde DTSTART: una serie diaria de 1900 ya no gasta 20 000 vueltas
+ * en llegar a hoy (antes ni llegaba). Con COUNT hay que contar desde el principio.
+ */
+function iniciosDe(ev: EventoICS, minimo: number, hasta: number): number[] {
   const r = ev.regla;
   if (!r) return [ev.inicio];
   const base = new Date(ev.inicio);
   const res: number[] = [];
   const limite = Math.min(hasta, r.until ?? Infinity);
+  const saltar = r.count === undefined;
+  // Las reglas guardadas antes de limpiar BYDAY y BYMONTHDAY al leer se limpian también aquí.
+  const byday = r.byday?.length ? limpiarByday(r.byday, r.freq) : undefined;
+  const bymonthday = r.bymonthday?.length ? limpiarBymonthday(r.bymonthday) : undefined;
   const conCuenta = (ms: number) => {
     if (ms < ev.inicio || ms > limite) return false;
     res.push(ms);
@@ -248,20 +317,28 @@ function iniciosDe(ev: EventoICS, hasta: number): number[] {
     d.setHours(base.getHours(), base.getMinutes(), base.getSeconds(), 0);
     return d.getTime();
   };
+  // Cuántos intervalos enteros se pueden saltar sin perder ninguno visible: uno de margen por los
+  // cambios de hora. Negativo o NaN (la vista empieza antes que la serie) = no saltar.
+  const intervalosASaltar = (cuantos: number) => (saltar ? Math.floor(cuantos / r.intervalo) - 1 : 0);
   let vueltas = 0;
+  const seguir = (coste = 1) => vueltas++ < TOPE_VUELTAS && (presupuesto -= coste) >= 0;
   if (r.freq === 'DAILY') {
     const d = new Date(base);
-    while (vueltas++ < TOPE_VUELTAS && d.getTime() <= limite) {
+    const k = intervalosASaltar((minimo - base.getTime()) / DIA_MS);
+    if (k > 0) d.setDate(d.getDate() + k * r.intervalo);
+    while (seguir() && d.getTime() <= limite) {
       if (conCuenta(d.getTime())) break;
       d.setDate(d.getDate() + r.intervalo);
     }
   } else if (r.freq === 'WEEKLY') {
-    const dias = r.byday?.length ? [...new Set(r.byday.map((b) => b.dia))].sort() : [base.getDay()];
+    const dias = byday?.length ? [...new Set(byday.map((b) => b.dia))].sort() : [base.getDay()];
     // La semana empieza el lunes (WKST por defecto).
     const lunes = new Date(base);
     lunes.setDate(lunes.getDate() - ((lunes.getDay() + 6) % 7));
+    const k = intervalosASaltar((minimo - lunes.getTime()) / (7 * DIA_MS));
+    if (k > 0) lunes.setDate(lunes.getDate() + 7 * r.intervalo * k);
     const ordenados = dias.sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7));
-    fuera: while (vueltas++ < TOPE_VUELTAS && lunes.getTime() <= limite + 7 * 86400000) {
+    fuera: while (seguir(ordenados.length) && lunes.getTime() <= limite + 7 * DIA_MS) {
       for (const dia of ordenados) {
         const d = new Date(lunes);
         d.setDate(d.getDate() + ((dia + 6) % 7));
@@ -273,8 +350,13 @@ function iniciosDe(ev: EventoICS, hasta: number): number[] {
     }
   } else if (r.freq === 'MONTHLY') {
     let mes = new Date(base.getFullYear(), base.getMonth(), 1);
-    fuera: while (vueltas++ < TOPE_VUELTAS && mes.getTime() <= limite) {
-      for (const ms of diasDelMes(mes, r, base)) {
+    const f = new Date(minimo);
+    const k = intervalosASaltar((f.getFullYear() - mes.getFullYear()) * 12 + f.getMonth() - mes.getMonth());
+    if (k > 0) mes = new Date(mes.getFullYear(), mes.getMonth() + k * r.intervalo, 1);
+    fuera: while (seguir() && mes.getTime() <= limite) {
+      const dias = diasDelMes(mes, base);
+      presupuesto -= dias.length + (byday?.length ?? 0);
+      for (const ms of dias) {
         if (ms > limite) break fuera;
         if (conCuenta(ms)) break fuera;
       }
@@ -282,7 +364,9 @@ function iniciosDe(ev: EventoICS, hasta: number): number[] {
     }
   } else {
     let anio = base.getFullYear();
-    while (vueltas++ < TOPE_VUELTAS) {
+    const k = intervalosASaltar(new Date(minimo).getFullYear() - anio);
+    if (k > 0) anio += k * r.intervalo;
+    while (seguir()) {
       const d = new Date(anio, base.getMonth(), base.getDate());
       if (d.getMonth() === base.getMonth()) {
         const ms = conHora(d);
@@ -295,23 +379,25 @@ function iniciosDe(ev: EventoICS, hasta: number): number[] {
   }
   return res;
 
-  function diasDelMes(mes: Date, regla: ReglaRepeticion, b: Date): number[] {
+  function diasDelMes(mes: Date, b: Date): number[] {
     const anio = mes.getFullYear();
     const m = mes.getMonth();
     const ultimo = new Date(anio, m + 1, 0).getDate();
+    const primero = new Date(anio, m, 1).getDay(); // día de la semana del día 1
     const dias = new Set<number>();
-    if (regla.byday?.length) {
-      for (const { n, dia } of regla.byday) {
+    if (byday?.length) {
+      for (const { n, dia } of byday) {
+        // Días del mes que caen en ese día de la semana: el primero y luego de 7 en 7, sin crear fechas.
         const coinciden: number[] = [];
-        for (let d = 1; d <= ultimo; d++) if (new Date(anio, m, d).getDay() === dia) coinciden.push(d);
+        for (let d = 1 + ((dia - primero + 7) % 7); d <= ultimo; d += 7) coinciden.push(d);
         if (n === 0) coinciden.forEach((d) => dias.add(d));
         else {
           const elegido = n > 0 ? coinciden[n - 1] : coinciden[coinciden.length + n];
           if (elegido) dias.add(elegido);
         }
       }
-    } else if (regla.bymonthday?.length) {
-      for (const n of regla.bymonthday) {
+    } else if (bymonthday?.length) {
+      for (const n of bymonthday) {
         const d = n > 0 ? n : ultimo + n + 1;
         if (d >= 1 && d <= ultimo) dias.add(d);
       }
@@ -330,15 +416,21 @@ export function ocurrencias(eventos: EventoICS[], desde: number, hasta: number):
     sustituidas.set(e.uid, s);
   }
   const res: Ocurrencia[] = [];
+  presupuesto = PRESUPUESTO;
   for (const e of eventos) {
     const largo = e.fin - e.inicio;
     if (e.recurrenciaDe !== undefined || !e.regla) {
       if (e.fin > desde && e.inicio < hasta) res.push({ evento: e, inicio: e.inicio, fin: e.fin });
       continue;
     }
-    const fuera = new Set([...(e.excepciones ?? []), ...(sustituidas.get(e.uid) ?? [])]);
+    // Solo cuentan las excepciones cerca de lo visible (dos días de margen, por las de todo el día que
+    // se comparan por fecha). Con cientos de miles de EXDATE, rehacer los conjuntos completos tardaba
+    // más de un segundo en cada dibujo de la agenda.
+    const primera = desde - (largo > 0 ? largo : 0) - 2 * DIA_MS;
+    const cerca = (ms: number) => ms > primera && ms < hasta + 2 * DIA_MS;
+    const fuera = new Set([...(e.excepciones ?? []), ...(sustituidas.get(e.uid) ?? [])].filter(cerca));
     const fueraDia = new Set([...fuera].map((ms) => new Date(ms).toDateString()));
-    for (const ini of iniciosDe(e, hasta)) {
+    for (const ini of iniciosDe(e, desde - largo, hasta)) {
       if (ini + largo <= desde) continue;
       if (fuera.has(ini) || (e.todoElDia && fueraDia.has(new Date(ini).toDateString()))) continue;
       res.push({ evento: e, inicio: ini, fin: ini + largo });

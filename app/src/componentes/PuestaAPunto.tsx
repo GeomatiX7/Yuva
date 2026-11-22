@@ -1,5 +1,6 @@
 // Puesta a punto («Atelier»): la tarjeta de Inicio con los cinco pasos y la tarjeta mínima de la barra lateral.
 // Los pasos se marcan solos (lib/puesta.ts); al pulsar uno se hace lo que pide o se explica cómo.
+// Con «Pulso», el avance son cinco tramos sesgados con --ang y la casilla es un paralelogramo.
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { avisar, abrirModal, cambiarAjustes, crearPagina } from '../data/estado';
@@ -31,6 +32,17 @@ function useChispasAlMarcar(alMarcar: (id: PasoId, completa: boolean) => void) {
     alMarcar(ultimo.id, pasosHechos(hechos) === PASOS.length);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ultimo]);
+}
+
+/** «Pulso»: el avance en cinco tramos con el sesgo de la firma (-18°), uno por paso, llenos en orden. */
+function Tramos({ n, className }: { n: number; className: string }) {
+  return (
+    <span className={className} aria-hidden="true">
+      {PASOS.map((p, i) => (
+        <i key={p.id} className={i < n ? 'h' : undefined} />
+      ))}
+    </span>
+  );
 }
 
 function Casilla() {
@@ -65,9 +77,7 @@ export function PuestaAPunto() {
           <X size={14} />
         </button>
       </div>
-      <div className="pap-progreso" aria-hidden="true">
-        <i style={{ width: `${(n / PASOS.length) * 100}%` }} />
-      </div>
+      <Tramos n={n} className="pap-progreso" />
       <ul className="pap-pasos">
         {PASOS.map((p) => {
           const hecho = hechos.includes(p.id);
@@ -99,7 +109,8 @@ export function PuestaAPunto() {
   );
 }
 
-/** Tarjeta mínima en la barra lateral, encima del pie: número, línea dorada y una frase. Lleva a Inicio. */
+/** Tarjeta mínima en la barra lateral, encima del pie: una ficha con el número en oro («3 / 5»), los cinco tramos
+ *  sesgados y una frase. Lleva a Inicio. */
 export function TarjetaPuesta() {
   const hechos = usarPuesta((s) => s.hechos);
   const oculta = usarPuesta((s) => s.oculta);
@@ -128,12 +139,11 @@ export function TarjetaPuesta() {
         <span className="tarjeta-puesta-fila">
           <span>{trad('Puesta a punto')}</span>
           <span className="tarjeta-puesta-cuenta">
-            {n} / {PASOS.length}
+            {n}
+            <small> / {PASOS.length}</small>
           </span>
         </span>
-        <span className="tarjeta-puesta-linea" aria-hidden="true">
-          <i style={{ width: `${(n / PASOS.length) * 100}%` }} />
-        </span>
+        <Tramos n={n} className="tarjeta-puesta-linea" />
         <small>{n === PASOS.length ? trad('¡Listo! Ya conoces lo esencial') : textoAvance(n)}</small>
       </button>
       <button className="tarjeta-puesta-cerrar" aria-label={trad('Ocultar la puesta a punto')} title={trad('Ocultar')} onClick={() => ocultarPuesta()}>

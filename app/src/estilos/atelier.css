@@ -40,9 +40,10 @@
 }
 
 :root[data-paleta='yuva'][data-tema='oscuro'][data-acento='azafran'] {
-  --principal: #c4566d;
+  /* Un punto más claro que #c4566d (4,48:1 con la tinta de encima): 5,4:1 con la tinta y 5,2:1 como texto sobre el papel. */
+  --principal: #d0687d;
   --principal-sobre: #1a0a0f;
-  --principal-hover: #d36a80;
+  --principal-hover: #dc7a8e;
 }
 
 /* ---------- mesa, panel y hoja ---------- */
@@ -567,9 +568,480 @@ kbd,
   color: color-mix(in srgb, var(--acento) 70%, #fff);
 }
 
-/* ---------- pestañas y segmentados: el elegido se marca con una cápsula ---------- */
-.segmentado button {
-  transition: background var(--dur-media) var(--ease-salida), color var(--dur-rapida), box-shadow var(--dur-media);
+/* ---------- segmentados («Pulso»): la pastilla elegida es un paralelogramo de -18° que se desliza ----------
+   Un solo estilo para todos los .segmentado de la app. La pastilla es el <span class="seg-ind"> que coloca
+   refSegmentado (componentes/ui.tsx) con offsetLeft/offsetTop y offsetWidth/offsetHeight del botón elegido
+   (aria-pressed, aria-selected, aria-checked o .activo). Mientras no se ha medido (.seg-listo), el botón
+   elegido pinta su propio fondo, así nunca queda el texto claro sobre la pista.
+   Contrastes: texto elegido sobre la pastilla 8,7:1 a 11,9:1; cifras (tinta-2 sobre papel-3) 5,7:1 a 8,1:1. */
+:root {
+  --seg-fondo: var(--principal);
+  --seg-texto: var(--principal-sobre);
+  --seg-filo: rgba(17, 41, 42, 0.3);
+}
+
+:root[data-tema='oscuro'] {
+  --seg-filo: rgba(17, 41, 42, 0.35);
+}
+
+:root[data-paleta='yuva'][data-acento='azafran'] {
+  --seg-fondo: #5e1a2d;
+  --seg-texto: #fff7f2;
+  --seg-filo: rgba(190, 141, 71, 0.65);
+}
+
+:root[data-paleta='yuva'][data-tema='oscuro'][data-acento='azafran'] {
+  --seg-fondo: #7a2238;
+  --seg-texto: #fbeee6;
+  --seg-filo: rgba(234, 196, 111, 0.45);
+}
+
+:root[data-contraste='alto'][data-paleta][data-tema][data-acento] {
+  --seg-filo: var(--oro-m);
+}
+
+.segmentado {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  max-width: 100%;
+  padding: 3px 6px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--papel-3);
+}
+
+.segmentado > button {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--tinta-2);
+  font-size: var(--t-s);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: color var(--dur-rapida);
+}
+
+.segmentado > button:hover:not(:disabled, [aria-pressed='true'], [aria-selected='true'], [aria-checked='true'], .activo) {
+  color: var(--tinta);
+  background: transparent;
+}
+
+.segmentado > button:is([aria-pressed='true'], [aria-selected='true'], [aria-checked='true'], .activo) {
+  color: var(--seg-texto);
+  font-weight: 600;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* Antes de medir: el elegido lleva su propio fondo (sin deslizarse). */
+.segmentado:not(.seg-listo) > button:is([aria-pressed='true'], [aria-selected='true'], [aria-checked='true'], .activo) {
+  border-radius: 4px;
+  background: var(--seg-fondo);
+  box-shadow: inset 0 0 0 1px var(--seg-filo);
+}
+
+.segmentado > button:focus-visible {
+  outline: 2px solid var(--oro-m);
+  outline-offset: 1px;
+  border-radius: 6px;
+}
+
+/* Con el teclado el foco cae en la opción elegida (tabulación itinerante): el anillo sigue el sesgo de la pastilla. */
+.seg-listo > button:is([aria-pressed='true'], [aria-selected='true'], [aria-checked='true'], .activo):focus-visible {
+  outline: none;
+}
+
+.seg-listo:has(> button:is([aria-pressed='true'], [aria-selected='true'], [aria-checked='true'], .activo):focus-visible) > .seg-ind {
+  box-shadow: inset 0 0 0 1px var(--seg-filo), 0 0 0 2px var(--papel-3), 0 0 0 4px var(--anillo-seg, var(--oro-m));
+}
+
+:root[data-contraste='alto'] .segmentado {
+  --anillo-seg: var(--tinta);
+}
+
+/* La cifra de cada opción («Favoritos 3»): tinta-2 en la pista, el color del texto en la pastilla. */
+.segmentado .n {
+  font: 500 11px/1 var(--f-mono);
+  color: var(--tinta-2);
+  font-variant-numeric: tabular-nums;
+}
+
+.segmentado > button:is([aria-pressed='true'], [aria-selected='true'], [aria-checked='true'], .activo) .n {
+  color: inherit;
+  opacity: 0.85;
+}
+
+.seg-ind {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: 0;
+  width: var(--w, 0);
+  height: var(--h, 28px);
+  border-radius: 4px;
+  background: var(--seg-fondo);
+  box-shadow: inset 0 0 0 1px var(--seg-filo);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(var(--x, 0), var(--y, 3px)) skewX(var(--ang));
+  transition:
+    transform 340ms var(--rebote-corto),
+    width 340ms var(--rebote-corto),
+    height 340ms var(--rebote-corto);
+}
+
+.seg-listo > .seg-ind {
+  opacity: 1;
+}
+
+.seg-quieto > .seg-ind {
+  transition: none;
+}
+
+/* En menús y paneles flotantes, más compacto para caber en su ancho (Apariencia, «Mostrar como», ajustes de vista). */
+.flotante .segmentado {
+  gap: 1px;
+  padding: 3px 4px;
+}
+
+.flotante .segmentado > button {
+  padding: 0 7px;
+  font-size: 12px;
+}
+
+.segmentado.chico {
+  padding: 2px 5px;
+  border-radius: 9px;
+}
+
+.segmentado.chico > button {
+  min-height: 24px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+
+/* Con los colores forzados de Windows (forced-colors), el navegador pinta la pastilla del color del papel y quita las
+   sombras: la opción elegida solo se distinguía por el peso de la letra, y el foco sobre ella, que es una sombra de
+   la pastilla, no se veía. Aquí la pastilla es de Highlight con el texto en HighlightText (sin filo ni anillo, que con
+   forced-color-adjust: none volverían en vino y oro), y el foco de la elegida es un contorno de CanvasText, que no se
+   confunde con la pastilla. Cada regla empata en especificidad con la que corrige y gana por ir después. Fuera de
+   este modo no cambia nada. */
+@media (forced-colors: active) {
+  .seg-ind,
+  .seg-listo:has(> button:is([aria-pressed='true'], [aria-selected='true'], [aria-checked='true'], .activo):focus-visible) > .seg-ind,
+  .segmentado:not(.seg-listo) > button:is([aria-pressed='true'], [aria-selected='true'], [aria-checked='true'], .activo) {
+    forced-color-adjust: none;
+    background: Highlight;
+    box-shadow: none;
+  }
+
+  .segmentado > button:is([aria-pressed='true'], [aria-selected='true'], [aria-checked='true'], .activo) {
+    forced-color-adjust: none;
+    color: HighlightText;
+  }
+
+  /* También antes de medir: con forced-color-adjust: none, el contorno de oro de siempre saldría en oro. */
+  .segmentado > button:is([aria-pressed='true'], [aria-selected='true'], [aria-checked='true'], .activo):focus-visible {
+    outline: 2px solid CanvasText;
+    outline-offset: 1px;
+  }
+}
+
+/* ---------- rayas («Pulso»): la diagonal del logo como raya de avance ----------
+   Hasta 12 tareas, una raya por tarea; con más, siempre 12 rayas en proporción, la parcial llena desde abajo,
+   y la cifra exacta al lado. Las pinta componentes/Rayas.tsx con el color de la página (--c). Solo viven en
+   tarjetas, en la línea de datos de la cabecera y en los encabezados de lista. */
+.rayas-pulso {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  vertical-align: middle;
+}
+
+.rayas {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--raya-hueco);
+  flex-shrink: 0;
+  /* el sesgo asoma 2 px por cada lado */
+  padding: 0 2px;
+  vertical-align: middle;
+}
+
+.rayas i {
+  display: block;
+  width: var(--raya-ancho);
+  height: var(--raya-alto);
+  border-radius: 1px;
+  background: var(--raya-vacia, var(--linea-fuerte));
+  transform: skewX(var(--ang));
+  transition: background 250ms ease;
+}
+
+.rayas i.h {
+  background: var(--c);
+}
+
+.rayas i.pp {
+  background: linear-gradient(to top, var(--c) var(--f), var(--raya-vacia, var(--linea-fuerte)) var(--f));
+}
+
+.rayas-cifra {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+  color: var(--tinta-2);
+  font: 600 12px/1.2 var(--f-titulo);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rayas-cifra b {
+  color: var(--tinta);
+  font-weight: 700;
+}
+
+.rayas-cifra .falta {
+  color: var(--tinta-3);
+  font: italic 400 12.5px/1.2 var(--f-serif);
+}
+
+/* ---------- casilla («Pulso»): la única casilla de la app fuera del editor ----------
+   Se pone a mano con class="casilla" en cada <input type="checkbox">: no hay ninguna regla global sobre las casillas,
+   así las de librerías y las del editor (editor.css, .casilla-pulso) siguen con lo suyo. Sigue siendo un input nativo:
+   Espacio, clic en su etiqueta, el formulario y el aria de siempre.
+   Un área de 18 px con la caja sesgada (--ang) en ::before y la palomita en ::after (la misma de las casillas del
+   editor, --casilla-palomita). Marcada: vino con la palomita crema en claro; oro con la palomita vino en oscuro.
+   La caja y la palomita se colocan con inset, así una casilla de otro tamaño no se descuadra. Al marcarla a mano
+   (lleva el foco) se estira y encoge (el «marcar» de movimiento.css) y la palomita se traza de izquierda a derecha;
+   al abrir una vista con casillas ya marcadas no se anima nada.
+   La vista de solo lectura de las bases (.casilla-vista, bd.css) toma el mismo aspecto con estos tokens. */
+:root {
+  --casilla-lleno: #5e1a2d;
+  --casilla-marca: #f3e4d6;
+}
+
+:root[data-tema='oscuro'] {
+  --casilla-lleno: #eac46f;
+  --casilla-marca: #2a0d16;
+}
+
+/* El borde de la caja vacía se calcula en la propia casilla, no en :root: así toma la tinta de la página donde está
+   (una página siempre clara u oscura, o un tema de página que cambia --tinta-3) y no la de la app. */
+.casilla,
+.casilla-vista {
+  --casilla-vacia: var(--tinta-3);
+}
+
+:root[data-contraste='alto'] :is(.casilla, .casilla-vista) {
+  --casilla-vacia: var(--tinta);
+}
+
+/* Una página que se ve siempre clara u oscura toma la casilla de su modo. */
+.modo-claro {
+  --casilla-lleno: #5e1a2d;
+  --casilla-marca: #f3e4d6;
+}
+
+.modo-oscuro {
+  --casilla-lleno: #eac46f;
+  --casilla-marca: #2a0d16;
+}
+
+input.casilla {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  vertical-align: -4px;
+  cursor: pointer;
+  accent-color: auto;
+}
+
+/* la caja */
+.casilla::before,
+.casilla-vista::before {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  box-sizing: border-box;
+  border: 1.6px solid var(--casilla-borde, var(--casilla-vacia));
+  border-radius: 2px;
+  background-color: transparent;
+  transform: skewX(var(--ang));
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    transform 120ms ease;
+}
+
+/* la palomita: sigue el ángulo y se traza de izquierda a derecha */
+.casilla::after,
+.casilla-vista::after {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  background: var(--casilla-marca);
+  -webkit-mask: var(--casilla-palomita) center / 100% 100% no-repeat;
+  mask: var(--casilla-palomita) center / 100% 100% no-repeat;
+  transform: skewX(var(--ang));
+  clip-path: inset(0 100% 0 0);
+  transition: clip-path 220ms ease-out 40ms;
+  pointer-events: none;
+}
+
+.casilla:hover:not(:disabled, :checked, :indeterminate)::before {
+  border-color: var(--casilla-lleno);
+  background-color: color-mix(in srgb, var(--casilla-lleno) 14%, transparent);
+}
+
+.casilla:active:not(:disabled)::before {
+  transform: skewX(var(--ang)) scale(0.86);
+}
+
+.casilla:is(:checked, :indeterminate)::before,
+.casilla-vista.marcada::before {
+  border-color: var(--casilla-lleno);
+  background-color: var(--casilla-lleno);
+}
+
+.casilla:checked::after,
+.casilla-vista.marcada::after {
+  clip-path: inset(0 0 0 0);
+}
+
+/* a medias (la de «Seleccionar todas» con algunas filas): una raya en vez de la palomita */
+.casilla:indeterminate::after {
+  inset: calc(50% - 1px) 4px;
+  border-radius: 1px;
+  -webkit-mask: none;
+  mask: none;
+  clip-path: none;
+}
+
+/* al marcarla a mano: se estira y encoge con el rebote de las casillas */
+.casilla:checked:focus {
+  animation: marcar 320ms var(--ease-rebote, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+
+.casilla:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* foco de doble contorno, como las del editor: el papel y luego el oro (en alto contraste, la tinta) */
+.casilla:focus-visible {
+  outline: none;
+}
+
+.casilla:focus-visible::before {
+  box-shadow:
+    0 0 0 2px var(--casilla-fondo, var(--papel)),
+    0 0 0 4px var(--oro-m);
+  transition-property: background-color, border-color, transform;
+}
+
+:root[data-contraste='alto'] .casilla:focus-visible::before {
+  box-shadow:
+    0 0 0 2px var(--casilla-fondo, var(--papel)),
+    0 0 0 4px var(--tinta);
+}
+
+/* En diálogos y menús flotantes el anillo se recorta contra su fondo. */
+:is(.modal, .flotante, .menu, .cuadro-clave) .casilla {
+  --casilla-fondo: var(--flota);
+}
+
+/* Colores forzados (temas de contraste de Windows): el navegador pinta los fondos con Canvas y quita las sombras, así
+   que la marcada se vería vacía y el foco no se vería. La marcada se llena de Highlight con la palomita en
+   HighlightText y el foco es un contorno de Highlight alrededor del área. */
+@media (forced-colors: active) {
+  .casilla::before,
+  .casilla-vista::before {
+    border-color: CanvasText;
+  }
+
+  .casilla:is(:checked, :indeterminate)::before,
+  .casilla-vista.marcada::before {
+    forced-color-adjust: none;
+    border-color: Highlight;
+    background-color: Highlight;
+    box-shadow: none;
+  }
+
+  .casilla:is(:checked, :indeterminate)::after,
+  .casilla-vista.marcada::after {
+    forced-color-adjust: none;
+    background: HighlightText;
+  }
+
+  .casilla:focus-visible,
+  :root[data-contraste='alto'] .casilla:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 1px;
+  }
+
+  .casilla:focus-visible::before {
+    box-shadow: none;
+  }
+}
+
+/* Movimiento reducido: sin rebote, sin trazo animado y sin transición de color. */
+@media (prefers-reduced-motion: reduce) {
+  .casilla,
+  .casilla::before,
+  .casilla::after,
+  .casilla-vista,
+  .casilla-vista::before,
+  .casilla-vista::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
+
+:root[data-movimiento='reducido'] .casilla,
+:root[data-movimiento='reducido'] .casilla::before,
+:root[data-movimiento='reducido'] .casilla::after,
+:root[data-movimiento='reducido'] .casilla-vista,
+:root[data-movimiento='reducido'] .casilla-vista::before,
+:root[data-movimiento='reducido'] .casilla-vista::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* ---------- separador de la firma: la diagonal dorada entre datos ---------- */
+.sep-diagonal {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 1.5px;
+  height: 14px;
+  margin: 0 3px;
+  background: var(--oro-m);
+  opacity: 0.7;
+  transform: skewX(var(--ang));
 }
 
 /* ---------- foco ---------- */
@@ -582,7 +1054,9 @@ kbd,
 @media (prefers-reduced-motion: reduce) {
   .resalte-barra,
   .comando,
-  .boton-primario::after {
+  .boton-primario::after,
+  .seg-ind,
+  .rayas i {
     transition: none !important;
   }
   .onda-clic {
@@ -592,4 +1066,8 @@ kbd,
 
 :root[data-movimiento='reducido'] .onda-clic {
   display: none;
+}
+
+:root[data-movimiento='reducido'] :is(.seg-ind, .rayas i) {
+  transition: none !important;
 }

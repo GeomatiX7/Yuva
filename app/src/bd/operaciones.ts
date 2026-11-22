@@ -24,6 +24,7 @@ import type {
 import { hoyISO, textoFecha } from '../lib/fechas';
 import { editoresAbiertos } from '../editor/paginaDeEditor';
 import { calcularEsquema, comoBase, esCalculada, valorCalculado, valorRelacion } from './derivadas';
+import { aplicarRepeticion, type OpcionesRepeticion, type ResultadoRepeticion } from './repetir';
 import { enIngles, LOCALE, plural, trad } from '../i18n';
 
 export const NOMBRE_TIPO: Record<TipoPropiedad, string> = {
@@ -349,7 +350,7 @@ export function enArbol(filas: Pagina[], esquema: EsquemaBD, plegadas: Set<strin
 /** Plantillas de fila de una base de datos (páginas hijas marcadas con `esPlantilla`). */
 export function plantillasDe(paginas: Record<string, Pagina>, bdId: string): Pagina[] {
   return Object.values(paginas)
-    .filter((p) => p.padreId === bdId && p.esPlantilla && !p.enPapelera)
+    .filter((p) => p.padreId === bdId && p.esPlantilla && !p.plantillaPagina && !p.enPapelera) // una plantilla propia no es de fila
     .sort((a, b) => a.creadoEn - b.creadoEn);
 }
 
@@ -380,7 +381,19 @@ export function crearDesdePlantilla(bdId: string, plantillaId: string, extra: Re
   const props: Record<string, ValorProp> = {};
   for (const [k, v] of Object.entries(plantilla.props ?? {})) props[k] = v === 'hoy' ? hoy : v;
   const fila = crearFila(bdId, { ...props, ...extra }, plantilla.titulo);
-  actualizarPagina(fila.id, { icono: plantilla.icono, portada: plantilla.portada, fuente: plantilla.fuente, anchoCompleto: plantilla.anchoCompleto }, false);
+  actualizarPagina(
+    fila.id,
+    {
+      icono: plantilla.icono,
+      portada: plantilla.portada,
+      fuente: plantilla.fuente,
+      anchoCompleto: plantilla.anchoCompleto,
+      // Las pegatinas de la plantilla también (una copia: cada fila mueve las suyas).
+      pegatinas: plantilla.pegatinas?.length ? plantilla.pegatinas.map((p) => ({ ...p })) : undefined,
+      desdePlantilla: plantillaId,
+    },
+    false,
+  );
   // El contenido se copia en cuanto se lee de la base local; los bloques reciben identificadores nuevos.
   bd.contenidos.get(plantillaId).then(async (c) => {
     const bloques = (c?.bloques as unknown[] | undefined) ?? [];
@@ -422,8 +435,8 @@ export function numerarFilas(bdId: string) {
   if (siguiente !== prop.siguiente) cambiarPropiedad(bdId, prop.id, { siguiente });
 }
 
-export function crearFila(bdId: string, props: Record<string, ValorProp> = {}, titulo = '', ref?: { despues?: string; antes?: string }): Pagina {
-  const fila = crearPagina({ padreId: bdId, titulo, props });
+export function crearFila(bdId: string, props: Record<string, ValorProp> = {}, titulo = '', ref?: { despues?: string; antes?: string; datos?: Partial<Pagina> }): Pagina {
+  const fila = crearPagina({ padreId: bdId, titulo, props, ...ref?.datos }); // `datos`: id fijo, icono… (bd/repetir.ts)
   if (ref) {
     // reordenar dentro de la base de datos
     const hermanos = hijosDe(obtener().paginas, bdId).filter((h) => h.id !== fila.id);
@@ -440,15 +453,18 @@ export function crearFila(bdId: string, props: Record<string, ValorProp> = {}, t
   return obtener().paginas[fila.id];
 }
 
-export function cambiarValor(filaId: string, propId: string, valor: ValorProp) {
+/** Cambia un valor de una fila. Si la fila se repite y el cambio la deja hecha, pasa a su fecha siguiente (o crea la
+ *  siguiente fila): bd/repetir.ts. Devuelve lo que hizo la repetición (para un «Deshacer» propio, con `sinAviso`). */
+export function cambiarValor(filaId: string, propId: string, valor: ValorProp, opciones?: OpcionesRepeticion): ResultadoRepeticion | null {
   const fila = obtener().paginas[filaId];
-  if (!fila) return;
+  if (!fila) return null;
   if (propId === 'titulo') {
     actualizarPagina(filaId, { titulo: String(valor ?? '') });
-    return;
+    return null;
   }
   actualizarPagina(filaId, { props: { ...(fila.props ?? {}), [propId]: valor } });
   if (fila.padreId && fila.props?.[propId] !== valor) automatizar(fila.padreId, filaId, { tipo: 'cambia', prop: propId, valor });
+  return fila.repetir ? aplicarRepeticion(filaId, propId, fila.props?.[propId] ?? null, valor, { ...opciones, propsAntes: fila.props }) : null;
 }
 
 /** Cambia las páginas enlazadas de una fila. En el lado reflejo escribe en las filas de la otra base de datos. */
@@ -630,6 +646,7 @@ function quitarDelEsquema(bdId: string, propId: string) {
       v.filtros = v.filtros.filter((f) => f.prop !== propId);
       v.ordenes = v.ordenes.filter((o) => o.prop !== propId);
       if (v.agruparPor === propId) v.agruparPor = undefined;
+      if (v.agrupar?.prop === propId) v.agrupar = undefined; // tabla y lista (bd/agrupar.tsx)
       if (v.propFecha === propId) v.propFecha = undefined;
       if (v.propFechaFin === propId) v.propFechaFin = undefined;
     }
@@ -749,11 +766,21 @@ export function cambiarTipoPropiedad(bdId: string, propId: string, tipo: TipoPro
     tipo,
     opciones: conOpciones(tipo) ? opciones : undefined,
     formato: tipo === 'numero' ? 'numero' : tipo === 'formula' || tipo === 'resumen' ? prop.formato : undefined,
+    decimales: tipo === 'formula' || tipo === 'resumen' ? prop.decimales : undefined, // como el formato
     relacion: undefined,
     resumen: tipo === 'resumen' ? resumenInicial(pag.esquema!) : undefined,
     formula: tipo === 'formula' ? prop.formula ?? '' : undefined,
     boton: tipo === 'boton' ? botonInicial(pag.esquema!) : undefined,
   });
+  // Tabla y lista agrupadas por ella: si el tipo nuevo no se agrupa (TIPOS_AGRUPABLES de bd/agrupar.tsx), dejan de
+  // agrupar; si se agrupa, los grupos plegados ya no valen.
+  const agrupable = ['estado', 'seleccion', 'multiseleccion', 'casilla', 'fecha', 'creado', 'editado', 'relacion'].includes(tipo);
+  if (obtener().paginas[bdId]?.esquema?.vistas.some((v) => v.agrupar?.prop === propId)) {
+    cambiarEsquema(bdId, (e) => {
+      for (const v of e.vistas) if (v.agrupar?.prop === propId) v.agrupar = agrupable ? { ...v.agrupar, plegados: undefined, fecha: undefined } : undefined;
+      return e;
+    });
+  }
   if (tipo === 'id') {
     numerarFilas(bdId);
     return;
@@ -861,23 +888,41 @@ export function valorDe(fila: Pagina, prop: Propiedad): ValorProp {
 }
 
 const fmtNumero = new Intl.NumberFormat(LOCALE, { maximumFractionDigits: 2 });
-export function formatearNumero(n: number, formato: Propiedad['formato']): string {
+
+// Un formateador por configuración regional y opciones (no uno nuevo en cada celda).
+const formateadores = new Map<string, Intl.NumberFormat>();
+function formateador(locale: string, opciones: Intl.NumberFormatOptions): Intl.NumberFormat {
+  const clave = `${locale}|${JSON.stringify(opciones)}`;
+  let f = formateadores.get(clave);
+  if (!f) formateadores.set(clave, (f = new Intl.NumberFormat(locale, opciones)));
+  return f;
+}
+
+/** Cifras decimales de la opción «Decimales» (un entero de 0 a 4), o undefined si se usan las del formato. */
+export function decimalesValidos(d: unknown): number | undefined {
+  return typeof d === 'number' && Number.isFinite(d) ? Math.min(4, Math.max(0, Math.round(d))) : undefined;
+}
+
+/** Escribe un número con su formato. Con `decimales` (0 a 4) muestra siempre esas cifras, en cualquier formato. */
+export function formatearNumero(n: number, formato: Propiedad['formato'], decimales?: number): string {
+  const d = decimalesValidos(decimales);
+  const cifras: Intl.NumberFormatOptions = d === undefined ? {} : { minimumFractionDigits: d, maximumFractionDigits: d };
   switch (formato) {
     case 'decimal':
-      return new Intl.NumberFormat(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
+      return formateador(LOCALE, { minimumFractionDigits: 2, maximumFractionDigits: 2, ...cifras }).format(n);
     case 'porcentaje':
-      return trad('{n} %', { n: fmtNumero.format(n) });
+      return trad('{n} %', { n: (d === undefined ? fmtNumero : formateador(LOCALE, cifras)).format(n) });
     case 'pesos':
-      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(n);
+      return formateador('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0, ...cifras }).format(n);
     case 'dolares':
       // En inglés, los dólares con formato de EE. UU. (US$ 1.500,00 en español, $1,500.00 en inglés).
-      return new Intl.NumberFormat(LOCALE, { style: 'currency', currency: 'USD' }).format(n);
+      return formateador(LOCALE, { style: 'currency', currency: 'USD', ...cifras }).format(n);
     case 'euros':
-      return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n);
+      return formateador('es-ES', { style: 'currency', currency: 'EUR', ...cifras }).format(n);
     default: {
       const moneda = formato ? MONEDAS[formato] : undefined;
-      if (moneda) return new Intl.NumberFormat(moneda[0], { style: 'currency', currency: moneda[1] }).format(n);
-      return fmtNumero.format(n);
+      if (moneda) return formateador(moneda[0], { style: 'currency', currency: moneda[1], ...cifras }).format(n);
+      return (d === undefined ? fmtNumero : formateador(LOCALE, cifras)).format(n);
     }
   }
 }
@@ -899,7 +944,7 @@ export function textoValor(propiedad: Propiedad, valor: ValorProp): string {
     case 'lugar':
       return nombreLugar(valor);
     case 'numero':
-      return typeof valor === 'number' ? formatearNumero(valor, prop.formato) : String(valor);
+      return typeof valor === 'number' ? formatearNumero(valor, prop.formato, prop.decimales) : String(valor);
     case 'id':
       return prop.prefijo ? `${prop.prefijo}-${valor}` : String(valor);
     case 'archivos':
@@ -1194,21 +1239,21 @@ export function calcular(filas: Pagina[], propiedad: Propiedad, calculo: Calculo
     case 'marcadas':
       return trad('{n} de {total}', { n: valores.filter(Boolean).length, total: filas.length });
     case 'suma':
-      return formatearNumero(nums.reduce((a, b) => a + b, 0), prop.formato);
+      return formatearNumero(nums.reduce((a, b) => a + b, 0), prop.formato, prop.decimales);
     case 'promedio':
-      return nums.length ? formatearNumero(nums.reduce((a, b) => a + b, 0) / nums.length, prop.formato) : '—';
+      return nums.length ? formatearNumero(nums.reduce((a, b) => a + b, 0) / nums.length, prop.formato, prop.decimales) : '—';
     case 'min':
-      return nums.length ? formatearNumero(Math.min(...nums), prop.formato) : '—';
+      return nums.length ? formatearNumero(Math.min(...nums), prop.formato, prop.decimales) : '—';
     case 'max':
-      return nums.length ? formatearNumero(Math.max(...nums), prop.formato) : '—';
+      return nums.length ? formatearNumero(Math.max(...nums), prop.formato, prop.decimales) : '—';
     case 'mediana': {
       if (!nums.length) return '—';
       const o = [...nums].sort((a, b) => a - b);
       const m = o.length >> 1;
-      return formatearNumero(o.length % 2 ? o[m] : (o[m - 1] + o[m]) / 2, prop.formato);
+      return formatearNumero(o.length % 2 ? o[m] : (o[m - 1] + o[m]) / 2, prop.formato, prop.decimales);
     }
     case 'rango':
-      return nums.length ? formatearNumero(Math.max(...nums) - Math.min(...nums), prop.formato) : '—';
+      return nums.length ? formatearNumero(Math.max(...nums) - Math.min(...nums), prop.formato, prop.decimales) : '—';
     case 'unicos':
       return String(new Set(llenos.flatMap((v) => (Array.isArray(v) ? v : [v])).map(String)).size);
     case 'pct_vacios':
@@ -1234,4 +1279,37 @@ export function calcular(filas: Pagina[], propiedad: Propiedad, calculo: Calculo
       return plural(dias, '{n} día', '{n} días');
     }
   }
+}
+
+/* ---------- estado de una fila nueva (antes en VistaBD.tsx) ---------- */
+
+/** Los filtros sueltos de la vista y los de sus grupos (con sus subgrupos). */
+function todosLosFiltros(vista: Vista): Filtro[] {
+  const res: Filtro[] = [...vista.filtros];
+  const abrir = (g: GrupoFiltro) => g.reglas.forEach((r) => ('reglas' in r ? abrir(r) : res.push(r)));
+  (vista.gruposFiltro ?? []).forEach(abrir);
+  return res;
+}
+
+/**
+ * Estado con que entra una fila nueva, como en Notion: la primera opción del grupo «Por hacer» de cada propiedad de
+ * estado a la que nadie le da valor (ni los filtros de la vista, ni la columna del tablero, ni la plantilla). Una
+ * columna «Sin estado» pasa su null a propósito y se respeta. Tampoco se pone si con ese estado la fila dejaría de
+ * cumplir un filtro de la vista que sin él sí cumple («Estado está vacío», «Estado no es Bandeja»…).
+ */
+export function estadoInicial(bd: Pagina, vista: Vista, valores: Record<string, ValorProp>, plantilla?: Pagina): Record<string, ValorProp> {
+  const res: Record<string, ValorProp> = {};
+  const filtros = todosLosFiltros(vista);
+  // Una fila de prueba con solo ese estado: los filtros de una propiedad de estado solo miran su valor.
+  const con = (p: Propiedad, v: ValorProp) => ({ props: { [p.id]: v } }) as unknown as Pagina;
+  for (const p of bd.esquema?.propiedades ?? []) {
+    if (p.tipo !== 'estado' || p.id in valores) continue;
+    const dePlantilla = plantilla?.props?.[p.id];
+    if (dePlantilla !== undefined && dePlantilla !== null && dePlantilla !== '') continue;
+    const op = p.opciones?.find((o) => grupoDeOpcion(p, o.id) === 'pendiente');
+    if (!op) continue;
+    if (filtros.some((f) => f.prop === p.id && cumpleFiltro(con(p, null), p, f) && !cumpleFiltro(con(p, op.id), p, f))) continue;
+    res[p.id] = op.id;
+  }
+  return res;
 }

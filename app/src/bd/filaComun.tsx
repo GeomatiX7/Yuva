@@ -3,7 +3,7 @@ import { ArrowUpRight, Copy, Link, PanelRightOpen, Trash2 } from 'lucide-react';
 import { aPapelera, avisar, duplicarPagina, usar } from '../data/estado';
 import { Flotante, ItemMenu, Menu, SeparadorMenu, type Ancla } from '../componentes/ui';
 import { enlacePagina, ir } from '../lib/ruta';
-import { abrirFila } from './VistaBD';
+import { abrirFila } from './abrirFila';
 import { hijosDe, actualizarPagina } from '../data/estado';
 import { trad } from '../i18n';
 

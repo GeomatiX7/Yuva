@@ -11,8 +11,14 @@
 //
 // El idioma se decide al abrir la app y no cambia mientras corre: cambiarlo recarga la ventana.
 // Así `trad()` funciona igual en componentes, constantes de módulo y funciones sueltas, sin ganchos.
-import { enUS, es as esFechas } from 'date-fns/locale';
-import { EN } from './en';
+//
+// El diccionario de inglés (unos 280 KB) solo se descarga si la app va en inglés: lo trae `cargarIdioma()`,
+// que main.tsx espera antes de importar el resto de la app. Por eso los `trad()` de nivel de módulo (constantes
+// con textos) ya encuentran el inglés: esos módulos se evalúan después.
+// Las locales de date-fns van por ruta: el barril 'date-fns/locale' hace que el servidor de desarrollo cargue
+// todas (en el build da lo mismo).
+import { enUS } from 'date-fns/locale/en-US';
+import { es as esFechas } from 'date-fns/locale/es';
 
 export type Idioma = 'es' | 'en';
 
@@ -46,6 +52,23 @@ if (typeof document !== 'undefined') document.documentElement.lang = idioma;
 export const LOCALE = enIngles ? 'en-US' : 'es-CO';
 /** Para date-fns: `format(d, 'd MMM', { locale: localeFechas })`. */
 export const localeFechas = enIngles ? enUS : esFechas;
+
+/** Textos en inglés, con el texto en español como clave. Vacío hasta `cargarIdioma()` (y siempre en español). */
+let EN: Record<string, string> = {};
+
+/**
+ * Trae el diccionario de inglés si la app va en inglés; en español no hace nada. main.tsx la espera antes de
+ * importar la app. Si el diccionario no llega (por ejemplo, un build a medio actualizar), la app abre en español
+ * en vez de quedarse en blanco.
+ */
+export async function cargarIdioma(): Promise<void> {
+  if (!enIngles) return;
+  try {
+    EN = (await import('./en')).EN;
+  } catch (err) {
+    console.error('[Yuva] No se pudo cargar el diccionario de inglés:', err);
+  }
+}
 
 const sinContexto = (s: string) => {
   const i = s.indexOf('@');

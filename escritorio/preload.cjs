@@ -17,7 +17,13 @@ contextBridge.exposeInMainWorld('escritorio', {
   guardarCopia: (nombre, texto) => ipcRenderer.invoke('escritorio:guardar-copia', nombre, texto),
   abrirCarpeta: (cual) => ipcRenderer.invoke('escritorio:abrir-carpeta', cual),
   mostrar: () => ipcRenderer.send('escritorio:mostrar'),
+  // Al cerrar la nota rápida: si la trajo un atajo, la bandeja o la lista de saltos, la ventana vuelve a como estaba
+  // (bandeja, minimizada o detrás) y el foco al otro programa. Devuelve si volvió.
+  volverTrasCaptura: () => ipcRenderer.invoke('escritorio:volver-tras-captura'),
   descargarCalendario: (url) => ipcRenderer.invoke('escritorio:descargar-calendario', String(url)),
+  // «Funciones con internet» (Ajustes › Privacidad): apagadas (false), la ventana no hace ninguna petición a la red.
+  // La app lo llama al arrancar y cada vez que cambia el interruptor.
+  fijarInternet: (activo) => ipcRenderer.send('escritorio:internet', activo !== false),
   actualizacion: {
     info: () => ipcRenderer.invoke('escritorio:actualizacion-info'),
     buscar: () => ipcRenderer.invoke('escritorio:actualizacion-buscar'),
@@ -51,4 +57,7 @@ contextBridge.exposeInMainWorld('escritorio', {
   },
   alAbrir: escuchar('escritorio:abrir'),
   alCambiarAjustes: escuchar('escritorio:ajustes'),
+  // Cerrar la ventana la esconde en la bandeja (si «Seguir en la bandeja al cerrar» está puesto): la app recibe el
+  // aviso justo antes, por ejemplo para bloquearse con el PIN. Devuelve la función que quita el aviso.
+  alOcultarEnBandeja: escuchar('escritorio:oculta-en-bandeja'),
 });

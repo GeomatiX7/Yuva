@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import { createReactBlockSpec } from '@blocknote/react';
 import { ArrowUpRight, Globe, Plus, Settings2 } from 'lucide-react';
 import { avisar, cambiarUi, estaBorrada, tituloDe, usar } from '../data/estado';
-import { crearDesdePlantilla, crearFila, plantillaPorDefecto } from '../bd/operaciones';
+import { crearDesdePlantilla, crearFila, estadoInicial, plantillaPorDefecto } from '../bd/operaciones';
 import type { Vista } from '../data/tipos';
 import { ir } from '../lib/ruta';
-import { Flotante, TituloMenu, confirmar } from '../componentes/ui';
+import { Flotante, TituloMenu, confirmar, refSegmentado } from '../componentes/ui';
 import { COLORES, NOMBRE_COLOR } from '../bd/operaciones';
 import { LOCALE, trad } from '../i18n';
 
@@ -51,9 +51,13 @@ function BotonPagina({ etiqueta, accion, destino, confirmacion, color, editable,
     if (accion === 'web') window.open(destino.trim(), '_blank', 'noopener');
     else if (accion === 'abrir') ir(objetivo!.id);
     else {
-      // Usa la plantilla por defecto de la base, como «Nueva» en sus vistas (el botón no tiene vista propia).
-      const porDefecto = plantillaPorDefecto(objetivo!, {} as Vista);
-      const fila = porDefecto ? crearDesdePlantilla(objetivo!.id, porDefecto.id) : crearFila(objetivo!.id);
+      // Usa la plantilla por defecto de la base, como «Nueva» en sus vistas (el botón no tiene vista propia, ni
+      // filtros). La fila entra con el estado inicial de la base (la primera opción «Por hacer»: en el Gestor de
+      // tareas, la Bandeja), salvo que la plantilla ya traiga uno.
+      const sinVista = { filtros: [] } as unknown as Vista;
+      const porDefecto = plantillaPorDefecto(objetivo!, sinVista);
+      const valores = estadoInicial(objetivo!, sinVista, {}, porDefecto);
+      const fila = porDefecto ? crearDesdePlantilla(objetivo!.id, porDefecto.id, valores) : crearFila(objetivo!.id, valores);
       cambiarUi({ vistazo: fila.id });
     }
   };
@@ -77,7 +81,8 @@ function BotonPagina({ etiqueta, accion, destino, confirmacion, color, editable,
               <input className="campo" autoFocus value={etiqueta} placeholder={trad('Nueva tarea')} onChange={(e) => alCambiar({ etiqueta: e.target.value })} />
             </label>
             <TituloMenu>{trad('Al pulsarlo')}</TituloMenu>
-            <div className="segmentado" role="radiogroup" aria-label={trad('Qué hace')}>
+            <div className="segmentado" role="radiogroup" aria-label={trad('Qué hace')} ref={refSegmentado}>
+              <span className="seg-ind" aria-hidden="true" />
               {(['crear', 'abrir', 'web'] as Accion[]).map((a) => (
                 <button key={a} role="radio" aria-checked={accion === a} aria-pressed={accion === a} onClick={() => alCambiar({ accion: a, destino: '' })}>
                   {NOMBRE_ACCION[a]}

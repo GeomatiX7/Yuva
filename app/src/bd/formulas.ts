@@ -337,6 +337,10 @@ export function aBooleano(v: ValorF | undefined): boolean {
   return v.length > 0;
 }
 
+// Fin de las fechas que vienen de un rango «inicio/fin». La fecha sigue siendo su inicio (así la tratan todas las
+// funciones); fechaFin() lee aquí el fin. Va aparte para no cambiar el valor que ven las demás funciones.
+const FIN_DE_RANGO = new WeakMap<Date, Date>();
+
 export function aFecha(v: ValorF | undefined): Date | null {
   if (v === null || v === undefined) return null;
   if (v instanceof Date) return isValid(v) ? v : null;
@@ -344,7 +348,17 @@ export function aFecha(v: ValorF | undefined): Date | null {
   if (typeof v !== 'string') return null;
   const t = v.trim();
   if (!t) return null;
-  let d = parseISO(/^\d{4}-\d{2}-\d{2}/.test(t) ? t.split('/')[0] : t); // de un rango «inicio/fin», el inicio
+  if (/^\d{4}-\d{2}-\d{2}/.test(t)) {
+    // De un rango «inicio/fin» vale el inicio, y el fin queda guardado para fechaFin().
+    const [ini, fin] = t.split('/');
+    const d = parseISO(ini);
+    if (isValid(d)) {
+      const f = fin ? parseISO(fin) : null;
+      if (f && isValid(f)) FIN_DE_RANGO.set(d, f);
+      return d;
+    }
+  }
+  let d = parseISO(t);
   // En inglés se prueba primero mes/día/año (12/31/2026).
   if (!isValid(d) && enIngles) d = parse(t, 'M/d/yyyy', new Date());
   if (!isValid(d) && enIngles) d = parse(t, 'M/d/yyyy H:mm', new Date());
@@ -664,6 +678,17 @@ export const FUNCIONES: DefFuncion[] = [
     nombres: ['fechaentre', 'datebetween', 'diasentre'], grupo: 'Fechas', firma: trad('fechaEntre(fecha1, fecha2, unidad)'), desc: trad('Tiempo que hay de fecha2 a fecha1 (negativo si fecha1 es anterior). Por defecto en días.'),
     ejemplo: trad('fechaEntre(prop("Entrega"), hoy(), "días")'), min: 2, max: 3, espera: ['fecha', 'fecha', 'texto'], tipo: 'numero',
     fn: ([a, b, u]) => conFecha(a, (x) => conFecha(b, (y) => fechaEntre(x, y, unidad(u ?? null)))),
+  },
+  // Los dos extremos de una fecha con fin. Una fecha sola es a la vez su inicio y su fin.
+  {
+    nombres: ['fechainicio', 'datestart'], grupo: 'Fechas', firma: trad('fechaInicio(fecha)'), desc: trad('El inicio de una fecha con fin (un rango). Si la fecha no tiene fin, la misma fecha.'),
+    ejemplo: trad('fechaEntre(fechaInicio(prop("Fechas")), hoy(), "días")'), min: 1, max: 1, espera: ['fecha'], tipo: 'fecha',
+    fn: ([f]) => conFecha(f, (d) => new Date(d.getTime())),
+  },
+  {
+    nombres: ['fechafin', 'dateend'], grupo: 'Fechas', firma: trad('fechaFin(fecha)'), desc: trad('El fin de una fecha con fin (un rango). Si la fecha no tiene fin, la misma fecha.'),
+    ejemplo: trad('fechaEntre(fechaFin(prop("Fechas")), fechaInicio(prop("Fechas")), "días")'), min: 1, max: 1, espera: ['fecha'], tipo: 'fecha',
+    fn: ([f]) => conFecha(f, (d) => new Date((FIN_DE_RANGO.get(d) ?? d).getTime())),
   },
   { nombres: ['ano', 'year'], grupo: 'Fechas', firma: trad('año(fecha)'), desc: trad('El año de una fecha.'), ejemplo: trad('año(prop("Fecha"))'), min: 1, max: 1, espera: ['fecha'], tipo: 'numero', fn: ([f]) => conFecha(f, (d) => d.getFullYear()) },
   { nombres: ['mes', 'month'], grupo: 'Fechas', firma: trad('mes(fecha)'), desc: trad('El mes de una fecha, de 1 (enero) a 12.'), ejemplo: trad('mes(prop("Fecha"))'), min: 1, max: 1, espera: ['fecha'], tipo: 'numero', fn: ([f]) => conFecha(f, (d) => d.getMonth() + 1) },

@@ -12,7 +12,7 @@ import { useTemaResuelto } from '../lib/tema';
 import { IconoPagina } from '../componentes/IconoPagina';
 import { propsVisibles, valorDe } from './operaciones';
 import { ValorVista } from './valores';
-import { abrirFila } from './VistaBD';
+import { abrirFila } from './abrirFila';
 import { trad } from '../i18n';
 
 function Contenido({ bloques }: { bloques: unknown[] }) {

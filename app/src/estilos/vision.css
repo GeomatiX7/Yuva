@@ -1,0 +1,488 @@
+/* Bloque «Tablero de visión» (editor/vision.tsx): un collage de imágenes propias en mosaico, polaroid o cuadrícula.
+   «Pulso»: el sello de tres rayas doradas a −18° encabeza el tablero y el vacío lleva el rayado al mismo ángulo; el
+   marco polaroid es crema con el pie en vino. Controles solo al pasar el ratón o con el foco (siempre en pantallas
+   táctiles). El vaivén es un balanceo leve y desfasado que se apaga con el movimiento reducido (sistema o Ajustes). */
+
+:root {
+  --vision-crema: #f3e4d6;
+  --vision-pie: #5e1a2d;
+  --vision-hueco: 10px;
+  --vision-sombra: 0 1px 2px rgba(42, 10, 18, 0.12), 0 10px 22px rgba(42, 10, 18, 0.13);
+  --vision-velo: linear-gradient(to bottom, transparent, rgba(24, 6, 12, 0.74));
+}
+
+:root[data-tema='oscuro'] {
+  --vision-crema: #e9d8c6;
+  --vision-sombra: 0 1px 2px rgba(0, 0, 0, 0.45), 0 12px 26px rgba(0, 0, 0, 0.5);
+}
+
+.vision {
+  position: relative;
+  width: 100%;
+  margin: 4px 0;
+}
+
+/* ---------- barra ---------- */
+.vision-barra {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+  min-height: 32px;
+  margin-bottom: 10px;
+}
+
+.vision-sello {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: var(--raya-hueco, 2px);
+  height: 14px;
+  padding: 0 2px;
+  flex: none;
+}
+
+.vision-sello i {
+  display: block;
+  width: var(--raya-ancho, 3px);
+  height: 100%;
+  border-radius: 1px;
+  background: var(--oro-m);
+  transform: skewX(var(--ang, -18deg));
+}
+
+.vision-sello i:nth-child(2) {
+  height: 72%;
+}
+
+.vision-sello i:nth-child(3) {
+  height: 46%;
+}
+
+.vision-sello.grande {
+  height: 26px;
+  gap: 3px;
+}
+
+.vision-sello.grande i {
+  width: 4px;
+}
+
+.vision-cuenta {
+  color: var(--tinta-3);
+  font: 600 11px/1 var(--f-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.vision-acciones {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity var(--dur-rapida, 160ms) ease;
+}
+
+.vision:hover .vision-acciones,
+.vision:focus-within .vision-acciones {
+  opacity: 1;
+}
+
+.vision-vaiven {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--tinta-2);
+  font-size: var(--t-s);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* ---------- vacío ---------- */
+.vision-vacio {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 30px 18px 26px;
+  border: 1.5px dashed var(--linea-fuerte);
+  border-radius: var(--r-3, 12px);
+  text-align: center;
+  background: repeating-linear-gradient(108deg, transparent 0 16px, color-mix(in srgb, var(--oro-m) 9%, transparent) 16px 19px);
+}
+
+.vision-vacio-titulo {
+  margin: 4px 0 0;
+  color: var(--tinta);
+  font: 600 18px/1.2 var(--f-titulo);
+  letter-spacing: -0.01em;
+}
+
+.vision-vacio-texto {
+  max-width: 44ch;
+  margin: 0 0 6px;
+  color: var(--tinta-2);
+  font-size: var(--t-m);
+  line-height: 1.5;
+}
+
+/* ---------- rejilla e imágenes ---------- */
+.vision-rejilla {
+  position: relative;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.vision-item {
+  position: relative;
+  margin: 0;
+  min-width: 0;
+  border-radius: 10px;
+  outline: none;
+  transition: translate 300ms var(--ease-salida, ease-out), opacity var(--dur-rapida, 160ms) ease;
+}
+
+.vision.editable .vision-item {
+  cursor: grab;
+}
+
+.vision.arrastrando,
+.vision.arrastrando .vision-item {
+  cursor: grabbing;
+}
+
+.vision-item:focus-visible {
+  box-shadow: 0 0 0 2px var(--papel), 0 0 0 4px var(--oro-m);
+}
+
+.vision-marco {
+  position: relative;
+  height: 100%;
+  transition: translate 260ms var(--rebote-corto, ease-out);
+}
+
+.vision-foto {
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+  border-radius: 10px;
+  background: var(--papel-3);
+}
+
+.vision-foto img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: scale 500ms var(--ease-salida, ease-out);
+}
+
+.vision-item:hover .vision-foto img {
+  scale: 1.035;
+}
+
+.vision-cargando {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 80px;
+  background: repeating-linear-gradient(108deg, transparent 0 10px, color-mix(in srgb, var(--oro-m) 12%, transparent) 10px 13px);
+}
+
+/* La arrastrada deja su hueco marcado; la copia que sigue al puntero va en el body (.vision-fantasma). */
+.vision-item.arrastrada .vision-marco {
+  opacity: 0.28;
+}
+
+.vision-item.arrastrada .vision-foto {
+  outline: 2px dashed var(--oro-m);
+  outline-offset: 2px;
+}
+
+/* Frase encima de la foto (mosaico y cuadrícula): un velo oscuro abajo con letra serif. */
+.vision-pie {
+  margin: 0;
+}
+
+.vision:is(.disp-mosaico, .disp-cuadricula) .vision-pie {
+  position: absolute;
+  inset: auto 0 0 0;
+  padding: 26px 10px 8px;
+  border-radius: 0 0 10px 10px;
+  background: var(--vision-velo);
+  color: #fff8f1;
+  opacity: 0;
+  transition: opacity var(--dur-rapida, 160ms) ease;
+  pointer-events: none;
+}
+
+.vision:is(.disp-mosaico, .disp-cuadricula) .vision-item.con-frase .vision-pie,
+.vision.editable:is(.disp-mosaico, .disp-cuadricula) .vision-item:is(:hover, :focus-within) .vision-pie {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.vision-frase {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 2px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: transparent;
+  color: inherit;
+  font: italic 400 14px/1.35 var(--f-serif);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: text;
+}
+
+span.vision-frase {
+  cursor: inherit;
+}
+
+input.vision-frase:focus {
+  outline: none;
+  border-bottom-color: var(--oro-c, #eac46f);
+}
+
+input.vision-frase::placeholder {
+  color: currentColor;
+  opacity: 0.62;
+}
+
+/* Mosaico: columnas de alturas distintas (filas de 8 px con un ritmo fijo, en orden de lectura). */
+.vision.disp-mosaico .vision-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-auto-rows: 8px;
+  column-gap: var(--vision-hueco);
+}
+
+.vision.disp-mosaico .vision-item {
+  grid-row: span var(--filas, 28);
+  margin-bottom: var(--vision-hueco);
+}
+
+/* Cuadrícula: celdas cuadradas iguales. */
+.vision.disp-cuadricula .vision-rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 6px;
+}
+
+.vision.disp-cuadricula .vision-item {
+  aspect-ratio: 1;
+}
+
+/* Polaroid: marco crema con pie, inclinadas un par de grados en alterno. */
+.vision.disp-polaroid .vision-rejilla {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px 20px;
+  padding: 8px 4px 14px;
+}
+
+.vision.disp-polaroid .vision-item {
+  flex: 0 1 190px;
+  min-width: 128px;
+  border-radius: 3px;
+}
+
+.vision.disp-polaroid .vision-marco {
+  height: auto;
+  padding: 9px 9px 0;
+  border-radius: 3px;
+  background: var(--vision-crema);
+  box-shadow: var(--vision-sombra);
+  rotate: var(--giro, 0deg);
+}
+
+.vision.disp-polaroid .vision-item:hover .vision-marco {
+  translate: 0 -3px;
+}
+
+.vision.disp-polaroid .vision-foto {
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 1px;
+}
+
+.vision.disp-polaroid .vision-pie {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 6px 2px 8px;
+  color: var(--vision-pie);
+  text-align: center;
+}
+
+.vision.disp-polaroid .vision-frase {
+  text-align: center;
+}
+
+.vision.disp-polaroid .vision-item:not(:hover, :focus-within) input.vision-frase::placeholder {
+  opacity: 0;
+}
+
+.vision.disp-polaroid input.vision-frase:focus {
+  border-bottom-color: color-mix(in srgb, var(--vision-pie) 45%, transparent);
+}
+
+.vision.disp-polaroid .vision-item:focus-visible {
+  box-shadow: none;
+}
+
+.vision.disp-polaroid .vision-item:focus-visible .vision-marco {
+  box-shadow: var(--vision-sombra), 0 0 0 2px var(--papel), 0 0 0 4px var(--oro-m);
+}
+
+/* ---------- controles de cada imagen ---------- */
+.vision-controles {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 2;
+  display: flex;
+  gap: 1px;
+  padding: 2px;
+  border: 1px solid var(--linea);
+  border-radius: 8px;
+  background: var(--flota);
+  box-shadow: var(--sombra-flota);
+  opacity: 0;
+  translate: 0 -3px;
+  pointer-events: none;
+  transition: opacity var(--dur-rapida, 160ms) ease, translate var(--dur-rapida, 160ms) var(--ease-salida, ease-out);
+}
+
+.vision-item:is(:hover, :focus-within) .vision-controles {
+  opacity: 1;
+  translate: 0 0;
+  pointer-events: auto;
+}
+
+.vision.arrastrando .vision-controles {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.vision-controles .boton-icono.mini {
+  width: 24px;
+  height: 24px;
+}
+
+.vision-controles .boton-icono:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.vision-asa {
+  cursor: grab;
+  touch-action: none;
+}
+
+@media (hover: none) {
+  .vision-acciones,
+  .vision-controles {
+    opacity: 1;
+    translate: 0 0;
+    pointer-events: auto;
+  }
+
+  .vision.editable:is(.disp-mosaico, .disp-cuadricula) .vision-pie {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* ---------- copia que sigue al puntero ---------- */
+.vision-fantasma {
+  position: fixed;
+  z-index: 1000;
+  overflow: hidden;
+  border-radius: 10px;
+  background: var(--papel-3);
+  box-shadow: var(--sombra-flota);
+  pointer-events: none;
+  rotate: 2.5deg;
+  scale: 1.03;
+  opacity: 0.94;
+}
+
+.vision-fantasma img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vision-fantasma.polaroid {
+  padding: 9px 9px 0;
+  border-radius: 3px;
+  background: var(--vision-crema);
+}
+
+.vision-fantasma.polaroid img {
+  height: auto;
+  aspect-ratio: 1;
+  border-radius: 1px;
+}
+
+/* ---------- vaivén: balanceo leve y desfasado ---------- */
+.vision.vaiven .vision-marco {
+  transform-origin: 50% 0;
+  animation: vision-vaiven 6.4s ease-in-out infinite alternate;
+  animation-delay: calc(var(--i, 0) * -1.7s);
+}
+
+.vision.vaiven.arrastrando .vision-marco {
+  animation-play-state: paused;
+}
+
+@keyframes vision-vaiven {
+  from {
+    transform: rotate(-0.8deg) translateY(0);
+  }
+  to {
+    transform: rotate(0.8deg) translateY(-3px);
+  }
+}
+
+/* Sin movimiento: ni vaivén ni deslizamientos (además de la regla global de movimiento.css). */
+@media (prefers-reduced-motion: reduce) {
+  .vision .vision-marco,
+  .vision.vaiven .vision-marco {
+    animation: none;
+  }
+
+  .vision-item,
+  .vision-marco,
+  .vision-foto img,
+  .vision-controles {
+    transition: none;
+  }
+
+  .vision-item:hover .vision-foto img {
+    scale: none;
+  }
+}
+
+:root[data-movimiento='reducido'] .vision .vision-marco,
+:root[data-movimiento='reducido'] .vision.vaiven .vision-marco {
+  animation: none;
+}
+
+:root[data-movimiento='reducido'] :is(.vision-item, .vision-marco, .vision-foto img, .vision-controles) {
+  transition: none;
+}
+
+:root[data-movimiento='reducido'] .vision-item:hover .vision-foto img {
+  scale: none;
+}

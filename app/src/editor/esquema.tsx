@@ -6,7 +6,9 @@ import {
   createCodeBlockSpec,
   defaultBlockSpecs,
   defaultInlineContentSpecs,
+  defaultStyleSpecs,
 } from '@blocknote/core';
+import { estiloAnotacion } from './anotar';
 import { createReactBlockSpec, createReactInlineContentSpec } from '@blocknote/react';
 import { codeBlockOptions } from '@blocknote/code-block';
 import { ArrowUpRight, ListTree } from 'lucide-react';
@@ -31,6 +33,7 @@ import { bloqueMarcador } from './marcador';
 import { bloqueGrabacion } from './grabacion';
 import { bloqueEcuacion, enLineaEcuacion } from './ecuacion';
 import { bloqueDiagrama } from './diagrama';
+import { bloqueVision } from './vision';
 import { enLineaEmojiPropio } from './emojiPropio';
 import { trad } from '../i18n';
 
@@ -117,8 +120,11 @@ export const bloquePagina = createReactBlockSpec(
   },
   {
     render: ({ block }) => <EnlaceSubpagina paginaId={block.props.paginaId} />,
+    // Una página en la papelera no deja su título en el HTML exportado ni en el portapapeles (como el sitio publicado).
     toExternalHTML: ({ block }) => {
-      const p = usar.getState().paginas[block.props.paginaId];
+      const { paginas } = usar.getState();
+      const p = paginas[block.props.paginaId];
+      if (p && estaBorrada(paginas, block.props.paginaId)) return <p>{trad('[Página en la papelera]')}</p>;
       return <a href={`#/p/${block.props.paginaId}`}>{tituloDe(p)}</a>;
     },
   },
@@ -211,8 +217,11 @@ export const bloqueBaseDatos = createReactBlockSpec(
   { type: 'baseDatos', propSchema: { paginaId: { default: '' } }, content: 'none' },
   {
     render: ({ block }) => <BaseDatosEnLinea paginaId={block.props.paginaId} />,
+    // Como en el editor («Esta base de datos está en la papelera.»): sin su título.
     toExternalHTML: ({ block }) => {
-      const p = usar.getState().paginas[block.props.paginaId];
+      const { paginas } = usar.getState();
+      const p = paginas[block.props.paginaId];
+      if (p && estaBorrada(paginas, block.props.paginaId)) return <p>{trad('[Base de datos en la papelera]')}</p>;
       return <p>{trad('[Base de datos: {titulo}]', { titulo: tituloDe(p) })}</p>;
     },
   },
@@ -310,6 +319,7 @@ export const esquema = BlockNoteSchema.create({
     marcador: bloqueMarcador(),
     ecuacion: bloqueEcuacion(),
     diagrama: bloqueDiagrama(),
+    vision: bloqueVision(),
     grabacion: bloqueGrabacion(),
   },
   inlineContentSpecs: {
@@ -319,6 +329,8 @@ export const esquema = BlockNoteSchema.create({
     ecuacionEnLinea: enLineaEcuacion,
     emojiPropio: enLineaEmojiPropio,
   },
+  // «Anotar»: el texto anotado lleva el id de su nota (editor/anotar.tsx). Los demás estilos, los de siempre.
+  styleSpecs: { ...defaultStyleSpecs, anotacion: estiloAnotacion },
 });
 
 export type EditorApp = typeof esquema.BlockNoteEditor;

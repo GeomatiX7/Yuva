@@ -1,0 +1,255 @@
+/* Nota rápida (componentes/Captura.tsx): un cuadro para apuntar sin salir de donde estás.
+   «Pulso»: la vista previa marca cada línea con la raya de la firma (3 px a -18°) o con la casilla sesgada, la fecha
+   de hoy va en mono con su diagonal dorada y el destino se elige con el segmentado de siempre. Los colores salen de
+   los tokens (claro, oscuro y alto contraste) y el movimiento se apaga con data-movimiento='reducido' y
+   prefers-reduced-motion. */
+
+.modal-captura .modal-cabecera {
+  padding-bottom: 8px;
+}
+
+/* La fecha de hoy junto al título, en mono, precedida de la diagonal dorada. */
+.captura-hoy {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 4px;
+  color: var(--tinta-3);
+  font: 500 11px/1 var(--f-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.captura-hoy::before {
+  content: '';
+  width: 1.5px;
+  height: 14px;
+  background: var(--oro-m);
+  transform: skewX(var(--ang));
+}
+
+.captura-cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-bottom: 18px;
+}
+
+/* El texto: una hoja dentro del diálogo, con el filo dorado al enfocarla. */
+.captura-texto {
+  width: 100%;
+  min-height: 104px;
+  max-height: 40vh;
+  padding: 12px 14px;
+  resize: vertical;
+  border: 1px solid var(--linea);
+  border-radius: 12px;
+  background: var(--papel);
+  color: var(--tinta);
+  font: 400 var(--t-cuerpo) / 1.55 var(--f-ui);
+  outline: none;
+  transition: border-color var(--dur), box-shadow var(--dur);
+}
+
+.captura-texto::placeholder {
+  color: var(--tinta-3);
+}
+
+.captura-texto:focus {
+  border-color: var(--oro-m);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--oro-m) 22%, transparent);
+}
+
+/* Vista previa: cómo quedará cada línea al guardarla. */
+.captura-vista {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 0;
+  padding: 8px 12px;
+  list-style: none;
+  border-radius: 12px;
+  background: var(--papel-2);
+}
+
+.captura-linea {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 24px;
+  color: var(--tinta);
+  font-size: var(--t-m);
+  animation: captura-entra 260ms var(--ease-salida, ease-out) both;
+}
+
+.captura-linea-texto {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* La primera línea en una base de datos es el título de la fila. */
+.captura-linea.titulo-fila {
+  font-family: var(--f-titulo);
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.captura-raya {
+  flex: none;
+  width: var(--raya-ancho);
+  height: var(--raya-alto);
+  margin: 0 5px;
+  border-radius: 1px;
+  background: var(--oro-m);
+  transform: skewX(var(--ang));
+}
+
+.captura-linea.bulletListItem .captura-raya {
+  height: 5px;
+  width: 5px;
+  border-radius: 1px;
+  background: var(--tinta-2);
+}
+
+.captura-casilla {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 0 1px;
+  border: 1.5px solid var(--linea-fuerte);
+  border-radius: 3px;
+  transform: skewX(var(--ang));
+}
+
+.captura-casilla.hecha {
+  border-color: var(--tinta);
+  background: var(--tinta);
+}
+
+.captura-linea.checkListItem:has(.hecha) .captura-linea-texto {
+  color: var(--tinta-3);
+  text-decoration: line-through;
+}
+
+/* La fecha del texto, como en el editor: campana aparte, aquí solo el calendario y la fecha. */
+.captura-fecha {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0 1px;
+  padding: 0 6px;
+  border-radius: 6px;
+  background: var(--acento-suave);
+  color: var(--acento-fuerte);
+  font-size: 0.92em;
+  font-weight: 600;
+  vertical-align: baseline;
+}
+
+.captura-mas {
+  padding-left: 22px;
+  color: var(--tinta-3);
+  font-size: var(--t-s);
+}
+
+/* El destino: el segmentado y, si es una base, cuál. */
+.captura-destino {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.captura-destino-titulo {
+  color: var(--tinta-3);
+  font: 500 11px/1 var(--f-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.captura-base {
+  width: auto;
+  min-width: 160px;
+  max-width: 100%;
+  min-height: 30px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  font-size: var(--t-s);
+}
+
+.captura-pie {
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+
+.captura-ayuda {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 14px;
+  margin: 0;
+  padding-block: 2px;
+  overflow: hidden;
+  flex: 1;
+  min-width: 220px;
+  color: var(--tinta-3);
+  font-size: var(--t-xs);
+}
+
+.captura-teclas {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+/* La raya separadora asoma en el hueco de antes de las teclas (margen negativo, sin moverlas). Si las teclas bajan
+   de renglón, empiezan en el borde y la raya queda fuera de la caja: overflow la recorta. */
+.captura-teclas .sep-diagonal {
+  margin: 0 3px 0 -7.5px; /* −7,5 + 1,5 de raya + 3 + 3 de hueco: la primera tecla empieza justo en el borde */
+}
+
+.captura-pie .boton-primario {
+  gap: 8px;
+}
+
+.captura-pie .boton-primario kbd {
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  background: transparent;
+  color: inherit;
+  opacity: 0.8;
+}
+
+@keyframes captura-entra {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+
+@media (max-width: 520px) {
+  .captura-hoy {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .captura-linea {
+    animation: none;
+  }
+}
+
+:root[data-movimiento='reducido'] .captura-linea {
+  animation: none;
+}
+
+@media (forced-colors: active) {
+  .captura-raya,
+  .captura-casilla.hecha {
+    forced-color-adjust: none;
+    background: CanvasText;
+  }
+}

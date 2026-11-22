@@ -47,3 +47,19 @@ export function sonar(cual?: SonidoAviso) {
     /* sin audio en este navegador */
   }
 }
+
+/** «Plin» de la bienvenida, el mismo de la pantalla de arranque (index.html). Suena tras un clic o una tecla,
+ *  así que también en el navegador. Respeta «Ajustes › Apariencia › Sonido al abrir». */
+export function sonarBienvenida() {
+  if (usar.getState().ajustes.sonidoArranque === false) return;
+  try {
+    contexto ??= new AudioContext();
+    const ctx = contexto;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    tono(ctx, 1318.5, 0, 0.9, 0.09, 'sine');
+    tono(ctx, 1318.5 * 2.76, 0, 0.45, 0.028, 'sine');
+    tono(ctx, 1975.5, 0.1, 0.7, 0.04, 'sine');
+  } catch {
+    /* sin audio en este navegador */
+  }
+}

@@ -4,9 +4,10 @@ import { useShallow } from 'zustand/react/shallow';
 import {
   Paperclip, AlignLeft, AtSign, Calendar, CircleChevronDown, CircleDashed, Clock, Hash, History, Link as IconoLink, List, Phone,
   SquareCheck, Type, MapPin, X, Plus, GripVertical, MoreHorizontal, Trash2, Check, ArrowUpRight, Sigma, SquareFunction, CircleAlert, BellRing, MousePointerClick,
+  Repeat,
 } from 'lucide-react';
-import type { GrupoEstado, MostrarNumero, Opcion, Pagina, Propiedad, TipoPropiedad, ValorProp } from '../data/tipos';
-import { Flotante, ItemMenu, Menu, SeparadorMenu, TituloMenu, type Ancla, Interruptor } from '../componentes/ui';
+import type { GrupoEstado, MostrarNumero, Opcion, Pagina, Propiedad, Repeticion, TipoPropiedad, ValorProp } from '../data/tipos';
+import { Flotante, ItemMenu, Menu, SeparadorMenu, TituloMenu, type Ancla, Interruptor, refSegmentado } from '../componentes/ui';
 import { IconoPagina } from '../componentes/IconoPagina';
 import {
   agregarOpcion, cambiarOpcion, cambiarRelacion, cambiarValor, grupoDeOpcion, NOMBRE_GRUPO_ESTADO, COLORES, crearFila, eliminarOpcion, moverOpcion, NOMBRE_COLOR,
@@ -16,9 +17,13 @@ import { comoBase, esCalculada, valorRelacion } from './derivadas';
 import { BotonFila } from './botones';
 import { EditorArchivos, ValorArchivos } from './archivosProp';
 import { EditorLugar, ValorLugar } from './lugarProp';
-import { hoyISO, partirFecha, textoFecha, unirFecha, useFormatoFecha } from '../lib/fechas';
+import { hoyISO, partirFecha, textoFecha, unirFecha, useFormatoFecha, useSemana } from '../lib/fechas';
+import { propsDeTarea } from '../lib/tareas';
+import {
+  cambiarRepeticion, diasEnOrden, fechaDeSerie, inicialDia, nombreDia, propsDeFechaRepeticion, repeticionActiva, resumenRepeticion, textoRepeticionDe,
+} from './repetir';
 import { cambiarUi, hijosDe, tituloDe, usar } from '../data/estado';
-import { trad } from '../i18n';
+import { plural, trad } from '../i18n';
 
 export const ICONO_TIPO: Record<TipoPropiedad, typeof Type> = {
   titulo: Type, texto: AlignLeft, numero: Hash, seleccion: CircleChevronDown, multiseleccion: List,
@@ -130,6 +135,17 @@ function BarraProgreso({ valor, texto }: { valor: number; texto: string }) {
   );
 }
 
+/** El icono de una fila que se repite (bd/repetir.ts), junto a su fecha, con el resumen como nombre: «Cada lunes».
+ *  Sin texto no se pinta. */
+export function IconoRepetir({ texto, tam = 12 }: { texto: string; tam?: number }) {
+  if (!texto) return null;
+  return (
+    <span className="repetir-icono" role="img" aria-label={texto} title={texto}>
+      <Repeat size={tam} strokeWidth={2.2} aria-hidden="true" />
+    </span>
+  );
+}
+
 /** Valor en modo lectura (celdas, tarjetas, listas). Fórmulas y resúmenes se muestran según el tipo de su resultado. */
 export function ValorVista({ prop: propiedad, valor, compacto, fila }: { prop: Propiedad; valor: ValorProp; compacto?: boolean; fila?: Pagina }) {
   useFormatoFecha(); // repinta las fechas al cambiar su formato en Ajustes
@@ -140,13 +156,13 @@ export function ValorVista({ prop: propiedad, valor, compacto, fila }: { prop: P
     const hecho = !!op && grupoDeOpcion(prop, op.id) === 'hecho';
     return (
       <span className="estado-casilla" title={op?.nombre ?? trad('Sin estado')}>
-        <span className={`casilla-vista${hecho ? ' marcada' : ''}`} aria-label={hecho ? trad('Completo') : trad('Sin completar')}>{hecho ? <Check size={12} strokeWidth={3} /> : null}</span>
+        <span className={`casilla-vista${hecho ? ' marcada' : ''}`} role="img" aria-label={hecho ? trad('Completo') : trad('Sin completar')} />
         {op && !hecho && grupoDeOpcion(prop, op.id) === 'curso' && <small>{op.nombre}</small>}
       </span>
     );
   }
   if (prop.tipo === 'casilla') {
-    return <span className={`casilla-vista${valor ? ' marcada' : ''}`} aria-label={valor ? trad('Marcada') : trad('Sin marcar')}>{valor ? <Check size={12} strokeWidth={3} /> : null}</span>;
+    return <span className={`casilla-vista${valor ? ' marcada' : ''}`} role="img" aria-label={valor ? trad('Marcada') : trad('Sin marcar')} />;
   }
   if (valor === null || valor === undefined || valor === '' || (Array.isArray(valor) && !valor.length)) return null;
   switch (prop.tipo) {
@@ -187,6 +203,7 @@ export function ValorVista({ prop: propiedad, valor, compacto, fila }: { prop: P
         <span className="valor-fecha">
           {valor === 'hoy' ? trad('Hoy (al crear la fila)') : textoFecha(valor)}
           {propiedad.recordar && String(valor).slice(0, 10) >= hoyISO() && <BellRing size={12} className="campana-fecha" aria-label={trad('Con recordatorio')} />}
+          {fila && <IconoRepetir texto={textoRepeticionDe(fila, propiedad.id)} />}
         </span>
       );
     case 'numero':
@@ -441,7 +458,7 @@ function EditorFecha({ fila, prop, ancla, alCerrar }: { fila: Pagina; prop: Prop
     ] as const;
   }, []);
   return (
-    <Flotante ancla={ancla} alCerrar={alCerrar} ancho={260}>
+    <Flotante ancla={ancla} alCerrar={alCerrar} ancho={292}>
       <div className="editor-fecha">
         <div className="fecha-linea">
           <input autoFocus type="date" className="campo" value={partes.inicio} aria-label={prop.nombre} onChange={(e) => guardar({ inicio: e.target.value })} />
@@ -512,8 +529,131 @@ function EditorFecha({ fila, prop, ancla, alCerrar }: { fila: Pagina; prop: Prop
             <X size={14} /> {trad('Quitar fecha')}
           </button>
         )}
+        <SeccionRepetir fila={fila} prop={prop} />
       </div>
     </Flotante>
+  );
+}
+
+type Cada = Repeticion['cada'];
+const NOMBRES_CADA = (): [Cada | 'no', string][] => [
+  ['no', trad('No@repetir')],
+  ['dia', trad('Día@repetir')],
+  ['semana', trad('Semana@repetir')],
+  ['mes', trad('Mes@repetir')],
+  ['anio', trad('Año@repetir')],
+];
+const UNIDAD = (cada: Cada, n: number) =>
+  cada === 'dia'
+    ? plural(n, 'día@unidad', 'días@unidad')
+    : cada === 'semana'
+      ? plural(n, 'semana@unidad', 'semanas@unidad')
+      : cada === 'mes'
+        ? plural(n, 'mes@unidad', 'meses@unidad')
+        : plural(n, 'año@unidad', 'años@unidad');
+
+/**
+ * «Repetir» del editor de fecha (bd/repetir.ts): No / Día / Semana / Mes / Año, «Cada [N]», los días de la semana,
+ * «Hasta» y qué pasa al completarla, con el resumen en una línea. Solo en filas (no en plantillas) de una base sin
+ * bloquear y en la fecha de la tarea (o la otra punta de su cronograma); si la base no tiene Estado ni Casilla, una
+ * línea lo explica. Cada cambio se guarda al momento.
+ */
+function SeccionRepetir({ fila: inicial, prop }: { fila: Pagina; prop: Propiedad }) {
+  const fila = usar((s) => s.paginas[inicial.id]) ?? inicial;
+  const base = usar((s) => (fila.padreId ? s.paginas[fila.padreId] : undefined));
+  const { weekStartsOn } = useSemana(); // repinta los días al cambiar el inicio de semana
+  if (!base || base.tipo !== 'bd' || fila.esPlantilla || base.bloqueada) return null;
+  if (!propsDeTarea(base)) {
+    return <p className="repetir-nota">{trad('Para que una fila se repita al completarla, la base necesita una propiedad Estado o Casilla.')}</p>;
+  }
+  const rep = repeticionActiva(fila);
+  const { principal, pareja } = propsDeFechaRepeticion(base, rep ?? undefined);
+  if (prop.id !== principal?.id && prop.id !== pareja?.id) return null;
+  const fecha = fechaDeSerie(fila, base, rep ?? undefined);
+  const n = Math.max(1, rep?.n ?? 1);
+  const guardar = (cambios: Partial<Repeticion>) => rep && cambiarRepeticion(fila.id, { ...rep, ...cambios });
+  const elegir = (cada: Cada | 'no') => {
+    if (cada === 'no') return cambiarRepeticion(fila.id, null);
+    if (rep?.cada === cada) return;
+    // Al cambiar de unidad, los días elegidos de la semana (y el día del mes) ya no valen.
+    cambiarRepeticion(fila.id, { ...(rep ?? {}), cada, dias: undefined, dia: undefined });
+  };
+  const diaFecha = fecha ? new Date(`${fecha}T12:00`).getDay() : -1;
+  const dias = rep?.dias?.length ? rep.dias : diaFecha >= 0 ? [diaFecha] : [];
+  const alternarDia = (k: number) => {
+    const nuevos = dias.includes(k) ? dias.filter((x) => x !== k) : [...dias, k];
+    if (nuevos.length) guardar({ dias: nuevos });
+  };
+  return (
+    <div className="repetir-editor" data-semana={weekStartsOn}>
+      <p className="repetir-titulo">
+        <Repeat size={13} aria-hidden="true" />
+        {trad('Repetir')}
+      </p>
+      <div className="segmentado repetir-seg" role="group" aria-label={trad('Repetir')} ref={refSegmentado}>
+        <span className="seg-ind" aria-hidden="true" />
+        {NOMBRES_CADA().map(([c, nombre]) => (
+          <button key={c} type="button" aria-pressed={(rep?.cada ?? 'no') === c} onClick={() => elegir(c)}>
+            {nombre}
+          </button>
+        ))}
+      </div>
+      {rep && (
+        <>
+          <label className="repetir-linea">
+            <span>{trad('Cada')}</span>
+            <input
+              type="number"
+              className="campo repetir-n"
+              min={1}
+              max={999}
+              value={n}
+              aria-label={trad('Cada cuántos')}
+              onChange={(e) => {
+                const v = Math.floor(Number(e.target.value));
+                if (Number.isFinite(v) && v >= 1) guardar({ n: Math.min(999, v) });
+              }}
+            />
+            <span>{UNIDAD(rep.cada, n)}</span>
+          </label>
+          {rep.cada === 'semana' && (
+            <div className="repetir-dias" role="group" aria-label={trad('Días de la semana')}>
+              {diasEnOrden().map((k) => (
+                <button key={k} type="button" className="repetir-dia" aria-pressed={dias.includes(k)} aria-label={nombreDia(k)} title={nombreDia(k)} onClick={() => alternarDia(k)}>
+                  {inicialDia(k)}
+                </button>
+              ))}
+            </div>
+          )}
+          <label className="repetir-linea">
+            <span>{trad('Hasta')}</span>
+            <input
+              type="date"
+              className="campo"
+              value={rep.hasta ?? ''}
+              min={fecha || undefined}
+              aria-label={trad('Hasta (opcional)')}
+              onChange={(e) => guardar({ hasta: e.target.value || undefined })}
+            />
+            {rep.hasta && (
+              <button type="button" className="boton-icono repetir-quitar-hasta" aria-label={trad('Sin fecha final')} title={trad('Sin fecha final')} onClick={() => guardar({ hasta: undefined })}>
+                <X size={14} />
+              </button>
+            )}
+          </label>
+          <label className="repetir-linea en-columna">
+            <span>{trad('Al completarla')}</span>
+            <select className="campo" value={rep.modo ?? 'avanzar'} onChange={(e) => guardar({ modo: e.target.value === 'crear' ? 'crear' : undefined })}>
+              <option value="avanzar">{trad('Pasar a la fecha siguiente')}</option>
+              <option value="crear">{trad('Crear la siguiente fila')}</option>
+            </select>
+          </label>
+          <p className="repetir-resumen" aria-live="polite">
+            {resumenRepeticion(rep, fecha)}
+          </p>
+        </>
+      )}
+    </div>
   );
 }
 
@@ -718,7 +858,7 @@ function CampoEditable({
             // Un estado «como casilla» sin valor se dibuja como casilla sin marcar, no como celda vacía.
             <span className="valor-vacio">{vacio ?? ''}</span>
           ) : (
-            <ValorVista prop={prop} valor={valor} />
+            <ValorVista prop={prop} valor={valor} fila={comoBase(prop).tipo === 'fecha' ? fila : undefined} />
           ))}
       </div>
       {ancla && <EditorValor bdId={bdId} fila={fila} prop={prop} ancla={ancla} alCerrar={() => setAncla(null)} />}

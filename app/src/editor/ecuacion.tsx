@@ -1,9 +1,8 @@
 // Ecuaciones con KaTeX: el bloque «Ecuación» (/ecuacion) y la ecuación en línea ($$…$$ o Ctrl+Shift+E).
 // Se escribe LaTeX y se ve la fórmula; un clic la vuelve a editar con vista previa. Un error de sintaxis
 // se muestra en rojo sin romper la página.
-import { useMemo, useState } from 'react';
-import katex from 'katex';
-import 'katex/dist/katex.min.css';
+// KaTeX (su código, su CSS y sus fuentes) no viene con la app: llega al pintar la primera ecuación.
+import { useEffect, useMemo, useState } from 'react';
 import { createReactBlockSpec, createReactInlineContentSpec } from '@blocknote/react';
 import { createExtension } from '@blocknote/core';
 import { Plugin } from '@tiptap/pm/state';
@@ -11,9 +10,26 @@ import { Sigma } from 'lucide-react';
 import { Flotante } from '../componentes/ui';
 import { trad } from '../i18n';
 
-/** LaTeX → HTML. Nunca lanza: devuelve el error como texto para mostrarlo. */
+type Katex = (typeof import('katex'))['default'];
+let katex: Katex | null = null;
+let cargaKatex: Promise<Katex> | null = null;
+
+/** Trae KaTeX y su hoja de estilos una sola vez (si falla, se vuelve a intentar la próxima vez). */
+function cargarKatex(): Promise<Katex> {
+  cargaKatex ??= Promise.all([import('katex'), import('katex/dist/katex.min.css')]).then(
+    ([m]) => (katex = m.default),
+    (err) => {
+      cargaKatex = null;
+      throw err;
+    },
+  );
+  return cargaKatex;
+}
+
+/** LaTeX → HTML. Nunca lanza: devuelve el error como texto para mostrarlo. Hasta que llega KaTeX (cargarKatex)
+ *  devuelve vacío. */
 export function pintarLatex(latex: string, enBloque: boolean): { html: string; error: string } {
-  if (!latex.trim()) return { html: '', error: '' };
+  if (!latex.trim() || !katex) return { html: '', error: '' };
   try {
     return { html: katex.renderToString(latex, { displayMode: enBloque, throwOnError: true, strict: 'ignore', trust: false, output: 'htmlAndMathml' }), error: '' };
   } catch (e) {
@@ -23,7 +39,22 @@ export function pintarLatex(latex: string, enBloque: boolean): { html: string; e
 }
 
 function Formula({ latex, enBloque }: { latex: string; enBloque: boolean }) {
-  const { html, error } = useMemo(() => pintarLatex(latex, enBloque), [latex, enBloque]);
+  const [listo, setListo] = useState(() => !!katex);
+  useEffect(() => {
+    if (listo || !latex.trim()) return;
+    let vivo = true;
+    cargarKatex().then(
+      () => vivo && setListo(true),
+      (err) => console.warn('[Yuva] No se pudo cargar KaTeX:', err),
+    );
+    return () => {
+      vivo = false;
+    };
+  }, [listo, !latex.trim()]);
+  const { html, error } = useMemo(() => pintarLatex(latex, enBloque), [latex, enBloque, listo]);
+  if (!latex.trim()) return <span className="ecuacion-vacia">{enBloque ? trad('Escribe una ecuación en LaTeX') : trad('Ecuación')}</span>;
+  // Mientras llega KaTeX (un instante, la primera vez), el LaTeX tal cual, en gris.
+  if (!listo) return <span className="ecuacion-vacia" aria-busy="true">{latex}</span>;
   if (error) return <span className="ecuacion-error">{error}</span>;
   if (!html) return <span className="ecuacion-vacia">{enBloque ? trad('Escribe una ecuación en LaTeX') : trad('Ecuación')}</span>;
   return <span className="ecuacion-formula" dangerouslySetInnerHTML={{ __html: html }} />;

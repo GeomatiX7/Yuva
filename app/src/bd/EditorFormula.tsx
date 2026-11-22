@@ -6,8 +6,8 @@ import type { Pagina, Propiedad } from '../data/tipos';
 import { tituloDe, usar } from '../data/estado';
 import { Flotante, type Ancla } from '../componentes/ui';
 import { aTexto, FUNCIONES, funcionPorNombre, NOMBRE_TIPO_F, nombreVisible, normalizar, type DefFuncion, type GrupoFuncion, type ValorF } from './formulas';
-import { probarFormula } from './derivadas';
-import { cambiarPropiedad, filasDe, FORMATOS, formatearNumero } from './operaciones';
+import { comoBase, probarFormula } from './derivadas';
+import { cambiarPropiedad, decimalesValidos, filasDe, FORMATOS, formatearNumero } from './operaciones';
 import { IconoTipo } from './valores';
 import { segunIdioma, trad } from '../i18n';
 
@@ -72,9 +72,39 @@ function resaltar(src: string): ReactNode[] {
   return out;
 }
 
+const MUESTRA_DECIMALES = 1234.5678;
+
+/**
+ * «Decimales» de un número: los del formato o de 0 a 4 (cada cifra con un ejemplo escrito con su formato). Lo usan
+ * este editor y el menú «Formato» de la propiedad (menusBD); vive aquí para que los dos no se importen entre sí.
+ */
+export function SelectorDecimales({ prop, alCambiar }: { prop: Propiedad; alCambiar: (decimales: number | undefined) => void }) {
+  const formato = comoBase(prop).formato;
+  const ejemplo = (d: number) => formatearNumero(MUESTRA_DECIMALES, formato, d);
+  return (
+    <select
+      className="campo"
+      aria-label={trad('Decimales')}
+      // El mismo valor con el que se escriben los números: uno fuera de 0 a 4 (de una importación, por ejemplo) se ve
+      // como la cifra que de verdad se usa, no como «Según el formato».
+      value={decimalesValidos(prop.decimales) ?? ''}
+      // Dentro de un menú, las flechas cambian la opción elegida y no saltan a otra opción del menú.
+      onKeyDown={(e) => ['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key) && e.stopPropagation()}
+      onChange={(e) => alCambiar(e.target.value === '' ? undefined : Number(e.target.value))}
+    >
+      <option value="">{trad('Según el formato')}</option>
+      {[0, 1, 2, 3, 4].map((d) => (
+        <option key={d} value={d}>
+          {`${d} (${ejemplo(d)})`}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function mostrarResultado(v: ValorF, prop: Propiedad): string {
   if (v === null || v === '' || (Array.isArray(v) && !v.length)) return trad('vacío');
-  if (typeof v === 'number') return formatearNumero(v, prop.formato);
+  if (typeof v === 'number') return formatearNumero(v, prop.formato, prop.decimales);
   if (typeof v === 'boolean') return v ? trad('Sí (casilla marcada)') : trad('No (casilla sin marcar)');
   if (v instanceof Date) return aTexto(v);
   if (typeof v === 'string') return segunIdioma(`«${v}»`, `"${v}"`);
@@ -283,6 +313,12 @@ export function EditorFormula({ bd, prop, ancla, fila, alCerrar }: { bd: Pagina;
                 </option>
               ))}
             </select>
+          </label>
+        )}
+        {prueba.tipo === 'numero' && !prueba.error && (
+          <label className="ef-formato">
+            <span>{trad('Decimales')}</span>
+            <SelectorDecimales prop={prop} alCambiar={(decimales) => cambiarPropiedad(bd.id, prop.id, { decimales })} />
           </label>
         )}
         <span className="espaciador" />

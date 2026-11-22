@@ -7,6 +7,7 @@ import type { AccionBoton, CambioBoton, ConfigBoton, EsquemaBD, Pagina, Propieda
 import { fechaCorta, hoyISO } from '../lib/fechas';
 import { ItemMenu, Menu, SeparadorMenu, TituloMenu } from '../componentes/ui';
 import { cambiarPropiedad, cambiarRelacion, cambiarValor, crearFila, valorDe } from './operaciones';
+import { deshacerRepeticion, textoAviso, type ResultadoRepeticion } from './repetir';
 import { LOCALE, trad } from '../i18n';
 
 const EDITABLES = new Set(['titulo', 'texto', 'numero', 'seleccion', 'multiseleccion', 'estado', 'fecha', 'casilla', 'url', 'correo', 'telefono']);
@@ -42,6 +43,7 @@ export function ejecutarBoton(filaId: string, prop: Propiedad) {
   const esquema = obtener().paginas[inicial.padreId]?.esquema;
   const antes: [string, string, ValorProp][] = [];
   const creadas: string[] = [];
+  const repeticiones: ResultadoRepeticion[] = []; // filas que se repitieron al quedar hechas (bd/repetir.ts)
   let abrir: string | null = null;
 
   const aplicar = (fila: Pagina, props: Propiedad[], c: CambioBoton) => {
@@ -56,7 +58,8 @@ export function ejecutarBoton(filaId: string, prop: Propiedad) {
     if (!p || !EDITABLES.has(p.tipo)) return;
     const actual = valorDe(fila, p);
     antes.push([fila.id, p.id, actual]);
-    cambiarValor(fila.id, p.id, nuevoValor(p, c, actual));
+    const r = cambiarValor(fila.id, p.id, nuevoValor(p, c, actual), { sinAviso: true });
+    if (r) repeticiones.push(r);
   };
 
   for (const a of conf.acciones) {
@@ -79,10 +82,12 @@ export function ejecutarBoton(filaId: string, prop: Propiedad) {
   const deshacer = antes.filter(([id]) => !creadas.includes(id));
   if (abrir) cambiarUi({ vistazo: abrir });
   if (deshacer.length || creadas.length) {
-    avisar(trad('{boton}: listo', { boton: conf.etiqueta || trad('Botón') }), {
+    const listo = trad('{boton}: listo', { boton: conf.etiqueta || trad('Botón') });
+    avisar(repeticiones.length ? `${listo} · ${textoAviso(repeticiones[repeticiones.length - 1])}` : listo, {
       accion: {
         etiqueta: trad('Deshacer'),
         fn: () => {
+          for (const r of [...repeticiones].reverse()) deshacerRepeticion(r.filaId, r);
           for (const [id, propId, valor] of [...deshacer].reverse()) cambiarValor(id, propId, valor);
           for (const id of creadas) aPapelera(id);
         },
@@ -296,7 +301,7 @@ export function ConfigBotonMenu({ bd, prop, alVolver }: { bd: Pagina; prop: Prop
                 </select>
                 {relacionHacia(a.bdId) && (
                   <label className="casilla-linea">
-                    <input type="checkbox" checked={!!a.enlazar} onChange={(e) => ponerAccion(i, { ...a, enlazar: e.target.checked ? relacionHacia(a.bdId)!.id : undefined })} />
+                    <input type="checkbox" className="casilla" checked={!!a.enlazar} onChange={(e) => ponerAccion(i, { ...a, enlazar: e.target.checked ? relacionHacia(a.bdId)!.id : undefined })} />
                     {trad('Enlazarla con esta fila («{prop}»)', { prop: relacionHacia(a.bdId)!.nombre })}
                   </label>
                 )}
@@ -324,7 +329,7 @@ export function ConfigBotonMenu({ bd, prop, alVolver }: { bd: Pagina; prop: Prop
                   </button>
                 )}
                 <label className="casilla-linea">
-                  <input type="checkbox" checked={!!a.abrir} onChange={(e) => ponerAccion(i, { ...a, abrir: e.target.checked })} />
+                  <input type="checkbox" className="casilla" checked={!!a.abrir} onChange={(e) => ponerAccion(i, { ...a, abrir: e.target.checked })} />
                   {trad('Abrirla al crearla')}
                 </label>
               </div>

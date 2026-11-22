@@ -1,0 +1,144 @@
+/* Bienvenida («Atelier»): tarjeta centrada que pregunta el nombre la primera vez.
+   Hoja con borde fino, título Bricolage apretado, el sitio del avatar con aro dorado y botón principal vino. */
+.modal.bienvenida-nombre {
+  padding: 34px 32px 26px;
+  text-align: center;
+  border: 1px solid var(--linea);
+  border-radius: 22px;
+  animation: bn-entra 520ms var(--ease-rebote) both;
+}
+
+.bn-formulario,
+.bn-hola {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+}
+
+/* El sitio del avatar: hoy la inicial; más adelante, la foto o el avatar animado. */
+.bn-avatar {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  margin-bottom: 6px;
+  border-radius: 50%;
+  color: var(--tinta-3);
+  border: 1.5px dashed var(--linea-fuerte);
+  background: var(--papel-2);
+  transition: border-color var(--dur-media) var(--ease-salida), background-color var(--dur-media);
+}
+
+.bn-avatar.con-nombre,
+.bn-hola .bn-avatar {
+  border: 2px solid #be8d47;
+  background: transparent;
+}
+
+.bn-avatar .avatar-perfil {
+  animation: bn-pop 360ms var(--ease-rebote) both;
+}
+
+.bn-saludo {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tinta-3);
+}
+
+.bn-saludo img {
+  border-radius: 5px;
+}
+
+.bn-titulo,
+.bn-hola-texto {
+  margin: 0 0 6px;
+  font-family: var(--f-titulo);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  font-variation-settings: 'opsz' 96;
+  color: var(--tinta);
+  overflow-wrap: anywhere;
+}
+
+.bn-hola-texto {
+  font-size: 30px;
+  animation: bn-sube 520ms var(--ease-salida) 80ms both;
+}
+
+.bn-campo {
+  width: 100%;
+  height: 44px;
+  font-size: 17px;
+  text-align: center;
+  border-radius: 12px;
+}
+
+.bn-nota {
+  margin: 2px 0 8px;
+  max-width: 34ch;
+  font-size: 12.5px;
+}
+
+.bn-botones {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.bn-botones .boton {
+  min-width: 112px;
+  height: 38px;
+  border-radius: 999px;
+}
+
+@keyframes bn-entra {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
+}
+
+@keyframes bn-pop {
+  from {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+}
+
+@keyframes bn-sube {
+  from {
+    transform: translateY(0.4em);
+    opacity: 0;
+    filter: blur(4px);
+  }
+}
+
+/* Elegir avatar en la bienvenida: la inicial o uno de los pajaritos animados (Avatar.tsx). */
+.bn-elige {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.bn-elige-titulo {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--tinta-3);
+}
+
+.bn-elige-opciones {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}

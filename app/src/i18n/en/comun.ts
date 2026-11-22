@@ -16,4 +16,8 @@ export const en: Record<string, string> = {
   'Mañana': 'Tomorrow',
   'Ayer': 'Yesterday',
   'Ver': 'View',
+  // Ctrl+Z fuera del editor (2026-11-20): data/estado.ts › registrarDeshacer y el botón del aviso.
+  'Deshecho: {texto}': 'Undone: {texto}',
+  'No se pudo deshacer': 'Couldn’t undo',
+  'También con Ctrl+Z': 'Also with Ctrl+Z',
 };
